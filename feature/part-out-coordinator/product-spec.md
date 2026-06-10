@@ -14,7 +14,7 @@
 | **Author** | David Vezzani (from [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md)) |
 | **Created** | 2026-06-09 |
 | **Last updated** | 2026-06-10 (storyboard Unit 0, shadcn-vue stack) |
-| **Related Tech Spec** | [tech-spec.md](./tech-spec.md) (created in `/design`) |
+| **Related Tech Spec** | [tech-spec.md](./tech-spec.md) |
 
 ## Problem & audience
 
@@ -235,7 +235,7 @@ Resolved in [dcv/qa-001.md](../../dcv/qa-001.md):
 - Q&A: [dcv/qa-001.md](../../dcv/qa-001.md)
 - Design reference map: [PROJECT.md — bricklink-chrome-extension](../../PROJECT.md#design-reference--bricklink-chrome-extension)
 - Seed proposal: [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md)
-- Tech Spec: [tech-spec.md](./tech-spec.md) (pending `/design`)
+- Tech Spec: [tech-spec.md](./tech-spec.md) (draft — `/design` 2026-06-10)
 - Process: [docs/AIDLC.md](../../docs/AIDLC.md)
 - Project memory: [PROJECT.md](../../PROJECT.md)
 - Parent issue: [GitHub #2](https://github.com/dcvezzani/brick-counter-coordinator/issues/2) (`AIDLC feature folder: feature/part-out-coordinator/`)

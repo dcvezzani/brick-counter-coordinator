@@ -2,7 +2,7 @@
 
 **Owner:** David Vezzani (Dave)  
 **Last updated:** 2026-06-10 (JS client, shadcn-vue, storyboard Unit 0)  
-**Status:** Plan — Product Spec ready; GitHub Projects v2 board [#2](https://github.com/users/dcvezzani/projects/2) live for **`dcvezzani`**
+**Status:** Design — Tech Spec draft; GitHub Projects v2 board [#2](https://github.com/users/dcvezzani/projects/2) live for **`dcvezzani`**
 
 ## What this project is
 
@@ -98,7 +98,7 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 
 | Feature | Status | Folder |
 |---------|--------|--------|
-| Part-Out Counting Coordinator | Plan — Product Spec (views + storyboard Unit 0); Vite/shadcn-vue scaffold in repo | [feature/part-out-coordinator/](feature/part-out-coordinator/) |
+| Part-Out Counting Coordinator | Design — Tech Spec draft (Units 0–4); Vite/shadcn-vue scaffold in repo | [feature/part-out-coordinator/](feature/part-out-coordinator/) |
 
 ## Conventions
 
@@ -122,7 +122,7 @@ npm run dev
 
 Open the dev server URL; storyboard views live under `src/views/` (added in Unit 0). Unit tests: `npm run test:unit`. E2E: `npm run test:e2e`.
 
-**Full stack:** coordinator server + WebSockets — after Tech Spec (`/design`).
+**Full stack:** `server/` Node coordinator + WebSockets — see [feature/part-out-coordinator/tech-spec.md](feature/part-out-coordinator/tech-spec.md). Dev: `npm run dev:all` (after Unit 1 build).
 
 ## Resolved product decisions (2026-06-09)
 
