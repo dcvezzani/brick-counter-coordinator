@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils'
 
 const SELECTOR_SIZE_PX = 10
 const TRANSITION_MS = 220
-const LABEL_VISIBILITY_THRESHOLD = 0.6
 const SWIPE_UP_THRESHOLD = 24
 
 const DEFAULT_THUMB_CLASSES = [
@@ -164,12 +163,25 @@ const visualZone = computed(() => {
   return `option-${thumbMorph.value.dominantOptionIndex}`
 })
 
-const thumbLabel = computed(() => {
-  if (thumbMorph.value.neutralBlend > 0.5) return ''
-  if (thumbMorph.value.optionProximity <= LABEL_VISIBILITY_THRESHOLD) return ''
-  const index = thumbMorph.value.dominantOptionIndex
-  return props.options[index]?.label ?? ''
+const highlightedLabelIndex = computed(() => {
+  if (thumbMorph.value.neutralBlend > 0.5) return null
+  if (!dragging.value && committedIndex.value != null) return committedIndex.value
+  if (dragging.value) return thumbMorph.value.dominantOptionIndex
+  return committedIndex.value
 })
+
+function labelTextClassForIndex(index) {
+  if (highlightedLabelIndex.value !== index) return 'text-muted-foreground'
+  const custom = props.options[index]?.thumbClass ?? ''
+  const match = custom.match(/text-\S+-foreground/)
+  if (match) return match[0]
+  const defaults = [
+    'text-primary-foreground',
+    'text-accent-foreground',
+    'text-destructive-foreground',
+  ]
+  return defaults[index % defaults.length]
+}
 
 const thumbClasses = computed(() => {
   const { neutralBlend, optionProximity, dominantOptionIndex } = thumbMorph.value
@@ -523,37 +535,6 @@ onBeforeUnmount(() => {
       @keydown="onKeydown"
     >
       <div
-        class="pointer-events-none absolute inset-0 grid"
-        :style="labelGridStyle"
-      >
-        <div
-          v-for="(option, index) in options"
-          :key="option.value"
-          class="flex items-center justify-center px-1"
-          :data-testid="`${testId}-label-${index}`"
-        >
-          <span
-            :class="
-              cn(
-                'truncate text-sm font-medium',
-                committedIndex === index ? 'text-transparent' : 'text-muted-foreground',
-              )
-            "
-          >
-            {{ option.label }}
-          </span>
-        </div>
-      </div>
-
-      <div
-        v-for="divider in segmentCount - 1"
-        :key="`divider-${divider}`"
-        class="pointer-events-none absolute top-1 bottom-1 border-l border-dashed border-border"
-        :style="{ left: `${(divider / segmentCount) * 100}%` }"
-        aria-hidden="true"
-      />
-
-      <div
         ref="insetLayerRef"
         class="absolute inset-1"
         :data-testid="`${testId}-inset`"
@@ -587,8 +568,32 @@ onBeforeUnmount(() => {
           @pointermove="onThumbPointerMove"
           @pointerup="onThumbPointerUp"
           @pointercancel="onThumbPointerCancel"
+        />
+      </div>
+
+      <div
+        v-for="divider in segmentCount - 1"
+        :key="`divider-${divider}`"
+        class="pointer-events-none absolute top-1 bottom-1 z-[15] border-l border-dashed border-border"
+        :style="{ left: `${(divider / segmentCount) * 100}%` }"
+        aria-hidden="true"
+      />
+
+      <div
+        class="pointer-events-none absolute inset-0 z-20 grid"
+        :style="labelGridStyle"
+      >
+        <div
+          v-for="(option, index) in options"
+          :key="option.value"
+          class="flex items-center justify-center px-1"
+          :data-testid="`${testId}-label-${index}`"
         >
-          <span v-if="thumbLabel" class="truncate px-1">{{ thumbLabel }}</span>
+          <span
+            :class="cn('truncate text-sm font-medium', labelTextClassForIndex(index))"
+          >
+            {{ option.label }}
+          </span>
         </div>
       </div>
     </div>
