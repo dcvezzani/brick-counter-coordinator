@@ -198,7 +198,7 @@ describe('TernarySwipeControl', () => {
     expect(wrapper.get('[data-testid="ternary-swipe-thumb"]').attributes('data-zone')).toBe('center')
   })
 
-  it('demotes thumb appearance while dragging away from left selection', async () => {
+  it('morphs toward circle while dragging away from left selection toward center', async () => {
     const wrapper = mount(TernarySwipeControl, {
       props: {
         name: 'status',
@@ -210,13 +210,34 @@ describe('TernarySwipeControl', () => {
 
     mockTrackRect(wrapper)
     pointerAt(wrapper, 'pointerdown', 50)
-    pointerAt(wrapper, 'pointermove', 200)
+    pointerAt(wrapper, 'pointermove', 150)
     await wrapper.vm.$nextTick()
 
     const thumb = wrapper.get('[data-testid="ternary-swipe-thumb"]')
     expect(thumb.attributes('data-zone')).toBe('center')
     expect(thumb.classes()).toContain('bg-foreground')
     expect(thumb.attributes('style')).toContain('width: 10px')
+    expect(thumb.attributes('style')).toContain('opacity: 1')
+  })
+
+  it('fades option pill opacity when offset from left snap during drag', async () => {
+    const wrapper = mount(TernarySwipeControl, {
+      props: {
+        name: 'status',
+        modelValue: 'moved',
+        option1Value: 'moved',
+        option2Value: 'new_loc',
+      },
+    })
+
+    mockTrackRect(wrapper)
+    pointerAt(wrapper, 'pointerdown', 50)
+    pointerAt(wrapper, 'pointermove', 100)
+    await wrapper.vm.$nextTick()
+
+    const style = wrapper.get('[data-testid="ternary-swipe-thumb"]').attributes('style')
+    expect(style).toMatch(/opacity: 0\.[0-9]+/)
+    expect(style).not.toContain('opacity: 1')
   })
 
   it('drags from left to right and selects option 2', async () => {

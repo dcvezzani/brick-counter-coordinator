@@ -20,9 +20,10 @@ const ZONE_BOUNDARIES = {
   right: 2 / 3,
 }
 
-const DEMOTE_THRESHOLD = 0.125
+const PROXIMITY_FALLOFF = 0.25
 const SELECTOR_SIZE_PX = 10
 const TRANSITION_MS = 220
+const LABEL_VISIBILITY_THRESHOLD = 0.6
 
 const props = defineProps({
   modelValue: { type: [String, null], default: '' },
@@ -47,9 +48,10 @@ const thumbRef = useTemplateRef('thumbRef')
 const committedZone = ref('center')
 const dragging = ref(false)
 const dragX = ref(null)
-const dragStartZone = ref('center')
 const animating = ref(false)
 const prefersReducedMotion = ref(false)
+const insetWidthPx = ref(0)
+const insetHeightPx = ref(0)
 
 let activePointerId = null
 let resizeObserver = null
@@ -69,65 +71,90 @@ const displayX = computed(() => {
   return SNAP_X[committedZone.value]
 })
 
-const visualDemoted = computed(() => {
-  if (!dragging.value) return committedZone.value === 'center'
-  if (dragStartZone.value === 'center') return true
-  const x = dragX.value ?? SNAP_X[dragStartZone.value]
-  if (dragStartZone.value === 'left') return x > SNAP_X.left + DEMOTE_THRESHOLD
-  if (dragStartZone.value === 'right') return x < SNAP_X.right - DEMOTE_THRESHOLD
-  return true
-})
+function proximity(x, target) {
+  return Math.max(0, 1 - Math.abs(x - target) / PROXIMITY_FALLOFF)
+}
 
-const thumbSelectedZone = computed(() => {
+function lerp(start, end, amount) {
+  return start + (end - start) * amount
+}
+
+function updateInsetDimensions() {
+  const layer = insetLayerRef.value
+  if (!layer) return
+  const rect = layer.getBoundingClientRect()
+  insetWidthPx.value = rect.width
+  insetHeightPx.value = rect.height
+}
+
+const thumbMorph = computed(() => {
+  const x = displayX.value
+
   if (dragging.value) {
-    if (visualDemoted.value) return 'center'
-    return dragStartZone.value
+    const neutralBlend = proximity(x, SNAP_X.center)
+    const leftProximity = proximity(x, SNAP_X.left)
+    const rightProximity = proximity(x, SNAP_X.right)
+    const optionProximity = Math.max(leftProximity, rightProximity)
+    const dominantOption = leftProximity >= rightProximity ? 'left' : 'right'
+
+    return { neutralBlend, optionProximity, dominantOption }
   }
-  return committedZone.value
+
+  if (committedZone.value === 'center') {
+    return { neutralBlend: 1, optionProximity: 0, dominantOption: 'left' }
+  }
+
+  return {
+    neutralBlend: 0,
+    optionProximity: 1,
+    dominantOption: committedZone.value,
+  }
 })
 
-const isSelectedThumb = computed(
-  () => thumbSelectedZone.value === 'left' || thumbSelectedZone.value === 'right',
-)
+const visualZone = computed(() => {
+  if (thumbMorph.value.neutralBlend >= 0.5) return 'center'
+  return thumbMorph.value.dominantOption
+})
 
 const thumbLabel = computed(() => {
-  if (thumbSelectedZone.value === 'left') return props.option1Label
-  if (thumbSelectedZone.value === 'right') return props.option2Label
+  if (thumbMorph.value.neutralBlend > 0.5) return ''
+  if (thumbMorph.value.optionProximity <= LABEL_VISIBILITY_THRESHOLD) return ''
+  if (thumbMorph.value.dominantOption === 'left') return props.option1Label
+  if (thumbMorph.value.dominantOption === 'right') return props.option2Label
   return ''
 })
 
-const thumbClasses = computed(() =>
-  cn(
+const thumbClasses = computed(() => {
+  const { neutralBlend, optionProximity, dominantOption } = thumbMorph.value
+  const isCircleDominant = neutralBlend > 0.5
+
+  return cn(
     'absolute z-10 flex items-center justify-center rounded-full font-medium select-none touch-none',
-    isSelectedThumb.value ? 'top-0 bottom-0' : 'top-1/2',
-    isSelectedThumb.value && 'border border-foreground',
-    thumbSelectedZone.value === 'left' && 'bg-primary text-primary-foreground text-sm',
-    thumbSelectedZone.value === 'right' && 'bg-accent text-accent-foreground text-sm',
-    thumbSelectedZone.value === 'center' && 'bg-foreground',
+    isCircleDominant && 'bg-foreground',
+    !isCircleDominant &&
+      dominantOption === 'left' &&
+      'bg-primary text-primary-foreground text-sm',
+    !isCircleDominant &&
+      dominantOption === 'right' &&
+      'bg-accent text-accent-foreground text-sm',
+    !isCircleDominant && optionProximity > 0.2 && 'border border-foreground',
     animating.value &&
       !prefersReducedMotion.value &&
-      'transition-[left,right,width,height,top,bottom,background-color,color,border-radius] duration-200 ease-out',
+      !dragging.value &&
+      'transition-[left,width,height,top,opacity,background-color,color,border-radius] duration-200 ease-out',
     dragging.value && 'cursor-grabbing',
     !dragging.value && !props.disabled && 'cursor-grab',
     props.disabled && 'cursor-not-allowed opacity-50',
-  ),
-)
+  )
+})
 
 const thumbStyle = computed(() => {
-  if (isSelectedThumb.value) {
-    if (dragging.value) {
-      return {
-        left: `${(displayX.value - 0.25) * 100}%`,
-        right: 'auto',
-        width: '50%',
-        top: '0',
-        bottom: '0',
-        height: 'auto',
-        marginTop: '0',
-      }
-    }
+  const { neutralBlend, optionProximity } = thumbMorph.value
+  const opacity = dragging.value ? (neutralBlend > 0.5 ? 1 : optionProximity) : 1
+  const opacityStyle = props.disabled ? {} : { opacity }
 
-    if (thumbSelectedZone.value === 'left') {
+  if (!dragging.value) {
+    if (committedZone.value === 'left') {
       return {
         left: '0',
         right: 'auto',
@@ -136,31 +163,71 @@ const thumbStyle = computed(() => {
         bottom: '0',
         height: 'auto',
         marginTop: '0',
+        maxWidth: 'none',
+        maxHeight: 'none',
+        ...opacityStyle,
       }
     }
 
+    if (committedZone.value === 'right') {
+      return {
+        left: 'auto',
+        right: '0',
+        width: '50%',
+        top: '0',
+        bottom: '0',
+        height: 'auto',
+        marginTop: '0',
+        maxWidth: 'none',
+        maxHeight: 'none',
+        ...opacityStyle,
+      }
+    }
+
+    const half = SELECTOR_SIZE_PX / 2
     return {
-      left: 'auto',
-      right: '0',
-      width: '50%',
-      top: '0',
-      bottom: '0',
-      height: 'auto',
-      marginTop: '0',
+      left: `calc(${displayX.value * 100}% - ${half}px)`,
+      right: 'auto',
+      width: `${SELECTOR_SIZE_PX}px`,
+      height: `${SELECTOR_SIZE_PX}px`,
+      maxWidth: `${SELECTOR_SIZE_PX}px`,
+      maxHeight: `${SELECTOR_SIZE_PX}px`,
+      top: '50%',
+      bottom: 'auto',
+      marginTop: `-${half}px`,
+      ...opacityStyle,
     }
   }
 
-  const half = SELECTOR_SIZE_PX / 2
+  const x = displayX.value
+  const insetW = insetWidthPx.value || 1
+  const insetH = insetHeightPx.value || SELECTOR_SIZE_PX
+
+  const pillW = insetW * 0.5
+  const pillH = insetH
+  const t = neutralBlend
+
+  const width = lerp(pillW, SELECTOR_SIZE_PX, t)
+  const height = lerp(pillH, SELECTOR_SIZE_PX, t)
+
+  let pillLeft = x * insetW - pillW / 2
+  pillLeft = Math.max(0, Math.min(pillLeft, insetW - pillW))
+
+  const circleLeft = x * insetW - width / 2
+  const left = lerp(pillLeft, circleLeft, t)
+  const top = lerp(0, insetH / 2 - height / 2, t)
+
   return {
-    left: `calc(${displayX.value * 100}% - ${half}px)`,
+    left: `${left}px`,
     right: 'auto',
-    width: `${SELECTOR_SIZE_PX}px`,
-    height: `${SELECTOR_SIZE_PX}px`,
-    maxWidth: `${SELECTOR_SIZE_PX}px`,
-    maxHeight: `${SELECTOR_SIZE_PX}px`,
-    top: '50%',
+    width: `${width}px`,
+    height: `${height}px`,
+    maxWidth: `${width}px`,
+    maxHeight: `${height}px`,
+    top: `${top}px`,
     bottom: 'auto',
-    marginTop: `-${half}px`,
+    marginTop: '0',
+    ...opacityStyle,
   }
 })
 
@@ -186,6 +253,10 @@ function pointerXAsFraction(event) {
   const layer = insetLayerRef.value ?? trackRef.value
   if (!layer) return SNAP_X.center
   const rect = layer.getBoundingClientRect()
+  if (layer === insetLayerRef.value) {
+    insetWidthPx.value = rect.width
+    insetHeightPx.value = rect.height
+  }
   const x = (event.clientX - rect.left) / rect.width
   return Math.min(1, Math.max(0, x))
 }
@@ -221,7 +292,6 @@ function onThumbPointerDown(event) {
   event.preventDefault()
   activePointerId = event.pointerId
   dragging.value = true
-  dragStartZone.value = committedZone.value
   dragX.value = pointerXAsFraction(event)
   animating.value = false
   if (typeof thumbRef.value?.setPointerCapture === 'function') {
@@ -306,10 +376,12 @@ onMounted(() => {
   prefersReducedMotion.value = reducedMotionQuery.matches
   reducedMotionQuery.addEventListener('change', onReducedMotionChange)
 
+  updateInsetDimensions()
+
   const observeTarget = insetLayerRef.value ?? trackRef.value
   if (typeof ResizeObserver !== 'undefined' && observeTarget) {
     resizeObserver = new ResizeObserver(() => {
-      // Layout uses percentages; observer keeps ref fresh for pointer math.
+      updateInsetDimensions()
     })
     resizeObserver.observe(observeTarget)
   }
@@ -421,7 +493,7 @@ onBeforeUnmount(() => {
           ref="thumbRef"
           data-thumb
           :data-testid="`${testId}-thumb`"
-          :data-zone="thumbSelectedZone"
+          :data-zone="visualZone"
           :class="thumbClasses"
           :style="thumbStyle"
           @pointerdown="onThumbPointerDown"
