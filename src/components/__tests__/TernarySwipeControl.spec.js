@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import TernarySwipeControl from '@/components/TernarySwipeControl.vue'
 
 const TRACK_WIDTH = 300
+const INSET_PADDING = 4
+const INSET_WIDTH = TRACK_WIDTH - INSET_PADDING * 2
 
-function mockTrackRect(wrapper) {
-  const track = wrapper.get('[data-testid="ternary-swipe-track"]').element
+function mockTrackRect(wrapper, testId = 'ternary-swipe') {
+  const track = wrapper.get(`[data-testid="${testId}-track"]`).element
   track.getBoundingClientRect = () => ({
     x: 0,
     y: 0,
@@ -15,6 +17,19 @@ function mockTrackRect(wrapper) {
     bottom: 44,
     width: TRACK_WIDTH,
     height: 44,
+    toJSON: () => ({}),
+  })
+
+  const inset = wrapper.get(`[data-testid="${testId}-inset"]`).element
+  inset.getBoundingClientRect = () => ({
+    x: INSET_PADDING,
+    y: INSET_PADDING,
+    top: INSET_PADDING,
+    left: INSET_PADDING,
+    right: INSET_PADDING + INSET_WIDTH,
+    bottom: 44 - INSET_PADDING,
+    width: INSET_WIDTH,
+    height: 44 - INSET_PADDING * 2,
     toJSON: () => ({}),
   })
 }

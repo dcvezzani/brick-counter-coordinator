@@ -10,9 +10,9 @@ import {
 import { cn } from '@/lib/utils'
 
 const SNAP_X = {
-  left: 1 / 6,
+  left: 0.25,
   center: 0.5,
-  right: 5 / 6,
+  right: 0.75,
 }
 
 const ZONE_BOUNDARIES = {
@@ -21,6 +21,8 @@ const ZONE_BOUNDARIES = {
 }
 
 const DEMOTE_THRESHOLD = 0.125
+const CENTER_THUMB_WIDTH = 28
+const CENTER_THUMB_HEIGHT = 20
 const TRANSITION_MS = 220
 
 const props = defineProps({
@@ -38,6 +40,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const trackRef = useTemplateRef('trackRef')
+const insetLayerRef = useTemplateRef('insetLayerRef')
 const thumbRef = useTemplateRef('thumbRef')
 
 const committedZone = ref('center')
@@ -82,10 +85,9 @@ const thumbSelectedZone = computed(() => {
   return committedZone.value
 })
 
-const thumbWidthPercent = computed(() => {
-  if (thumbSelectedZone.value === 'center') return 12
-  return 42
-})
+const isSelectedThumb = computed(
+  () => thumbSelectedZone.value === 'left' || thumbSelectedZone.value === 'right',
+)
 
 const thumbLabel = computed(() => {
   if (thumbSelectedZone.value === 'left') return props.option1Label
@@ -95,13 +97,14 @@ const thumbLabel = computed(() => {
 
 const thumbClasses = computed(() =>
   cn(
-    'absolute top-1/2 z-10 flex items-center justify-center rounded-md border border-foreground font-medium select-none touch-none',
+    'absolute z-10 flex items-center justify-center rounded-full border border-foreground font-medium select-none touch-none',
+    isSelectedThumb.value ? 'top-0 bottom-0' : 'top-1/2',
     thumbSelectedZone.value === 'left' && 'bg-primary text-primary-foreground text-sm',
     thumbSelectedZone.value === 'right' && 'bg-accent text-accent-foreground text-sm',
     thumbSelectedZone.value === 'center' && 'bg-muted-foreground',
     animating.value &&
       !prefersReducedMotion.value &&
-      'transition-[left,width,height,background-color,color] duration-200 ease-out',
+      'transition-[left,right,width,height,top,bottom,background-color,color,border-radius] duration-200 ease-out',
     dragging.value && 'cursor-grabbing',
     !dragging.value && !props.disabled && 'cursor-grab',
     props.disabled && 'cursor-not-allowed opacity-50',
@@ -109,15 +112,51 @@ const thumbClasses = computed(() =>
 )
 
 const thumbStyle = computed(() => {
-  const widthPct = thumbWidthPercent.value
-  const heightPx = thumbSelectedZone.value === 'center' ? 20 : 36
-  const leftPct = (displayX.value - widthPct / 200) * 100
+  if (isSelectedThumb.value) {
+    if (dragging.value) {
+      return {
+        left: `${(displayX.value - 0.25) * 100}%`,
+        right: 'auto',
+        width: '50%',
+        top: '0',
+        bottom: '0',
+        height: 'auto',
+        marginTop: '0',
+      }
+    }
 
+    if (thumbSelectedZone.value === 'left') {
+      return {
+        left: '0',
+        right: 'auto',
+        width: '50%',
+        top: '0',
+        bottom: '0',
+        height: 'auto',
+        marginTop: '0',
+      }
+    }
+
+    return {
+      left: 'auto',
+      right: '0',
+      width: '50%',
+      top: '0',
+      bottom: '0',
+      height: 'auto',
+      marginTop: '0',
+    }
+  }
+
+  const widthPct = CENTER_THUMB_WIDTH
   return {
-    left: `${leftPct}%`,
+    left: `${(displayX.value - widthPct / 200) * 100}%`,
+    right: 'auto',
     width: `${widthPct}%`,
-    height: `${heightPx}px`,
-    marginTop: `-${heightPx / 2}px`,
+    height: `${CENTER_THUMB_HEIGHT}px`,
+    top: '50%',
+    bottom: 'auto',
+    marginTop: `-${CENTER_THUMB_HEIGHT / 2}px`,
   }
 })
 
@@ -140,9 +179,9 @@ function zoneFromX(x) {
 }
 
 function pointerXAsFraction(event) {
-  const track = trackRef.value
-  if (!track) return SNAP_X.center
-  const rect = track.getBoundingClientRect()
+  const layer = insetLayerRef.value ?? trackRef.value
+  if (!layer) return SNAP_X.center
+  const rect = layer.getBoundingClientRect()
   const x = (event.clientX - rect.left) / rect.width
   return Math.min(1, Math.max(0, x))
 }
@@ -263,11 +302,12 @@ onMounted(() => {
   prefersReducedMotion.value = reducedMotionQuery.matches
   reducedMotionQuery.addEventListener('change', onReducedMotionChange)
 
-  if (typeof ResizeObserver !== 'undefined' && trackRef.value) {
+  const observeTarget = insetLayerRef.value ?? trackRef.value
+  if (typeof ResizeObserver !== 'undefined' && observeTarget) {
     resizeObserver = new ResizeObserver(() => {
       // Layout uses percentages; observer keeps ref fresh for pointer math.
     })
-    resizeObserver.observe(trackRef.value)
+    resizeObserver.observe(observeTarget)
   }
 })
 
@@ -306,7 +346,7 @@ onBeforeUnmount(() => {
       :data-testid="`${testId}-track`"
       :class="
         cn(
-          'bg-muted relative min-h-11 w-full overflow-hidden rounded-full border',
+          'bg-muted relative min-h-11 w-full rounded-full border p-1',
           'focus-visible:ring-ring/50 outline-none focus-visible:ring-3',
           disabled && 'pointer-events-none opacity-50',
         )
@@ -348,7 +388,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div
-        class="pointer-events-none absolute top-0 bottom-0 left-1/2 -translate-x-1/2 border-l border-dashed border-border"
+        class="pointer-events-none absolute top-1 bottom-1 left-1/2 -translate-x-1/2 border-l border-dashed border-border"
         aria-hidden="true"
       />
 
@@ -363,18 +403,24 @@ onBeforeUnmount(() => {
       />
 
       <div
-        ref="thumbRef"
-        data-thumb
-        :data-testid="`${testId}-thumb`"
-        :data-zone="thumbSelectedZone"
-        :class="thumbClasses"
-        :style="thumbStyle"
-        @pointerdown="onThumbPointerDown"
-        @pointermove="onThumbPointerMove"
-        @pointerup="onThumbPointerUp"
-        @pointercancel="onThumbPointerCancel"
+        ref="insetLayerRef"
+        class="absolute inset-1"
+        :data-testid="`${testId}-inset`"
       >
-        <span v-if="thumbLabel" class="truncate px-1">{{ thumbLabel }}</span>
+        <div
+          ref="thumbRef"
+          data-thumb
+          :data-testid="`${testId}-thumb`"
+          :data-zone="thumbSelectedZone"
+          :class="thumbClasses"
+          :style="thumbStyle"
+          @pointerdown="onThumbPointerDown"
+          @pointermove="onThumbPointerMove"
+          @pointerup="onThumbPointerUp"
+          @pointercancel="onThumbPointerCancel"
+        >
+          <span v-if="thumbLabel" class="truncate px-1">{{ thumbLabel }}</span>
+        </div>
       </div>
     </div>
   </div>
