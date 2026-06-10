@@ -16,7 +16,7 @@ const props = defineProps({
 })
 
 const router = useRouter()
-const { getLot, saveLot, getColorsForPart } = useSession()
+const { getLot, saveLot, getColorsForPart, resolvePartId } = useSession()
 
 const partId = ref('')
 const colorId = ref(null)
@@ -40,6 +40,12 @@ watch(
   { immediate: true },
 )
 
+watch(partId, (next, prev) => {
+  if (prev != null && prev !== '' && next !== prev) {
+    colorId.value = null
+  }
+})
+
 function resetForAnother() {
   const keepPart = partId.value
   partId.value = keepPart
@@ -53,7 +59,7 @@ async function handleSave(addAnother = false) {
   duplicateMessage.value = null
   const result = saveLot(props.sessionId, {
     id: props.lotId,
-    partId: partId.value,
+    partId: resolvePartId(partId.value),
     colorId: colorId.value,
     condition: condition.value,
     qty: Number(qty.value),

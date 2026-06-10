@@ -45,6 +45,17 @@ describe('useFixtureSession', () => {
     )
   })
 
+  it('returns part-specific known colors for the storyboard catalog', () => {
+    const colors = fixture.getColorsForPart('3001')
+    expect(colors.map((c) => c.id)).toEqual([86, 11, 1, 5, 15])
+    expect(fixture.getColorsForPart('')).toEqual([])
+  })
+
+  it('resolves part ids case-insensitively and enables colors', () => {
+    expect(fixture.resolvePartId('3062B')).toBe('3062b')
+    expect(fixture.getColorsForPart('3062B').length).toBeGreaterThan(0)
+  })
+
   it('advances phase on part-out confirm', () => {
     const { session } = fixture.createSession({
       setNumber: '99999-1',

@@ -33,6 +33,8 @@ export function useSession() {
     resolveReconciliation: fixture.resolveReconciliation,
     exportReconciliationXml: fixture.exportReconciliationXml,
     searchParts: fixture.searchParts,
+    resolvePartId: fixture.resolvePartId,
+    lookupPart: fixture.lookupPart,
     getColorsForPart: fixture.getColorsForPart,
     workerName: fixture.workerName,
     colorName: fixture.colorName,

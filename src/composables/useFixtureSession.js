@@ -250,6 +250,19 @@ export function useFixtureSession() {
     }
   }
 
+  function resolvePartId(raw) {
+    const trimmed = String(raw ?? '').trim()
+    if (!trimmed) return ''
+    const match = DEMO_PARTS.find((p) => p.partId.toLowerCase() === trimmed.toLowerCase())
+    return match?.partId ?? trimmed
+  }
+
+  function lookupPart(raw) {
+    const id = resolvePartId(raw)
+    if (!id) return null
+    return DEMO_PARTS.find((p) => p.partId === id) ?? null
+  }
+
   function searchParts(query) {
     const q = query.toLowerCase()
     return DEMO_PARTS.filter(
@@ -257,8 +270,27 @@ export function useFixtureSession() {
     )
   }
 
-  function getColorsForPart() {
-    return DEMO_COLORS
+  /** Known color ids per part — storyboard subset of DEMO_COLORS. */
+  const DEMO_PART_KNOWN_COLOR_IDS = {
+    '3001': [86, 11, 1, 5, 15],
+    '3003': [5, 11, 1],
+    '3020': [1, 86, 11],
+    '3062b': [11, 86, 5],
+    '4070': [15, 1, 86],
+  }
+
+  function getColorsForPart(partId) {
+    const canonical = resolvePartId(partId)
+    if (!canonical) return []
+
+    const ids = DEMO_PART_KNOWN_COLOR_IDS[canonical]
+    if (ids?.length) {
+      return ids.map((id) => DEMO_COLORS.find((c) => c.id === id)).filter(Boolean)
+    }
+
+    if (lookupPart(canonical)) return [...DEMO_COLORS]
+
+    return []
   }
 
   function workerName(sessionId, workerId) {
@@ -308,6 +340,8 @@ export function useFixtureSession() {
     resolveReconciliation,
     exportReconciliationXml,
     searchParts,
+    resolvePartId,
+    lookupPart,
     getColorsForPart,
     workerName,
     colorName,
