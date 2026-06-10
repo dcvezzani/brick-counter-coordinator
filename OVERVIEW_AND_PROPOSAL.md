@@ -42,12 +42,18 @@ I enjoy a good UI, but I am not a front end or UX engineer.  I hate pushing pixe
   - if the lego/color/condition (aka "lot") already exists, indicate who created the lot? how many legos in each cup
   - cups may consist of one or multiple colors
 
-### server
-- Node.js; no TypeScript
-- Vue.js
-- Font Awesome
-- ShadCN
-- web sockets
+### client (current — see [docs/tech-stack.md](docs/tech-stack.md))
+- Vue 3 + Vite
+- shadcn-vue + Tailwind CSS v4
+- Lucide icons (replaces Font Awesome)
+- Vue Router
+- JavaScript on the client (`components.json` → `typescript: false`)
+- **Unit 0 storyboard:** navigable UI, fixture data, no backend yet
+
+### server (planned — `/design`)
+- Node.js
+- WebSockets
+- BrickLink via AJAX/fetch (no iframes)
 
 #### features
 - handle client requests from worker devices

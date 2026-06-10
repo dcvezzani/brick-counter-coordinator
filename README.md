@@ -49,4 +49,13 @@ cd ../.. && git add .claude/deps/ai-dlc && git commit -m "chore: bump AI-DLC sub
 
 ## Development
 
-_Application code and local run instructions will be added with the first Feature._
+**Frontend (storyboard / Unit 0):**
+
+```bash
+npm install
+npm run dev
+```
+
+Stack: Vue 3, Vite, shadcn-vue, Tailwind, **JavaScript** — [docs/tech-stack.md](docs/tech-stack.md). UI components: `npx shadcn-vue@latest add <component>`. Path aliases: [jsconfig.json](jsconfig.json). Storyboard: [dcv/storyboard.md](dcv/storyboard.md).
+
+Coordinator server: after `/design` Tech Spec.

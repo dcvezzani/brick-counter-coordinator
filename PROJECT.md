@@ -1,7 +1,7 @@
 # Brick Counter Coordinator — Project Memory
 
 **Owner:** David Vezzani (Dave)  
-**Last updated:** 2026-06-10  
+**Last updated:** 2026-06-10 (JS client, shadcn-vue, storyboard Unit 0)  
 **Status:** Plan — Product Spec ready; GitHub Projects v2 board [#2](https://github.com/users/dcvezzani/projects/2) live for **`dcvezzani`**
 
 ## What this project is
@@ -10,13 +10,13 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 
 **Primary users:** counters/sorters (pick name at join), session lead, organizers.
 
-**Seed documents:** [OVERVIEW_AND_PROPOSAL.md](OVERVIEW_AND_PROPOSAL.md) · [dcv/qa-001.md](dcv/qa-001.md) · extension reference below
+**Seed documents:** [OVERVIEW_AND_PROPOSAL.md](OVERVIEW_AND_PROPOSAL.md) · [dcv/qa-001.md](dcv/qa-001.md) · [dcv/application-views.md](dcv/application-views.md) · extension reference below
 
 ## Architecture overview (high level — detail in `/design`)
 
 | Layer | Role |
 |-------|------|
-| **Worker clients** | Mobile browser — lot entry form (one lot per form), cups list, pick lists |
+| **Worker clients** | Mobile browser — six views: Home, New session, Lot form, List cups, List lots, Part-out reconciliation (see [dcv/application-views.md](dcv/application-views.md)) |
 | **Coordinator server** | Sessions, Bricklink part-out import, consolidated counts, reconciliation, split, XML export |
 
 **Core domain concepts:**
@@ -26,7 +26,7 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 - **Session** — One part-out job for a set, seeded from Bricklink part-out data.
 - **Remarks / location** — Storage target from Bricklink part-out metadata; flows to organizer pick lists.
 - **Reconciliation** — Session totals vs imported part-out list.
-- **Pick list** — Per-worker organizer assignments with line checkboxes.
+- **Pick list** — Per-worker organizer assignments on **List lots** (moved to storage / needs new location / list-complete).
 
 **Integrations (product level):**
 
@@ -37,7 +37,9 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 | Color picker | Reuse UX from existing extension |
 | Bricklink upload | **XML export** → manual bulk update (no live API) |
 
-**Dave's stack preferences** (for `/design`): mobile HTML5; Node (no TypeScript); Vue; Font Awesome; ShadCN-style UI; WebSockets. See [OVERVIEW_AND_PROPOSAL.md](OVERVIEW_AND_PROPOSAL.md).
+**Tech stack:** [docs/tech-stack.md](docs/tech-stack.md) — **Vue 3 + Vite + shadcn-vue + Tailwind v4 + Lucide + Vue Router** (client **JavaScript**, `components.json` → `typescript: false`). **Storyboard first** (Unit 0): navigable UI with fixture data, no backend. **Coordinator server** (Node, WebSockets) — contracts in `/design`. Mobile HTML5 primary.
+
+**UI tooling:** shadcn-vue CLI · MCP in [`.cursor/mcp.json`](.cursor/mcp.json) · skill [`.agents/skills/shadcn-vue`](.agents/skills/shadcn-vue/SKILL.md)
 
 ## Design reference — bricklink-chrome-extension
 
@@ -83,6 +85,9 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 | Path | Purpose |
 |------|---------|
 | `docs/AIDLC.md` | Canonical AIDLC process |
+| `docs/tech-stack.md` | Vue / shadcn-vue / tooling |
+| `src/` | Vite app — views, router, shadcn-vue components |
+| `dcv/storyboard.md` | Storyboard walkthrough script & exit criteria |
 | `feature/part-out-coordinator/` | First Feature — Product Spec, Tech Spec, phase artifacts |
 | `dcv/` | Decision / Q&A scratchpad (e.g. qa-001) |
 | `OVERVIEW_AND_PROPOSAL.md` | Original proposal |
@@ -93,12 +98,14 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 
 | Feature | Status | Folder |
 |---------|--------|--------|
-| Part-Out Counting Coordinator | Plan — Product Spec draft (qa-001 incorporated) | [feature/part-out-coordinator/](feature/part-out-coordinator/) |
+| Part-Out Counting Coordinator | Plan — Product Spec (views + storyboard Unit 0); Vite/shadcn-vue scaffold in repo | [feature/part-out-coordinator/](feature/part-out-coordinator/) |
 
 ## Conventions
 
 - **Process:** AIDLC — `/plan` → `/design` → `/build` → `/review` → `/ship`
-- **Entry UX:** One lot per form; **Save** / **Save and Add Another**; cups list for navigation
+- **Storyboard (Unit 0):** All six views navigable with fixture data before backend — [dcv/storyboard.md](dcv/storyboard.md)
+- **Application views:** Home → New session → Lot form / List cups / List lots / Part-out reconciliation
+- **Entry UX:** One lot per form; **Save** / **Save and Add Another**; **List cups** for navigation
 - **Workers:** Display name at session join (no auth MVP)
 - **Terminology:** **Lot** = part + color + condition; **cup** = physical container or cups-list row
 - **BrickLink integration:** AJAX/fetch only — **no iframes**
@@ -106,7 +113,16 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 
 ## How to run locally
 
-_Not yet defined. Update after `/design` and application scaffold._
+**Storyboard / frontend (today):**
+
+```bash
+npm install
+npm run dev
+```
+
+Open the dev server URL; storyboard views live under `src/views/` (added in Unit 0). Unit tests: `npm run test:unit`. E2E: `npm run test:e2e`.
+
+**Full stack:** coordinator server + WebSockets — after Tech Spec (`/design`).
 
 ## Resolved product decisions (2026-06-09)
 
