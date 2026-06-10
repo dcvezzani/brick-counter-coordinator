@@ -106,6 +106,15 @@ function createNew() {
         >
           Dev: Ternary swipe playground
         </Button>
+        <Button
+          v-if="isDev"
+          variant="ghost"
+          class="min-h-11"
+          data-testid="dev-segmented-swipe"
+          @click="router.push('/dev/segmented-swipe')"
+        >
+          Dev: Segmented swipe playground
+        </Button>
       </div>
     </div>
 

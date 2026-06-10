@@ -7,6 +7,7 @@ import ListCupsView from '@/views/ListCupsView.vue'
 import ListLotsView from '@/views/ListLotsView.vue'
 import ReconciliationView from '@/views/ReconciliationView.vue'
 import TernarySwipeDemoView from '@/views/dev/TernarySwipeDemoView.vue'
+import SegmentedSwipeDemoView from '@/views/dev/SegmentedSwipeDemoView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -47,6 +48,11 @@ const router = createRouter({
       path: '/dev/ternary-swipe',
       name: 'dev-ternary-swipe',
       component: TernarySwipeDemoView,
+    },
+    {
+      path: '/dev/segmented-swipe',
+      name: 'dev-segmented-swipe',
+      component: SegmentedSwipeDemoView,
     },
   ],
 })
