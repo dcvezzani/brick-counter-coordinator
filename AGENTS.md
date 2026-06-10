@@ -20,6 +20,21 @@ Humans: use [README.md](README.md). This file is for AI assistants.
 - **Submodule:** [`.claude/deps/ai-dlc`](.claude/deps/ai-dlc) — track branch **`main`**. Canonical bundles live under **`skills/`** in that repo. [`.claude/skills`](.claude/skills) is a **symlink** to `deps/ai-dlc/skills`.
 - **Cursor:** discovers `.claude/skills/` and `.cursor/skills/` (symlink to the same tree). Rules: [.cursor/rules/project-owner.md](.cursor/rules/project-owner.md), [.cursor/rules/aidlc.md](.cursor/rules/aidlc.md).
 
+### Skill shell scripts
+
+When a skill references a helper script (e.g. `git-commit.sh`), **resolve it relative to the skill tree first** — do not search the repo root or workspace at large unless the skill gives an absolute path or a path under `$HOME`.
+
+**Lookup order:**
+
+1. **Absolute path** — use as given (e.g. `/Users/dcvezzani/.claude/skills/git-commit/git-commit.sh`).
+2. **Path under `$HOME`** — expand and use (e.g. `~/.claude/skills/<skill>/<script>.sh`).
+3. **Skill-relative** — beside the skill that names it:
+   - Repo: `.claude/skills/<skill>/<script>.sh` (symlink to AI-DLC submodule)
+   - User install: `~/.claude/skills/<skill>/<script>.sh`
+4. **Only if the above fail** — search elsewhere (repo root, `scripts/`, etc.) and report what you tried.
+
+Example: `git-commit` → `.claude/skills/git-commit/git-commit.sh` or `~/.claude/skills/git-commit/git-commit.sh`, not `./git-commit.sh` at the repo root.
+
 ## Phase orchestrators (from AI-DLC submodule)
 
 Primary user invocations: **`/plan`**, **`/design`**, **`/build`**, **`/review`**, **`/ship`** — implemented as Agent Skills. Canonical definitions live in **[AI-DLC](https://github.com/queen-of-code/AI-DLC)**; this repo exposes them via **`.claude/skills`** (symlink), not a second committed copy.
