@@ -15,7 +15,7 @@
 | **Status** | Draft — awaiting human approval for build |
 | **Author** | AIDLC `/design` (David Vezzani, product owner) |
 | **Created** | 2026-06-10 |
-| **Last updated** | 2026-06-10 |
+| **Last updated** | 2026-06-10 (ADR-0004: server fetch + Part-out import) |
 
 ### Summary
 
@@ -26,7 +26,7 @@ A **Vue 3 SPA** (shadcn-vue, JavaScript) talks to a **Node.js coordinator** over
 | Unit | Title | GitHub card (create) | Product criteria |
 |------|-------|----------------------|------------------|
 | **0** | Storyboard prototype | `Unit 0: Storyboard — all views` | #14, #15 |
-| **1** | Shell & live session | `Unit 1: Session create/join` | #4 (partial), #14 |
+| **1** | Shell, fetch & import curation | `Unit 1: Session create/join + Part-out import` | #4 (partial), #14, #16 |
 | **2** | Counting & cups | `Unit 2: Lot entry + List cups` | #1–#7, #14 |
 | **3** | Organizer pick lists | `Unit 3: List lots organizer` | #10–#12 |
 | **4** | Reconciliation & XML export | `Unit 4: Part-out reconciliation` | #8, #9, #13 |
@@ -45,6 +45,11 @@ Units **1–4** depend on prior units only sequentially (2 needs 1, 3 needs 2, 4
 | [dcv/application-views.md](../../dcv/application-views.md) | View names, navigation |
 | [dcv/storyboard.md](../../dcv/storyboard.md) | Unit 0 walkthrough |
 | [PROJECT.md](../../PROJECT.md) | Bricklink extension module map |
+| [docs/bricklink-colors.md](../../docs/bricklink-colors.md) | Color catalog JSON + `catalogitem.page` known-color scrape; picker contract |
+| [docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md) | Bricklink `invSetEdit.asp` POST contract, cookie, form fields, HTML parse |
+| [docs/bricklink-store-inventory-search.md](../../docs/bricklink-store-inventory-search.md) | Bricklink `list.ajax` POST contract, query modes, `SimplifiedLot` mapper |
+| [docs/bricklink-catalog-price-guide.md](../../docs/bricklink-catalog-price-guide.md) | Bricklink `catalogPG.asp` HTML scrape for market avg price (optional; not MVP) |
+| [docs/bricklink-mass-update-export.md](../../docs/bricklink-mass-update-export.md) | Bulk-update XML build + `invXML.asp#update` validation handoff (Unit 4) |
 | `src/` | Vite scaffold (`router`, `button` component) |
 
 ### ADRs (this Feature)
@@ -53,7 +58,7 @@ Units **1–4** depend on prior units only sequentially (2 needs 1, 3 needs 2, 4
 |-----|----------|
 | [adr/0001-sqlite-single-node-persistence.md](../../adr/0001-sqlite-single-node-persistence.md) | SQLite file DB, single Node process |
 | [adr/0002-bricklink-ajax-only-no-iframes.md](../../adr/0002-bricklink-ajax-only-no-iframes.md) | AJAX/fetch only for Bricklink |
-| [adr/0003-part-out-import-json-upload-mvp.md](../../adr/0003-part-out-import-json-upload-mvp.md) | Part-out JSON upload for MVP import |
+| [adr/0004-part-out-server-fetch-curated-import.md](../../adr/0004-part-out-server-fetch-curated-import.md) | Server fetch + Part-out import curation (supersedes ADR-0003) |
 
 ### Out of scope (entire Feature — unchanged from Product Spec)
 
@@ -93,7 +98,7 @@ flowchart TB
 - **Thin client:** validation for UX only; authoritative rules on server.
 - **Real-time:** WebSocket broadcasts lot/session changes to joined clients (near-real-time totals, duplicate awareness).
 - **Bricklink:** Server holds **store session cookie** (env/config) for `list.ajax` and catalog color fetch; **no iframes** ([ADR-0002](../../adr/0002-bricklink-ajax-only-no-iframes.md)).
-- **Part-out official list (MVP):** JSON file upload from extension scrape ([ADR-0003](../../adr/0003-part-out-import-json-upload-mvp.md)); server-side scrape deferred.
+- **Part-out official list (MVP):** Server **POST**s `invSetEdit.asp` on session create with `BRICKLINK_SESSION_COOKIE` and `part_out_options` form fields ([docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md)); lead curates via **Part-out import** view ([ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md)). Parser ports extension `inv-set-edit-dom.js` / `code-scraper.js` output shape.
 
 ### Repository layout (target)
 
@@ -113,7 +118,7 @@ brick-counter-coordinator/
     routes/
     ws/
     services/
-    bricklink/            # list.ajax proxy, colors, xml export
+    bricklink/            # list.ajax proxy, part-out fetch/parser, colors, xml export
   package.json            # scripts: dev, dev:server, dev:all
 ```
 
@@ -123,7 +128,8 @@ brick-counter-coordinator/
 
 | Phase | Who acts | UI views |
 |-------|----------|----------|
-| `counting` | Counters, lead | Home, New session, Lot form, List cups |
+| `importing` | Lead | Part-out import (curate fetched list) |
+| `counting` | Counters, lead | Home, Lot form, List cups |
 | `reconciling` | Lead, workers resolve | Part-out reconciliation |
 | `organizing` | Organizers | List lots (organizer mode) |
 | `closed` | — | Read-only or redirect Home |
@@ -143,7 +149,9 @@ SQLite schema (logical entities):
 | `id` | TEXT PK | UUID |
 | `set_number` | TEXT | e.g. `70404-1` |
 | `name` | TEXT | Display label |
-| `phase` | TEXT | `counting` \| `reconciling` \| `organizing` \| `closed` |
+| `phase` | TEXT | `importing` \| `counting` \| `reconciling` \| `organizing` \| `closed` |
+| `part_out_fetch_status` | TEXT | `pending` \| `ok` \| `error` |
+| `part_out_fetch_error` | TEXT | Nullable; last fetch failure message |
 | `part_out_options` | JSON | Pricing, N/U, overwrite vs consolidate |
 | `created_at` | TEXT | ISO8601 |
 
@@ -158,7 +166,7 @@ SQLite schema (logical entities):
 
 Unique: `(session_id, display_name)`.
 
-### `part_out_lines` (imported official list)
+### `part_out_lines` (fetched official list)
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -167,9 +175,11 @@ Unique: `(session_id, display_name)`.
 | `part_id` | TEXT | |
 | `color_id` | INTEGER | Bricklink color id |
 | `condition` | TEXT | `N` \| `U` |
-| `qty_expected` | INTEGER | From part-out |
+| `qty_expected` | INTEGER | From Bricklink fetch |
 | `remarks` | TEXT | Storage location |
 | `bricklink_lot_id` | TEXT | Nullable; for bulk-update XML |
+| `excluded` | INTEGER | `0` = included in this sweep; `1` = lead removed from scope |
+| `sort_key` | INTEGER | Stable row order from fetch |
 
 ### `lots` (counted session lots)
 
@@ -229,11 +239,19 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 | `POST` | `/sessions/:id/join` | Body: `{ displayName }` → worker |
 | `POST` | `/sessions/:id/phase` | Lead: advance phase |
 
-### Part-out import (Unit 4; upload can stub in Unit 1)
+### Part-out fetch & import (Unit 1)
+
+Triggered by `POST /sessions` (async or inline — inline OK for MVP). On failure, session stays in `importing` with `part_out_fetch_status=error`; lead can `POST …/part-out/refetch`.
+
+**Upstream Bricklink call:** `POST https://www.bricklink.com/invSetEdit.asp` — session cookie, urlencoded form (`itemNo`, `itemCondition`, `invAdjust*`, etc.), HTML response parsed to `part_out_lines`. Full contract: [docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md). Fixture HTML: [dcv/set-part-out-list/response.html](../../dcv/set-part-out-list/response.html).
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/sessions/:id/part-out` | Multipart JSON file (extension scrape format) |
+| `GET` | `/sessions/:id/part-out/lines` | Query: `includedOnly=true\|false` (default `false` on import view) |
+| `PATCH` | `/sessions/:id/part-out/lines/:lineId` | Body: `{ excluded: true\|false }` |
+| `POST` | `/sessions/:id/part-out/lines/bulk-exclude` | Body: `{ lineIds: [] }` — exclude multiple |
+| `POST` | `/sessions/:id/part-out/confirm` | Lead confirms curation → phase `counting` |
+| `POST` | `/sessions/:id/part-out/refetch` | Re-fetch from Bricklink (resets lines; confirm in UI) |
 
 ### Lots & cups (Unit 2)
 
@@ -258,8 +276,12 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/bricklink/inventory-search?q=` | Proxy `list.ajax` (part search) |
-| `GET` | `/bricklink/parts/:partId/colors` | Known colors (catalog or static JSON) |
+| `GET` | `/bricklink/inventory-search` | Proxy `list.ajax` — query `q`/`partId`, optional `condition`, `colorId`, or `lotId` ([docs/bricklink-store-inventory-search.md](../../docs/bricklink-store-inventory-search.md)) |
+| `GET` | `/bricklink/parts/:partId/colors` | Known colors for part — catalog JSON + `catalogitem.page` scrape ([docs/bricklink-colors.md](../../docs/bricklink-colors.md)); optional `?q=` filter |
+
+**Upstream:** `POST https://www.bricklink.com/ajax/renovate/storeInventoryDetail/list.ajax` with `BRICKLINK_SESSION_COOKIE`. Port `buildListAjaxBody`, `filterInventoryRows`, `toSimplifiedLot` from extension `store-inventory-list.js`. Fixture: [dcv/search-parts/store-inventory-detail-list-query.md](../../dcv/search-parts/store-inventory-detail-list-query.md).
+
+**Optional — catalog price guide:** `GET /bricklink/price-guide?partId=&colorId=&condition=` → scrape `catalogPG.asp` ([docs/bricklink-catalog-price-guide.md](../../docs/bricklink-catalog-price-guide.md)). Market avg when no store lot exists; port [dcv/prices/catalog-price-guide.js](../../dcv/prices/catalog-price-guide.js). Not required for MVP counting flows.
 
 ### Reconciliation (Unit 4)
 
@@ -269,7 +291,7 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 | `POST` | `/sessions/:id/reconciliation/resolve` | Apply resolution |
 | `POST` | `/sessions/:id/reconciliation/export-xml` | Returns XML + validation URL |
 
-XML shape: port `bricklink-chrome-extension/scripts/bulk-repair/lib/build-bulk-update-xml.mjs` (`<INVENTORY><ITEM><LOTID/><REMARKS/></ITEM>`). **Not** upload XML from `inv-upload-xml.js`. See [PROJECT.md](../../PROJECT.md#design-reference--bricklink-chrome-extension).
+**Export XML:** Port `buildBulkUpdateXml` from `bricklink-chrome-extension/scripts/bulk-repair/lib/build-bulk-update-xml.mjs` (`<LOTID>` + `<REMARKS>` per reconciled row). **Not** upload XML from `inv-upload-xml.js`. Handoff: download/clipboard + `validationUrl` `https://www.bricklink.com/invXML.asp#update` — user pastes into `inv-update__textarea-xml` and verifies on BrickLink. Full contract: [docs/bricklink-mass-update-export.md](../../docs/bricklink-mass-update-export.md).
 
 ### Pick lists (Unit 3)
 
@@ -304,6 +326,7 @@ Connect: `ws://host/ws?sessionId=&workerId=`
 |------|------|------|
 | `/` | Home | 0 |
 | `/session/new` | New session | 0 |
+| `/session/:sessionId/import` | Part-out import | 0 |
 | `/sessions` | Enter existing (modal or sub-view on Home) | 0 |
 | `/session/:sessionId/cups` | List cups | 0 |
 | `/session/:sessionId/lot/:lotId?` | Lot form (`lotId` optional = new) | 0 |
@@ -316,7 +339,8 @@ Connect: `ws://host/ws?sessionId=&workerId=`
 
 | Component | Purpose |
 |-----------|---------|
-| `LotListTable` | Shared list UI for three List lots modes |
+| `LotListTable` | Shared list UI for List lots modes + Part-out import rows |
+| `PartOutImportTable` | Fetched lines with exclude/restore, bulk select, included/excluded tabs |
 | `LotForm` | Part search, color swatches, condition, count, Save / Save and Add Another |
 | `ColorPicker` | Port UX from extension `catalog-known-colors` + `bricklink-colors.json` |
 | `PartSearchCombobox` | Debounced search → `/bricklink/inventory-search` |
@@ -361,7 +385,7 @@ Local-network deployment assumed; document in README for production hardening la
 
 **Acceptance (Review):**
 
-- [ ] All six views reachable per [dcv/storyboard.md](../../dcv/storyboard.md)
+- [ ] All seven views reachable per [dcv/storyboard.md](../../dcv/storyboard.md)
 - [ ] Storyboard badge visible; no API calls
 - [ ] Lot form fits mobile viewport without scroll
 - [ ] List lots supports `mode` query switching (organizer / cup / reconciliation UI)
@@ -371,17 +395,20 @@ Local-network deployment assumed; document in README for production hardening la
 
 ---
 
-### Unit 1 — Shell & live session
+### Unit 1 — Shell, fetch & import curation
 
-**Deliver:** `server/` scaffold, SQLite migrations, session CRUD + join; Home + New session wired to API; other views still fixture or read-only shell.
+**Deliver:** `server/` scaffold, SQLite migrations, session CRUD + join; Bricklink part-out fetch on create; **Part-out import** view; Home + New session wired to API; other views still fixture or read-only shell.
 
 **Acceptance:**
 
-- [ ] `POST /sessions` creates session; worker stored
+- [ ] `POST /sessions` creates session, fetches part-out, stores `part_out_lines`; phase starts `importing`
 - [ ] `GET /sessions` lists open sessions
 - [ ] Join with display name; duplicate name rejected or suffixed (document behavior)
+- [ ] Part-out import: list all lines, exclude/restore, confirm → `counting`
+- [ ] Fetch failure surfaces error with refetch action (fixture fallback in dev documented)
 - [ ] WebSocket connects on enter session
 - [ ] `npm run dev:all` runs client + server
+- [ ] Product criterion **#16**
 
 ---
 
@@ -415,16 +442,17 @@ Local-network deployment assumed; document in README for production hardening la
 
 ### Unit 4 — Reconciliation & export
 
-**Deliver:** Part-out JSON upload, reconciliation report, resolve, XML export.
+**Deliver:** Reconciliation report (included lines only), resolve, XML export.
 
 **Acceptance:**
 
 - [ ] Product criteria #8, #9, #13
+- [ ] Reconciliation diff uses `excluded = 0` lines only
 - [ ] Mismatch filter on reconciliation list
 - [ ] XML validates on Bricklink bulk update validation page (manual sign-off)
 - [ ] Reconciled opens download + link to bulk update UI
 
-**Part-out JSON schema:** Align with extension `code-scraper.js` output; document in `server/bricklink/part-out-schema.json`.
+**Part-out line schema:** Align parsed fetch with extension `code-scraper.js` output; document in `server/bricklink/part-out-schema.json`. Tests use `fixtures/part-out-sample.json`.
 
 ---
 
@@ -494,15 +522,16 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 | Risk / question | Mitigation / owner |
 |-----------------|---------------------|
 | Bricklink session cookie rotation | Document refresh procedure; env var update |
-| Part-out JSON schema drift vs extension | Shared schema file; Dave validates sample export |
-| Server-side part-out fetch wanted later | ADR-0003 defers; add ADR when prioritizing |
+| Bricklink `invSetEdit.asp` HTML changes | Port `inv-set-edit-dom.js`; fixture regression tests |
+| Part-out fetch needs valid cookie | Document refresh; dev uses fixtures when cookie absent |
+| Two-sweep only for partial-bag | Brand-new (all N) and loose (all U) = one session, confirm with no exclusions |
 | `list.ajax` rate limits | Debounce search; cache colors per part id |
 | SQLite write contention | Single session MVP load is low; revisit if needed |
 | Product Spec not formally checked | Dave: check approval box before `/build` |
 
 ### Change requests to Product
 
-None. **Design choice recorded:** part-out import via JSON upload for MVP (ADR-0003) — aligns with extension scrape path Dave already has.
+**Locked (Dave 2026-06-10):** Server-side part-out fetch + **Part-out import** curation view ([ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md)). Single sweep (confirm full list) for brand-new or loose purchases; two-sweep only for partial-bag sets with mixed used/new.
 
 ---
 
@@ -511,6 +540,7 @@ None. **Design choice recorded:** part-out import via JSON upload for MVP (ADR-0
 | Date | Author | Changes |
 |------|--------|---------|
 | 2026-06-10 | `/design` | Initial Tech Spec: architecture, data model, APIs, Units 0–4, review passes |
+| 2026-06-10 | Dave | Locked part-out import: server fetch + Part-out import view (ADR-0004); seventh view; `importing` phase |
 
 ## Human approval
 

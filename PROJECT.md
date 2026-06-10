@@ -16,8 +16,8 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 
 | Layer | Role |
 |-------|------|
-| **Worker clients** | Mobile browser — six views: Home, New session, Lot form, List cups, List lots, Part-out reconciliation (see [dcv/application-views.md](dcv/application-views.md)) |
-| **Coordinator server** | Sessions, Bricklink part-out import, consolidated counts, reconciliation, split, XML export |
+| **Worker clients** | Mobile browser — seven views: Home, New session, Part-out import, Lot form, List cups, List lots, Part-out reconciliation (see [dcv/application-views.md](dcv/application-views.md)) |
+| **Coordinator server** | Sessions, Bricklink part-out **server fetch** + import curation, consolidated counts, reconciliation, split, XML export |
 
 **Core domain concepts:**
 
@@ -32,7 +32,7 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 
 | Integration | MVP behavior |
 |-------------|----------------|
-| Bricklink part-out | Official list + Remarks per line (import — Design chooses scrape vs session fetch) |
+| Bricklink part-out | Official list + Remarks per line — **server fetch** on session create; lead curates in Part-out import view ([ADR-0004](adr/0004-part-out-server-fetch-curated-import.md)) |
 | Part search | API-style lookup (reference: Dave's Chrome extension) |
 | Color picker | Reuse UX from existing extension |
 | Bricklink upload | **XML export** → manual bulk update (no live API) |
@@ -51,26 +51,29 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 
 | Area | Primary files | Notes |
 |------|---------------|-------|
-| **Color picker** | `src/content/inv-xml-modal.js`, `src/lib/catalog-known-colors.js`, `src/data/bricklink-colors.json` | Part ID → known colors from catalog page; filterable swatch list |
-| **Part / inventory lookup** | `src/lib/store-inventory-list.js`, `src/content/inv-xml-modal.js`, `docs/inv-xml-population-rules.md` | POST `list.ajax` by part ID / lot ID; not catalog autocomplete |
-| **Part-out import (JSON)** | `scripts/code-scraper.js`, `src/lib/inv-set-edit-dom.js`, `SCRIPTS.md` | DevTools scraper on `invSetEdit.asp`; extension **Load** remarks in `src/content/inv-set-edit.js` |
-| **XML export (upload)** | `src/lib/inv-upload-xml.js`, `src/content/inv-xml-modal.js` | `<INVENTORY><ITEM>` for mass **upload** (`invXML.asp`) |
-| **XML export (bulk update)** | `scripts/bulk-repair/lib/build-bulk-update-xml.mjs`, `dcv/bulk-updates-02/bulk-update-documentation.md` | `<LOTID>` + `<REMARKS>` patches — **not** wired in extension UI yet; likely shape for coordinator export |
+| **Color picker** | `src/lib/catalog-known-colors.js`, `src/lib/bricklink-colors.js`, `src/data/bricklink-colors.json`, [docs/bricklink-colors.md](docs/bricklink-colors.md) | Catalog JSON + per-part known colors from `catalogitem.page`; swatch picker |
+| **Part / inventory lookup** | `src/lib/store-inventory-list.js`, `src/content/inv-xml-modal.js`, [docs/bricklink-store-inventory-search.md](docs/bricklink-store-inventory-search.md) | POST `list.ajax` by part ID / lot ID; not catalog autocomplete |
+| **Catalog price guide** | `src/lib/catalog-price-guide.js`, [dcv/prices/catalog-price-guide.js](dcv/prices/catalog-price-guide.js), [docs/bricklink-catalog-price-guide.md](docs/bricklink-catalog-price-guide.md) | GET `catalogPG.asp` + HTML scrape for market avg price by part/color/condition |
+| **Part-out fetch & parse** | `scripts/code-scraper.js`, `src/lib/inv-set-edit-dom.js`, `SCRIPTS.md`, [docs/bricklink-set-part-out-fetch.md](docs/bricklink-set-part-out-fetch.md) | Server POSTs `invSetEdit.asp` with session cookie; port DOM parser (not JSON upload) |
+| **XML export (upload)** | `src/lib/inv-upload-xml.js`, `src/content/inv-xml-modal.js` | New lots — mass **upload** (`invXMLverify.asp`); not coordinator reconciled export |
+| **XML export (bulk update)** | `scripts/bulk-repair/lib/build-bulk-update-xml.mjs`, [docs/bricklink-mass-update-export.md](docs/bricklink-mass-update-export.md) | Reconciled export → `<LOTID>` patches → `invXML.asp#update` verify ([dcv/validate-mass-update/readme.md](dcv/validate-mass-update/readme.md)) |
 
 ### BrickLink URLs / endpoints (from extension)
 
 | URL | Use |
 |-----|-----|
-| `POST …/ajax/renovate/storeInventoryDetail/list.ajax` | Store inventory search |
-| `GET …/v2/catalog/catalogitem.page?P={partId}` | Known colors for part |
-| `https://www.bricklink.com/invSetEdit.asp` | Set part-out Step 2 |
-| `https://www.bricklink.com/invXML.asp` | Mass upload UI |
+| `POST …/ajax/renovate/storeInventoryDetail/list.ajax` | Store inventory search ([docs/bricklink-store-inventory-search.md](docs/bricklink-store-inventory-search.md)) |
+| `GET …/v2/catalog/catalogitem.page?P={partId}` | Known colors for part ([docs/bricklink-colors.md](docs/bricklink-colors.md)) |
+| `GET …/catalogPG.asp?P={partId}&colorid={colorId}` | Catalog price guide — scrape avg price ([docs/bricklink-catalog-price-guide.md](docs/bricklink-catalog-price-guide.md)) |
+| `POST https://www.bricklink.com/invSetEdit.asp` | Set part-out Step 2 — **fetch official list** ([docs/bricklink-set-part-out-fetch.md](docs/bricklink-set-part-out-fetch.md)) |
+| `https://www.bricklink.com/invXML.asp` | Mass upload UI (`invXMLverify.asp`) |
+| `https://www.bricklink.com/invXML.asp#update` | Mass **update** — paste bulk-update XML ([docs/bricklink-mass-update-export.md](docs/bricklink-mass-update-export.md)) |
 
 ### Design cautions (from extension exploration)
 
-- **Upload XML ≠ bulk-update XML** — coordinator reconciled export must match the **bulk update** schema (`build-bulk-update-xml.mjs`), not only `inv-upload-xml.js` upload shape.
-- **Part “search”** in extension = store inventory lookup + manual part ID, not Rebrickable-style catalog search — coordinator may need to port or wrap `list.ajax` server-side with BrickLink session.
-- **Part-out JSON** today = manual scraper (`code-scraper.js`); authenticated fetch is an open Design choice.
+- **Upload XML ≠ bulk-update XML** — coordinator reconciled export must match the **bulk update** schema (`build-bulk-update-xml.mjs`), not `inv-upload-xml.js` upload shape. See [docs/bricklink-mass-update-export.md](docs/bricklink-mass-update-export.md).
+- **Part “search”** in extension = store inventory lookup + manual part ID, not Rebrickable-style catalog search — coordinator proxies `list.ajax` server-side ([docs/bricklink-store-inventory-search.md](docs/bricklink-store-inventory-search.md)).
+- **Part-out import** = server fetch + curated import view ([ADR-0004](adr/0004-part-out-server-fetch-curated-import.md)); parser aligns with `code-scraper.js` / `inv-set-edit-dom.js`.
 - **No iframes (hard constraint)** — Dave forbids iframe-based BrickLink integration in the coordinator. The extension's part-out **My Remarks** flow uses `src/lib/inventory-iframe-lookup.js` (hidden iframe + React hydration) — **do not port this**. Prefer the **AJAX** path used by new-lot entry: `src/lib/store-inventory-list.js` → `POST …/storeInventoryDetail/list.ajax` (consumed from `src/content/inv-xml-modal.js`). Extension repo is **read-only reference**; no changes there.
 
 | Pattern | Extension module | Coordinator |
@@ -85,6 +88,11 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 | Path | Purpose |
 |------|---------|
 | `docs/AIDLC.md` | Canonical AIDLC process |
+| `docs/bricklink-colors.md` | Color catalog JSON + per-part known colors (`catalogitem.page`) |
+| `docs/bricklink-set-part-out-fetch.md` | Bricklink part-out list fetch (POST `invSetEdit.asp`, cookie, parse) |
+| `docs/bricklink-store-inventory-search.md` | Bricklink store inventory search (`list.ajax`, part/lot lookup) |
+| `docs/bricklink-catalog-price-guide.md` | Bricklink catalog price guide (`catalogPG.asp`, HTML scrape) |
+| `docs/bricklink-mass-update-export.md` | Reconciled bulk-update XML + `invXML.asp#update` handoff |
 | `docs/tech-stack.md` | Vue / shadcn-vue / tooling |
 | `src/` | Vite app — views, router, shadcn-vue components |
 | `dcv/storyboard.md` | Storyboard walkthrough script & exit criteria |
@@ -103,8 +111,8 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 ## Conventions
 
 - **Process:** AIDLC — `/plan` → `/design` → `/build` → `/review` → `/ship`
-- **Storyboard (Unit 0):** All six views navigable with fixture data before backend — [dcv/storyboard.md](dcv/storyboard.md)
-- **Application views:** Home → New session → Lot form / List cups / List lots / Part-out reconciliation
+- **Storyboard (Unit 0):** All seven views navigable with fixture data before backend — [dcv/storyboard.md](dcv/storyboard.md)
+- **Application views:** Home → New session → Part-out import → Lot form / List cups / List lots / Part-out reconciliation
 - **Entry UX:** One lot per form; **Save** / **Save and Add Another**; **List cups** for navigation
 - **Workers:** Display name at session join (no auth MVP)
 - **Terminology:** **Lot** = part + color + condition; **cup** = physical container or cups-list row

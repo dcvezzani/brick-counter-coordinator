@@ -13,7 +13,7 @@
 | **Status** | Draft — awaiting approval |
 | **Author** | David Vezzani (from [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md)) |
 | **Created** | 2026-06-09 |
-| **Last updated** | 2026-06-10 (storyboard Unit 0, shadcn-vue stack) |
+| **Last updated** | 2026-06-10 (server fetch + Part-out import; single vs two-sweep by purchase type) |
 | **Related Tech Spec** | [tech-spec.md](./tech-spec.md) |
 
 ## Problem & audience
@@ -61,7 +61,7 @@ These tie directly to the **scorecard** in `/ship`. Each should be **testable** 
 | 1 | **Parallel counting** — Two workers can join the same part-out session and submit counts for different lots without overwriting each other. | Simulated session with two devices; both submissions appear in consolidated totals. |
 | 2 | **Duplicate-lot awareness** — When worker B enters a lot that worker A already recorded, B sees who created it and the current total for that lot before or immediately after submit. | Enter same part/color/condition from two devices; second worker sees existing-lot message with creator and quantity. |
 | 3 | **Mobile-first entry** — A worker can complete one lot entry (part, color, condition, count) on a phone-sized viewport **without scrolling the main form**. | Manual check on phone or narrow viewport; all primary controls visible. |
-| 4 | **Session lifecycle** — Lead can create a session from a Bricklink part-out for a set; workers pick a **display name at join**, select the session, and all counts roll up. | End-to-end walkthrough: create → join with name → submit → view session totals. |
+| 4 | **Session lifecycle** — Lead can create a session from a Bricklink part-out for a set (server fetch + import curation); workers pick a **display name at join**, select the session, and all counts roll up. | End-to-end walkthrough: create → curate import → join with name → submit → view session totals. |
 | 5 | **Part search** — Worker can search/select a part to populate the part identifier field (search behavior matches business need for finding parts by number or name). | Search for a known part; selection fills the part field. |
 | 6 | **Save and Add Another** — Form offers **Save** and **Save and Add Another**; the latter saves the current lot and opens a fresh form with the **same part id pre-filled** (one lot per form). | Submit via Save and Add Another; new form shows previous part id; color/condition/count cleared or ready for entry. |
 | 7 | **List cups navigation** — **List cups** shows all cups in the session; tapping a cup opens **Lot form**, or **List lots** filtered to that cup when it has **multiple lots**. | Cup with one lot opens Lot form directly; cup with multiple lots shows cup-filtered List lots then Lot form. |
@@ -71,8 +71,9 @@ These tie directly to the **scorecard** in `/ship`. Each should be **testable** 
 | 11 | **Organizer progress** — On **List lots**, a worker can mark each lot as **moved to storage**, **needs new storage location**, or open it for editing; **mark entire list complete** when every line is in one of those states. Progress persists for their list during the session. | Mark lines with both outcomes; list-complete enabled only when all lines resolved; state survives refresh. |
 | 12 | **Pick-list delivery** — **List lots** is available on worker devices; worker can **send list to printer** when a printer is available. | View on device; print or print-ready output for one worker list. |
 | 13 | **Bricklink XML export** — From **Part-out reconciliation**, **Reconciled** generates **XML** and opens Bricklink **bulk update validation** (manual confirm/upload outside the app if required). | XML validates on Bricklink bulk-update validation page; spot-check row contents vs reconciled session. |
-| 14 | **Application views** — All six canonical views (see below) are **routable** with session-aware navigation. | Navigate to every view from an active session; no dead-end routes. |
+| 14 | **Application views** — All seven canonical views (see below) are **routable** with session-aware navigation. | Navigate to every view from an active session; no dead-end routes. |
 | 15 | **Storyboard walkthrough** — Before live backend work, stakeholders complete key scenarios (below) on an **interactive UI prototype** using **fixture data** only; feedback informs spec updates. | [dcv/storyboard.md](../../dcv/storyboard.md) script checked off; at least one counter/organizer walkthrough; gaps logged. |
+| 16 | **Part-out import curation** — After session create, lead sees the **full** server-fetched Bricklink part-out list, **confirms** scope (optionally excludes lines for partial-bag two-sweep); reconciliation compares session totals to **included** lines only. | Single-sweep: confirm all lines → count → reconcile. Partial-bag: exclude lines → confirm → count → reconcile; excluded lines not in expected quantities. |
 
 ### Business impact
 
@@ -88,11 +89,12 @@ Canonical screen inventory from [dcv/application-views.md](../../dcv/application
 | View | Purpose | Primary actions |
 |------|---------|-----------------|
 | **Home** | Session entry | Worker enters **display name**; chooses **create a new session** or **enter an existing session**. |
-| **New session** | Session creation | Specify the **set** to part-out; submit to create session. |
+| **New session** | Session creation | Specify the **set** to part-out and Bricklink options; submit — server **fetches** the official part-out list. |
+| **Part-out import** | Curate counting scope | Shows **all** fetched part-out lines (part, color, condition, qty, Remarks). Lead **confirms** to start counting (typical: full list, no changes). For partial-bag sets, lead may **exclude** out-of-scope lines per sweep; excluded lines can be **restored** before confirm. |
 | **Lot form** | Counting entry | A **lot** = part id + color + condition. Enter or find part number, select color and condition, enter count; **Save** or **Save and Add Another**. |
 | **List cups** | Cup navigation | Select a cup. If the cup has **multiple lots**, open **List lots** filtered to that cup only; otherwise open **Lot form** for the single lot. |
 | **List lots** | Organizer pick list (per worker) | Shows this worker's share of lots (evenly divided, ordered by part id). Mark lot **moved to storage** or **needs new storage location**; **add another lot**; **open lot for editing**; **open associated cup** (cup-filtered List lots); **send list to printer**; **mark entire list complete** when every line is resolved. |
-| **Part-out reconciliation** | Reconcile & export | Fetch official Bricklink part-out for the set; compare with session counts; show discrepancies as a **List lots**-style list; **Reconciled** generates XML and sends to Bricklink **bulk update validation**. |
+| **Part-out reconciliation** | Reconcile & export | Compare session counts to **included** part-out lines (from import curation); show discrepancies as a **List lots**-style list; **Reconciled** generates XML and sends to Bricklink **bulk update validation**. |
 
 ### View naming note
 
@@ -112,11 +114,11 @@ Work is split into **Units** at `/design` (one Tech Spec and one or more GitHub 
 
 | Unit | What ships | Backend / data |
 |------|------------|----------------|
-| **0 — Storyboard** | All six views navigable; **shadcn-vue** layout and controls; realistic **fixture** session | **None** — in-memory or static mocks only |
-| **1 — Shell & session (live)** | **Home**, **New session** wired to coordinator | Session create/join API |
+| **0 — Storyboard** | All seven views navigable; **shadcn-vue** layout and controls; realistic **fixture** session | **None** — in-memory or static mocks only |
+| **1 — Shell & session (live)** | **Home**, **New session**, **Part-out import** (fixture or live fetch) | Session create/join API; server part-out fetch |
 | **2 — Counting** | **Lot form**, **List cups**, cup-scoped **List lots** | Live lots + real-time totals |
 | **3 — Organizer lists** | Worker **List lots** (split, progress, print, list-complete) | Pick-list split + persistence |
-| **4 — Reconciliation & export** | **Part-out reconciliation** (**Reconciled** → XML → Bricklink validation) | Part-out import + export |
+| **4 — Reconciliation & export** | **Part-out reconciliation** (**Reconciled** → XML → Bricklink validation) | Reconciliation + XML export (import curation ships in Unit 1) |
 
 **Unit 0 (storyboard) — product intent:** Dave and stakeholders **walk through** the app in a browser, talk through scenarios, and refine the Product Spec **before** coordinator server or BrickLink integration. Same routes and view names as production; UI built with **shadcn-vue** per [docs/tech-stack.md](../../docs/tech-stack.md). Walkthrough script: [dcv/storyboard.md](../../dcv/storyboard.md).
 
@@ -124,7 +126,7 @@ Work is split into **Units** at `/design` (one Tech Spec and one or more GitHub 
 
 **Unit 1+** extends the **same** view components and routes — no throwaway prototype fork.
 
-Success criteria **#15** → Unit 0; **#1–#7, #14** → Units 0–2; **#8–#9, #13** → Unit 4; **#10–#12** → Unit 3.
+Success criteria **#15** → Unit 0; **#1–#7, #14, #16** → Units 0–2 ( **#16** live in Unit 1); **#8–#9, #13** → Unit 4; **#10–#12** → Unit 3.
 
 ## User experience & scenarios
 
@@ -132,21 +134,26 @@ Success criteria **#15** → Unit 0; **#1–#7, #14** → Units 0–2; **#8–#9
 
 1. **Home → session** — On **Home**, worker enters display name and chooses **create a new session** or **enter an existing session**.
 
-2. **New session** — Session lead opens **New session**, specifies the set to part-out (Bricklink options: pricing basis, new/used, inventory overwrite vs consolidate), and submits.
+2. **New session** — Session lead opens **New session**, specifies the set to part-out (Bricklink options: pricing basis, new/used, inventory overwrite vs consolidate), and submits. Server fetches the full official part-out list.
 
-3. **Record a lot (Lot form)** — Worker enters part (via search/picker), color, condition (new or used), and count. Form fits on one mobile screen without scrolling. Worker taps **Save** or **Save and Add Another** (latter pre-fills part id on a fresh form).
+3. **Curate import (Part-out import)** — Lead reviews all fetched lines and confirms scope before counting. **Most sessions are a single sweep** — lead confirms the full list with no exclusions:
+   - **Brand-new sealed set** — all parts are **new**; no used bricks expected; one session, confirm all lines.
+   - **Loose brick purchase** — all parts are **used**; no new bricks expected; one session, confirm all lines.
+   - **Partial-bag set** (some bags opened, some sealed) — **two sweeps**: first session excludes lines still in sealed bags and counts **used** parts found outside bags; a **second session** excludes the opposite subset and counts **new** parts from sealed bags. Lead excludes out-of-scope lines per sweep before confirm.
 
-4. **Discover an existing lot** — If the part/color/condition already exists in the session, worker sees who created it, current quantity, and that other physical cups may exist for the same lot.
+4. **Record a lot (Lot form)** — Worker enters part (via search/picker), color, condition (new or used), and count. Form fits on one mobile screen without scrolling. Worker taps **Save** or **Save and Add Another** (latter pre-fills part id on a fresh form).
 
-5. **Browse cups (List cups)** — Worker opens **List cups**. Tapping a cup:
+5. **Discover an existing lot** — If the part/color/condition already exists in the session, worker sees who created it, current quantity, and that other physical cups may exist for the same lot.
+
+6. **Browse cups (List cups)** — Worker opens **List cups**. Tapping a cup:
    - **One lot** in the cup → opens **Lot form** for that lot.
    - **Multiple lots** in the cup → opens **List lots** filtered to that cup; worker picks a lot, then **Lot form**.
 
-6. **Reconcile (Part-out reconciliation)** — Lead opens **Part-out reconciliation**; official Bricklink part-out is compared to session counts. Discrepancies appear in a list; workers resolve until totals agree.
+7. **Reconcile (Part-out reconciliation)** — Lead opens **Part-out reconciliation**; **included** part-out lines are compared to session counts. Discrepancies appear in a list; workers resolve until totals agree.
 
-7. **Organize (List lots)** — After split, each worker opens their **List lots** view (even share, ordered by part id). They mark lots **moved to storage** or **needs new storage location**, edit lots, jump to the associated cup, print the list, and **mark entire list complete** when done.
+8. **Organize (List lots)** — After split, each worker opens their **List lots** view (even share, ordered by part id). They mark lots **moved to storage** or **needs new storage location**, edit lots, jump to the associated cup, print the list, and **mark entire list complete** when done.
 
-8. **Export to Bricklink** — From **Part-out reconciliation**, lead presses **Reconciled** to generate **XML** and open Bricklink **bulk update validation** (confirm/upload outside the app if required).
+9. **Export to Bricklink** — From **Part-out reconciliation**, lead presses **Reconciled** to generate **XML** and open Bricklink **bulk update validation** (confirm/upload outside the app if required).
 
 ### Experience principles
 
@@ -157,7 +164,7 @@ Success criteria **#15** → Unit 0; **#1–#7, #14** → Units 0–2; **#8–#9
 - **Elegant and engaging UI** — Polished, modern interface; Dave wants high-quality UX without hand-tuning every pixel (implementation in `/design`).
 - **Reuse familiar controls** — Color selection should feel consistent with Dave's **existing LEGO tooling** (reference implementations available for Design — see Related documents).
 - **Glanceable progress** — Lead and workers can see whether the session is in counting, reconciliation, or organizing.
-- **Stable view names** — Use the six canonical views above in UI labels and navigation; avoid inventing alternate screen names per Unit.
+- **Stable view names** — Use the seven canonical views above in UI labels and navigation; avoid inventing alternate screen names per Unit.
 - **Storyboard before backend** — Interactive prototype (Unit 0) for stakeholder feedback; not a separate design-only artifact.
 
 ## Scope
@@ -165,8 +172,9 @@ Success criteria **#15** → Unit 0; **#1–#7, #14** → Units 0–2; **#8–#9
 ### In scope
 
 - **Storyboard prototype (Unit 0)** — Navigable UI for all views with fixture data; [dcv/storyboard.md](../../dcv/storyboard.md).
-- **Six application views** — **Home**, **New session**, **Lot form**, **List cups**, **List lots**, **Part-out reconciliation** (see [Application views](#application-views)); routes established in **Unit 0**, live behavior added in Units 1–4.
-- Part-out **session** creation from a **Bricklink part-out** for a given set (set number and Bricklink part-out options).
+- **Seven application views** — **Home**, **New session**, **Part-out import**, **Lot form**, **List cups**, **List lots**, **Part-out reconciliation** (see [Application views](#application-views)); routes established in **Unit 0**, live behavior added in Units 1–4.
+- Part-out **session** creation from a **Bricklink part-out** for a given set (set number and Bricklink part-out options); **server-side fetch** of the official list ([ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md)).
+- **Part-out import** curation — lead reviews fetched list and confirms before counting; excludes out-of-scope lines only when needed (**two-sweep** for partial-bag sets; single sweep for brand-new or loose purchases).
 - Worker **display name at join** on **Home** (no account system required for MVP).
 - Worker **self-service entry** on **Lot form**: part identifier, color, condition, quantity — **one lot per form**.
 - Form actions: **Save** and **Save and Add Another** (pre-fill part id on the latter).
@@ -226,6 +234,7 @@ Resolved in [dcv/qa-001.md](../../dcv/qa-001.md):
 | 2026-06-10 | **Reconciled handoff:** **Reconciled** on **Part-out reconciliation** generates XML and opens Bricklink **bulk update validation** (not silent background upload). |
 | 2026-06-10 | **Storyboard (Unit 0):** Interactive shadcn-vue prototype with fixture data — all views navigable for stakeholder walkthroughs before backend ([dcv/storyboard.md](../../dcv/storyboard.md)). |
 | 2026-06-10 | **UI stack:** **shadcn-vue** + Tailwind v4 + Lucide + Vue Router on Vite; client **JavaScript** (`typescript: false`). Supersedes Font Awesome / generic ShadCN notes. |
+| 2026-06-10 | **Part-out import:** **Server-side fetch** on session create (not JSON upload). New **Part-out import** view shows full fetched list; lead confirms before counting (excludes lines only when needed). **Single sweep** for brand-new sealed sets (all new) or loose bricks (all used). **Two sweeps** only for partial-bag sets (mixed opened/sealed bags). Supersedes [ADR-0003](../../adr/0003-part-out-import-json-upload-mvp.md) → [ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md). |
 
 ## Related documents
 
