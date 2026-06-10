@@ -48,14 +48,28 @@ function pointerAt(wrapper, type, clientX, extra = {}) {
   thumb.element.dispatchEvent(new PointerEvent(type, eventInit))
 }
 
-function tapTrackAt(wrapper, clientX) {
+function tapTrackAt(wrapper, clientX, pointerId = 2) {
+  const track = wrapper.get('[data-testid="ternary-swipe-track"]')
+  const eventInit = {
+    bubbles: true,
+    clientX,
+    clientY: 22,
+    pointerId,
+    pointerType: 'mouse',
+  }
+  track.element.dispatchEvent(new PointerEvent('pointerdown', eventInit))
+  track.element.dispatchEvent(new PointerEvent('pointerup', { ...eventInit }))
+}
+
+function trackPointerAt(wrapper, type, clientX, clientY = 22, pointerId = 3) {
   const track = wrapper.get('[data-testid="ternary-swipe-track"]')
   track.element.dispatchEvent(
-    new PointerEvent('pointerdown', {
+    new PointerEvent(type, {
       bubbles: true,
+      cancelable: true,
       clientX,
-      clientY: 22,
-      pointerId: 2,
+      clientY,
+      pointerId,
       pointerType: 'mouse',
     }),
   )
@@ -140,6 +154,27 @@ describe('TernarySwipeControl', () => {
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['moved'])
     expect(wrapper.get('[data-testid="ternary-swipe-hidden-input"]').element.value).toBe('moved')
     expect(wrapper.get('[data-testid="ternary-swipe-thumb"]').attributes('data-zone')).toBe('left')
+  })
+
+  it('slides after track tap without lifting finger', async () => {
+    const wrapper = mount(TernarySwipeControl, {
+      props: {
+        name: 'status',
+        modelValue: '',
+        option1Value: 'moved',
+        option2Value: 'new_loc',
+      },
+    })
+
+    mockTrackRect(wrapper)
+    trackPointerAt(wrapper, 'pointerdown', 40)
+    trackPointerAt(wrapper, 'pointermove', 250)
+    trackPointerAt(wrapper, 'pointerup', 250)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['new_loc'])
+    expect(wrapper.get('[data-testid="ternary-swipe-hidden-input"]').element.value).toBe('new_loc')
+    expect(wrapper.get('[data-testid="ternary-swipe-thumb"]').attributes('data-zone')).toBe('right')
   })
 
   it('taps right half to select option 2', async () => {

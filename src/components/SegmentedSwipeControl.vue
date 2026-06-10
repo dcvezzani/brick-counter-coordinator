@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 const SELECTOR_SIZE_PX = 10
 const TRANSITION_MS = 220
 const SWIPE_UP_THRESHOLD = 24
+const HORIZONTAL_DRAG_THRESHOLD = 8
 
 const DEFAULT_THUMB_CLASSES = [
   'bg-primary text-primary-foreground text-sm',
@@ -80,6 +81,10 @@ const snapPoints = computed(() =>
   props.options.map((_, index) => (index + 0.5) / segmentCount.value),
 )
 
+const neutralReleaseRadius = computed(() =>
+  Math.min(proximityFalloff.value * 0.45, 1 / (4 * segmentCount.value)),
+)
+
 const committedValue = computed(() => {
   if (committedIndex.value == null) return props.neutralValue
   return props.options[committedIndex.value]?.value ?? props.neutralValue
@@ -109,6 +114,11 @@ function proximity(x, target) {
   return Math.max(0, 1 - Math.abs(x - target) / proximityFalloff.value)
 }
 
+function isReleaseOnNeutralAnchor(x) {
+  if (!props.allowNeutral) return false
+  return Math.abs(x - neutralX.value) <= neutralReleaseRadius.value
+}
+
 function lerp(start, end, amount) {
   return start + (end - start) * amount
 }
@@ -132,7 +142,13 @@ const thumbMorph = computed(() => {
   const x = displayX.value
 
   if (dragging.value) {
-    const neutralBlend = props.allowNeutral ? proximity(x, neutralX.value) : 0
+    const horizontalDrag =
+      Math.abs(dragLastX.value - dragStartX.value) >= HORIZONTAL_DRAG_THRESHOLD
+    const aimingAtNeutral = isReleaseOnNeutralAnchor(x)
+    const neutralBlend =
+      props.allowNeutral && (!horizontalDrag || aimingAtNeutral)
+        ? proximity(x, neutralX.value)
+        : 0
     let dominantOptionIndex = 0
     let optionProximity = 0
 
@@ -288,7 +304,7 @@ function indexFromValue(value) {
   return props.allowNeutral ? null : 0
 }
 
-function resolveFromX(x) {
+function resolveFromX(x, { excludeNeutral = false } = {}) {
   let best = { kind: 'option', index: 0, score: -1 }
 
   props.options.forEach((_, index) => {
@@ -298,7 +314,7 @@ function resolveFromX(x) {
     }
   })
 
-  if (props.allowNeutral) {
+  if (props.allowNeutral && !excludeNeutral) {
     const neutralScore = proximity(x, neutralX.value)
     if (neutralScore > best.score) {
       best = { kind: 'neutral', index: null, score: neutralScore }
@@ -306,6 +322,10 @@ function resolveFromX(x) {
   }
 
   return best
+}
+
+function dragHorizontalDistance() {
+  return Math.abs(dragLastX.value - dragStartX.value)
 }
 
 function pointerXAsFraction(event) {
@@ -358,8 +378,9 @@ function isSwipeUp(event) {
   return deltaY >= SWIPE_UP_THRESHOLD && deltaY > deltaX
 }
 
-function onThumbPointerDown(event) {
-  if (props.disabled) return
+function beginPointerDrag(event) {
+  if (props.disabled || dragging.value) return
+  if (event.target.closest('[data-neutral-anchor]')) return
   event.preventDefault()
   activePointerId = event.pointerId
   dragging.value = true
@@ -369,8 +390,8 @@ function onThumbPointerDown(event) {
   dragLastY.value = event.clientY
   dragX.value = pointerXAsFraction(event)
   animating.value = false
-  if (typeof thumbRef.value?.setPointerCapture === 'function') {
-    thumbRef.value.setPointerCapture(event.pointerId)
+  if (typeof trackRef.value?.setPointerCapture === 'function') {
+    trackRef.value.setPointerCapture(event.pointerId)
   }
 }
 
@@ -381,48 +402,49 @@ function finishSwipeUp() {
   commitNeutral()
 }
 
-function onThumbPointerMove(event) {
+function onTrackPointerMove(event) {
   if (!dragging.value || event.pointerId !== activePointerId) return
   dragLastX.value = event.clientX
   dragLastY.value = event.clientY
-  if (isSwipeUp(event)) {
-    finishSwipeUp()
-    return
-  }
   dragX.value = pointerXAsFraction(event)
 }
 
 function finishDrag(event) {
-  if (isSwipeUp(event)) {
+  if (event && isSwipeUp(event)) {
     finishSwipeUp()
     return
   }
 
   const x = dragX.value ?? displayX.value
-  const resolved = resolveFromX(x)
+  const horizontalDrag = dragHorizontalDistance() >= HORIZONTAL_DRAG_THRESHOLD
+
+  if (isReleaseOnNeutralAnchor(x)) {
+    dragging.value = false
+    dragX.value = null
+    activePointerId = null
+    commitIndex(null)
+    return
+  }
+
+  const resolved = resolveFromX(x, { excludeNeutral: horizontalDrag })
   dragging.value = false
   dragX.value = null
   activePointerId = null
   commitIndex(resolved.index)
 }
 
-function onThumbPointerUp(event) {
-  if (!dragging.value || event.pointerId !== activePointerId) return
-  finishDrag(event)
-}
-
-function onThumbPointerCancel(event) {
-  if (!dragging.value || event.pointerId !== activePointerId) return
-  finishDrag(event)
-}
-
 function onTrackPointerDown(event) {
-  if (props.disabled || dragging.value) return
-  if (event.target.closest('[data-thumb], [data-neutral-anchor]')) return
+  beginPointerDrag(event)
+}
 
-  const x = pointerXAsFraction(event)
-  const resolved = resolveFromX(x)
-  snapToIndex(resolved.index)
+function onTrackPointerUp(event) {
+  if (!dragging.value || event.pointerId !== activePointerId) return
+  finishDrag(event)
+}
+
+function onTrackPointerCancel(event) {
+  if (!dragging.value || event.pointerId !== activePointerId) return
+  finishDrag(event)
 }
 
 function onNeutralAnchorClick() {
@@ -525,13 +547,16 @@ onBeforeUnmount(() => {
       :data-testid="`${testId}-track`"
       :class="
         cn(
-          'bg-muted relative min-h-11 w-full rounded-full border p-1',
+          'bg-muted relative min-h-11 w-full touch-none rounded-full border p-1',
           'focus-visible:ring-ring/50 outline-none focus-visible:ring-3',
           disabled && 'pointer-events-none opacity-50',
           trackClass,
         )
       "
       @pointerdown="onTrackPointerDown"
+      @pointermove="onTrackPointerMove"
+      @pointerup="onTrackPointerUp"
+      @pointercancel="onTrackPointerCancel"
       @keydown="onKeydown"
     >
       <div
@@ -555,6 +580,7 @@ onBeforeUnmount(() => {
           :disabled="disabled"
           :data-testid="`${testId}-neutral-anchor`"
           class="absolute top-1/2 z-10 max-h-2.5 max-w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground bg-transparent focus-visible:ring-ring/50 outline-none focus-visible:ring-2"
+          :class="dragging && 'pointer-events-none'"
           :style="{
             left: `calc(${(1 / segmentCount) * 100}% )`,
             width: `${SELECTOR_SIZE_PX}px`,
@@ -572,10 +598,6 @@ onBeforeUnmount(() => {
           :data-index="committedIndex ?? -1"
           :class="thumbClasses"
           :style="thumbStyle"
-          @pointerdown="onThumbPointerDown"
-          @pointermove="onThumbPointerMove"
-          @pointerup="onThumbPointerUp"
-          @pointercancel="onThumbPointerCancel"
         />
       </div>
 

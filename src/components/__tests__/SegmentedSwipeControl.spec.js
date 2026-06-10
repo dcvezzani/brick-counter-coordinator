@@ -54,14 +54,28 @@ function pointerAt(wrapper, type, clientX, clientY = 22, extra = {}) {
   thumb.element.dispatchEvent(new PointerEvent(type, eventInit))
 }
 
-function tapTrackAt(wrapper, clientX) {
+function tapTrackAt(wrapper, clientX, pointerId = 2) {
+  const track = wrapper.get('[data-testid="segmented-swipe-track"]')
+  const eventInit = {
+    bubbles: true,
+    clientX,
+    clientY: 22,
+    pointerId,
+    pointerType: 'mouse',
+  }
+  track.element.dispatchEvent(new PointerEvent('pointerdown', eventInit))
+  track.element.dispatchEvent(new PointerEvent('pointerup', { ...eventInit }))
+}
+
+function trackPointerAt(wrapper, type, clientX, clientY = 22, pointerId = 3) {
   const track = wrapper.get('[data-testid="segmented-swipe-track"]')
   track.element.dispatchEvent(
-    new PointerEvent('pointerdown', {
+    new PointerEvent(type, {
       bubbles: true,
+      cancelable: true,
       clientX,
-      clientY: 22,
-      pointerId: 2,
+      clientY,
+      pointerId,
       pointerType: 'mouse',
     }),
   )
@@ -147,6 +161,25 @@ describe('SegmentedSwipeControl', () => {
     expect(wrapper.get('[data-testid="segmented-swipe-thumb"]').attributes('data-index')).toBe('0')
   })
 
+  it('slides after track tap without lifting finger', async () => {
+    const wrapper = mount(SegmentedSwipeControl, {
+      props: {
+        name: 'status',
+        modelValue: '',
+        options: THREE_OPTIONS,
+      },
+    })
+
+    mockTrackRect(wrapper)
+    trackPointerAt(wrapper, 'pointerdown', 40)
+    trackPointerAt(wrapper, 'pointermove', 250)
+    trackPointerAt(wrapper, 'pointerup', 250)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['trashed'])
+    expect(wrapper.get('[data-testid="segmented-swipe-hidden-input"]').element.value).toBe('trashed')
+  })
+
   it('taps right segment to select last option', async () => {
     const wrapper = mount(SegmentedSwipeControl, {
       props: {
@@ -200,7 +233,7 @@ describe('SegmentedSwipeControl', () => {
     expect(wrapper.get('[data-testid="segmented-swipe-thumb"]').attributes('data-index')).toBe('2')
   })
 
-  it('morphs toward circle while dragging toward neutral anchor', async () => {
+  it('does not morph to neutral during horizontal drag through neutral zone', async () => {
     const wrapper = mount(SegmentedSwipeControl, {
       props: {
         name: 'status',
@@ -211,17 +244,56 @@ describe('SegmentedSwipeControl', () => {
 
     mockTrackRect(wrapper)
     pointerAt(wrapper, 'pointerdown', 50)
-    pointerAt(wrapper, 'pointermove', 101)
+    pointerAt(wrapper, 'pointermove', 130)
     await wrapper.vm.$nextTick()
 
     const thumb = wrapper.get('[data-testid="segmented-swipe-thumb"]')
-    expect(thumb.attributes('data-zone')).toBe('neutral')
-    expect(thumb.classes()).toContain('bg-foreground')
-    const style = thumb.attributes('style') ?? ''
-    expect(style).toMatch(/width: 1[0-4]\.\d+px/)
+    expect(thumb.attributes('data-zone')).not.toBe('neutral')
+    expect(thumb.classes()).not.toContain('bg-foreground')
   })
 
-  it('swipe up commits neutral during drag', async () => {
+  it('does not snap to neutral when releasing after horizontal slide through neutral zone', async () => {
+    const wrapper = mount(SegmentedSwipeControl, {
+      props: {
+        name: 'status',
+        modelValue: '',
+        options: THREE_OPTIONS,
+        neutralValue: 'none',
+      },
+    })
+
+    mockTrackRect(wrapper)
+    trackPointerAt(wrapper, 'pointerdown', 40)
+    trackPointerAt(wrapper, 'pointermove', 101)
+    trackPointerAt(wrapper, 'pointermove', 250)
+    trackPointerAt(wrapper, 'pointerup', 250)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['trashed'])
+    expect(wrapper.get('[data-testid="segmented-swipe-hidden-input"]').element.value).toBe('trashed')
+  })
+
+  it('snaps to neutral when releasing on the none anchor after horizontal drag', async () => {
+    const wrapper = mount(SegmentedSwipeControl, {
+      props: {
+        name: 'status',
+        modelValue: 'moved',
+        options: THREE_OPTIONS,
+        neutralValue: 'none',
+      },
+    })
+
+    mockTrackRect(wrapper)
+    trackPointerAt(wrapper, 'pointerdown', 40)
+    trackPointerAt(wrapper, 'pointermove', 101)
+    trackPointerAt(wrapper, 'pointerup', 101)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['none'])
+    expect(wrapper.get('[data-testid="segmented-swipe-thumb"]').attributes('data-zone')).toBe('neutral')
+  })
+
+  it('swipe up commits neutral on release', async () => {
     const wrapper = mount(SegmentedSwipeControl, {
       props: {
         name: 'status',
@@ -234,6 +306,7 @@ describe('SegmentedSwipeControl', () => {
     mockTrackRect(wrapper)
     pointerAt(wrapper, 'pointerdown', 150, 40)
     pointerAt(wrapper, 'pointermove', 150, 10)
+    pointerAt(wrapper, 'pointerup', 150, 10)
     await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['none'])

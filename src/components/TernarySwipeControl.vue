@@ -287,31 +287,22 @@ function snapToZone(zone) {
   commitZone(zone)
 }
 
-function onThumbPointerDown(event) {
-  if (props.disabled) return
+function beginPointerDrag(event) {
+  if (props.disabled || dragging.value) return
+  if (event.target.closest('[data-center-anchor]')) return
   event.preventDefault()
   activePointerId = event.pointerId
   dragging.value = true
   dragX.value = pointerXAsFraction(event)
   animating.value = false
-  if (typeof thumbRef.value?.setPointerCapture === 'function') {
-    thumbRef.value.setPointerCapture(event.pointerId)
+  if (typeof trackRef.value?.setPointerCapture === 'function') {
+    trackRef.value.setPointerCapture(event.pointerId)
   }
 }
 
-function onThumbPointerMove(event) {
+function onTrackPointerMove(event) {
   if (!dragging.value || event.pointerId !== activePointerId) return
   dragX.value = pointerXAsFraction(event)
-}
-
-function onThumbPointerUp(event) {
-  if (!dragging.value || event.pointerId !== activePointerId) return
-  finishDrag()
-}
-
-function onThumbPointerCancel(event) {
-  if (!dragging.value || event.pointerId !== activePointerId) return
-  finishDrag()
 }
 
 function finishDrag() {
@@ -324,12 +315,17 @@ function finishDrag() {
 }
 
 function onTrackPointerDown(event) {
-  if (props.disabled || dragging.value) return
-  if (event.target.closest('[data-thumb], [data-center-anchor]')) return
+  beginPointerDrag(event)
+}
 
-  const x = pointerXAsFraction(event)
-  const zone = zoneFromX(x)
-  snapToZone(zone)
+function onTrackPointerUp(event) {
+  if (!dragging.value || event.pointerId !== activePointerId) return
+  finishDrag()
+}
+
+function onTrackPointerCancel(event) {
+  if (!dragging.value || event.pointerId !== activePointerId) return
+  finishDrag()
 }
 
 function onCenterAnchorClick() {
@@ -429,6 +425,9 @@ onBeforeUnmount(() => {
         )
       "
       @pointerdown="onTrackPointerDown"
+      @pointermove="onTrackPointerMove"
+      @pointerup="onTrackPointerUp"
+      @pointercancel="onTrackPointerCancel"
       @keydown="onKeydown"
     >
       <div class="pointer-events-none absolute inset-0 grid grid-cols-2">
@@ -496,10 +495,6 @@ onBeforeUnmount(() => {
           :data-zone="visualZone"
           :class="thumbClasses"
           :style="thumbStyle"
-          @pointerdown="onThumbPointerDown"
-          @pointermove="onThumbPointerMove"
-          @pointerup="onThumbPointerUp"
-          @pointercancel="onThumbPointerCancel"
         >
           <span v-if="thumbLabel" class="truncate px-1">{{ thumbLabel }}</span>
         </div>
