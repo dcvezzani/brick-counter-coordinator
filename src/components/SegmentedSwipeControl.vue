@@ -535,8 +535,16 @@ onBeforeUnmount(() => {
       @keydown="onKeydown"
     >
       <div
+        v-for="divider in segmentCount - 1"
+        :key="`divider-${divider}`"
+        class="pointer-events-none absolute top-1 bottom-1 z-[1] border-l border-dashed border-border"
+        :style="{ left: `${(divider / segmentCount) * 100}%` }"
+        aria-hidden="true"
+      />
+
+      <div
         ref="insetLayerRef"
-        class="absolute inset-1"
+        class="absolute inset-1 z-10"
         :data-testid="`${testId}-inset`"
       >
         <button
@@ -546,7 +554,7 @@ onBeforeUnmount(() => {
           data-neutral-anchor
           :disabled="disabled"
           :data-testid="`${testId}-neutral-anchor`"
-          class="absolute top-1/2 max-h-2.5 max-w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground bg-transparent focus-visible:ring-ring/50 outline-none focus-visible:ring-2"
+          class="absolute top-1/2 z-10 max-h-2.5 max-w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground bg-transparent focus-visible:ring-ring/50 outline-none focus-visible:ring-2"
           :style="{
             left: `calc(${(1 / segmentCount) * 100}% )`,
             width: `${SELECTOR_SIZE_PX}px`,
@@ -570,14 +578,6 @@ onBeforeUnmount(() => {
           @pointercancel="onThumbPointerCancel"
         />
       </div>
-
-      <div
-        v-for="divider in segmentCount - 1"
-        :key="`divider-${divider}`"
-        class="pointer-events-none absolute top-1 bottom-1 z-[15] border-l border-dashed border-border"
-        :style="{ left: `${(divider / segmentCount) * 100}%` }"
-        aria-hidden="true"
-      />
 
       <div
         class="pointer-events-none absolute inset-0 z-20 grid"
