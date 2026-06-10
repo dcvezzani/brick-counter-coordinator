@@ -8,6 +8,11 @@ Thumbs.db
 *.swo
 .vscode/
 
+# Cursor Cloud Agents (override global gitignore that ignores all of .cursor/)
+!.cursor/
+!.cursor/environment.json
+!.cursor/rules/
+
 # Environment / secrets
 .env
 .env.*

@@ -43,7 +43,7 @@ cd ../.. && git add .claude/deps/ai-dlc && git commit -m "chore: bump AI-DLC sub
 | Doc | Description |
 |-----|-------------|
 | [docs/AIDLC.md](docs/AIDLC.md) | Canonical AIDLC process |
-| [docs/github-queue.md](docs/github-queue.md) | Optional GitHub issue/project automation |
+| [docs/github-queue.md](docs/github-queue.md) | GitHub Projects v2 + Cursor Cloud Agent automation (`dcvezzani`) |
 | [PROJECT.md](PROJECT.md) | Project memory for agents |
 | [AGENTS.md](AGENTS.md) | Agent/skill discoverability |
 

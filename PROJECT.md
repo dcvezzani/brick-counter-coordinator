@@ -1,8 +1,8 @@
 # Brick Counter Coordinator — Project Memory
 
 **Owner:** David Vezzani (Dave)  
-**Last updated:** 2026-06-09  
-**Status:** Plan — Product Spec + extension reference map ready; awaiting approval
+**Last updated:** 2026-06-10  
+**Status:** Plan — Product Spec ready; GitHub Projects v2 board [#2](https://github.com/users/dcvezzani/projects/2) live for **`dcvezzani`**
 
 ## What this project is
 

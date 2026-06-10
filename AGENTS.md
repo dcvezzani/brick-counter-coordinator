@@ -44,13 +44,18 @@ These **orchestrate** AIDLC phases and **pull in** library skills (`architecture
 
 | Field | Value |
 |--------|--------|
-| **System** | `github-issues` |
-| **Work item for a Feature** | GitHub issue on this repository; URL pattern `github.com/<owner>/brick-counter-coordinator/issues/NNN` |
-| **Phase signal** | Manual — issue labels or project board column until automation is configured |
+| **System** | `github-projects-v2` |
+| **GitHub account** | **`dcvezzani`** (personal — not `dcvezzani_church`) |
+| **Work item for a Feature** | GitHub issue on `dcvezzani/brick-counter-coordinator`; URL pattern `github.com/dcvezzani/brick-counter-coordinator/issues/NNN` |
+| **Phase signal** | Projects v2 single-select field **`AIDLC phase`** on user board; label **`aidlc_work:unstarted`** triggers automation; **`aidlc_work:in_progress`** = agent mutex |
 | **Parent ↔ `feature/<slug>/`** | Issue body includes `AIDLC feature folder: feature/<kebab-slug>/` |
-| **Automation entry points** | Manual until configured — see [docs/github-queue.md](docs/github-queue.md) for optional GitHub Projects setup |
+| **Automation entry points** | [`.github/workflows/aidlc-agent-launch.yml`](.github/workflows/aidlc-agent-launch.yml) (`issues.labeled`); [`.github/workflows/aidlc-launch-from-board.yml`](.github/workflows/aidlc-launch-from-board.yml); [`.github/workflows/aidlc-issue-comment-launch.yml`](.github/workflows/aidlc-issue-comment-launch.yml) (`/aidlc-launch` comment) |
 
-**Notes:** Issue tracker is **manual** for now. To add GitHub Projects (classic) label automation, follow [GITHUB-AIDLC-PROJECT.md](https://github.com/queen-of-code/AI-DLC/blob/main/docs/GITHUB-AIDLC-PROJECT.md). To switch trackers (Linear, Jira), use **`agent-issue-tracker-setup`** and [ISSUE-TRACKER-PORTABILITY.md](https://github.com/queen-of-code/AI-DLC/blob/main/docs/ISSUE-TRACKER-PORTABILITY.md).
+**Board:** [users/dcvezzani/projects/2](https://github.com/users/dcvezzani/projects/2) — **`AIDLC_PROJECT_NUMBER=2`**. Vars: `AIDLC_PROJECT_OWNER=dcvezzani`, `AIDLC_PROJECT_OWNER_TYPE=user`.
+
+**Secrets:** `CURSOR_API_KEY`, `AIDLC_PROJECT_PAT` (PAT with **`project`** + **`repo`** for `dcvezzani`). **Cursor dashboard** (not GitHub): `AIDLC_GH_CALLBACK_TOKEN`.
+
+**Setup guide:** [docs/github-queue.md](docs/github-queue.md). Queue reference: [AI-DLC GITHUB-AIDLC-QUEUE.md](.claude/deps/ai-dlc/docs/GITHUB-AIDLC-QUEUE.md).
 
 ## `/review` dimensions (orchestrator must cover all in scope)
 
