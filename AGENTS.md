@@ -72,3 +72,43 @@ The **`/review`** phase skill is not a shallow CI check. It must drive evaluatio
 **Handoff to `/build`:** after review comments exist, **`/build`** triages each thread — **fix** valid findings or **reply** with why invalid, then **resolve**.
 
 See [.claude/skills/review/SKILL.md](.claude/skills/review/SKILL.md).
+
+## Cursor Cloud specific instructions
+
+**Repo state (2026-06-10):** Plan-phase spec shell only — **no application scaffold** (`package.json`, dev server, tests, or lint config do not exist yet). Local “run the app” instructions will arrive with the first `/build` Feature. Cloud Agent setup is therefore **AIDLC tooling + submodule**, not a Node/Vue stack.
+
+### What the update script does
+
+[`.cursor/environment.json`](.cursor/environment.json) runs `git submodule update --init --recursive` on VM startup. That checks out [AI-DLC](https://github.com/queen-of-code/AI-DLC) at `.claude/deps/ai-dlc` so `.claude/skills` and `.cursor/skills` symlinks resolve. **No `npm install` or other package step** until application code lands.
+
+### Verifying the environment (smoke test)
+
+After submodule init, confirm phase skills and the active feature folder:
+
+```bash
+for s in plan design build review ship; do test -f ".claude/skills/$s/SKILL.md" && echo "✓ /$s"; done
+ls feature/part-out-coordinator/
+git submodule status
+```
+
+Optional AI-DLC submodule checks (from repo root):
+
+```bash
+node .claude/deps/ai-dlc/scripts/validate-cursor-marketplace.mjs
+python3 .claude/skills/spec-management/scripts/validate-spec.py feature/part-out-coordinator/product-spec.md
+```
+
+The `validate-spec.py` script expects generic section names; AIDLC product specs use different headings — a non-zero exit is expected until specs are aligned or `--strict` is omitted for template files.
+
+### Services
+
+| Service | Required today? | Notes |
+|---------|---------------|-------|
+| AI-DLC submodule + skill symlinks | **Yes** | Enables `/plan` … `/ship` in Cursor Agent |
+| Coordinator server / worker UI | **No** | Not implemented — planned Node + Vue + WebSockets after `/design` |
+| GitHub Projects v2 automation | **No** for local dev | Workflows in `.github/workflows/aidlc-*.yml`; needs repo secrets (`CURSOR_API_KEY`, `AIDLC_PROJECT_PAT`) |
+| Bricklink (external) | **No** | Product integration; manual XML upload in MVP |
+
+### When application code exists
+
+After `/design` → `/build`, expect updates to `PROJECT.md` → “How to run locally”, plus `package.json` (or equivalent). Future agents should follow those instructions for `npm run dev`, lint, and test — and extend this section rather than duplicating run commands here.
