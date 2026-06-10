@@ -50,8 +50,8 @@ describe('ColorPicker', () => {
     vi.advanceTimersByTime(150)
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.findAll('[data-testid^="color-option-"]')).toHaveLength(1)
-    expect(wrapper.get('[data-testid="color-option-41"]').classes()).toContain('bg-accent')
+    expect(wrapper.findAll('[data-testid^="color-picker-option-"]')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="color-picker-option-41"]').classes()).toContain('bg-accent')
   })
 
   it('selects the highlighted color on Enter', async () => {
