@@ -10,7 +10,7 @@
 | Field | Value |
 |-------|-------|
 | **Feature** | Part-Out Counting Coordinator |
-| **Status** | Draft — awaiting approval |
+| **Status** | Approved |
 | **Author** | David Vezzani (from [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md)) |
 | **Created** | 2026-06-09 |
 | **Last updated** | 2026-06-10 (server fetch + Part-out import; single vs two-sweep by purchase type) |
@@ -244,7 +244,8 @@ Resolved in [qa-001.md](../../docs/support/qa-001.md):
 - Q&A: [qa-001.md](../../docs/support/qa-001.md)
 - Design reference map: [PROJECT.md — bricklink-chrome-extension](../../PROJECT.md#design-reference--bricklink-chrome-extension)
 - Seed proposal: [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md)
-- Tech Spec: [tech-spec.md](./tech-spec.md) (draft — `/design` 2026-06-10)
+- Tech Spec: [tech-spec.md](./tech-spec.md) (in review — `/design` 2026-06-10)
+- View/service inventory: [planned-views-services.md](../../docs/support/planned-views-services.md)
 - Process: [docs/AIDLC.md](../../docs/AIDLC.md)
 - Project memory: [PROJECT.md](../../PROJECT.md)
 - Parent issue: [GitHub #2](https://github.com/dcvezzani/brick-counter-coordinator/issues/2) (`AIDLC feature folder: feature/part-out-coordinator/`)

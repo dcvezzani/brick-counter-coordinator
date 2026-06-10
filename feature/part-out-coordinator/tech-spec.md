@@ -1,7 +1,7 @@
 # Tech Spec — Part-Out Counting Coordinator
 
 **AIDLC phase:** Design  
-**Grounding:** Implements [product-spec.md](./product-spec.md). Product Spec human checkbox is open — Dave invoked `/design` to proceed; **explicit Product approval still required before `/build`**.
+**Grounding:** Implements approved [product-spec.md](./product-spec.md) (Product owner signed off 2026-06-10).
 
 ---
 
@@ -12,10 +12,10 @@
 | **Feature** | Part-Out Counting Coordinator |
 | **Parent issue** | [GitHub #2](https://github.com/dcvezzani/brick-counter-coordinator/issues/2) |
 | **Product Spec** | [product-spec.md](./product-spec.md) |
-| **Status** | Draft — awaiting human approval for build |
+| **Status** | In review — awaiting human approval before `/build` |
 | **Author** | AIDLC `/design` (David Vezzani, product owner) |
 | **Created** | 2026-06-10 |
-| **Last updated** | 2026-06-10 (ADR-0004: server fetch + Part-out import) |
+| **Last updated** | 2026-06-10 (view/service inventory; review passes; join-name policy) |
 
 ### Summary
 
@@ -44,6 +44,7 @@ Units **1–4** depend on prior units only sequentially (2 needs 1, 3 needs 2, 4
 | [docs/tech-stack.md](../../docs/tech-stack.md) | Client stack (Vite, shadcn-vue, JS) |
 | [application-views.md](../../docs/support/application-views.md) | View names, navigation |
 | [storyboard.md](../../docs/support/storyboard.md) | Unit 0 walkthrough |
+| [planned-views-services.md](../../docs/support/planned-views-services.md) | Per-view routes, composables, API dependencies |
 | [PROJECT.md](../../PROJECT.md) | Bricklink extension module map |
 | [docs/bricklink-colors.md](../../docs/bricklink-colors.md) | Color catalog JSON + `catalogitem.page` known-color scrape; picker contract |
 | [docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md) | Bricklink `invSetEdit.asp` POST contract, cookie, form fields, HTML parse |
@@ -229,6 +230,12 @@ Adjustments when resolving discrepancies (delta qty or agreed final qty per part
 
 Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message": "..." } }`.
 
+### Operations (Unit 1+)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/health` | Liveness — `{ "status": "ok" }` |
+
 ### Sessions (Unit 1+)
 
 | Method | Path | Purpose |
@@ -236,7 +243,7 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 | `GET` | `/sessions` | List open sessions (enter existing) |
 | `POST` | `/sessions` | Create session (set number, options, lead name) |
 | `GET` | `/sessions/:id` | Session detail + phase |
-| `POST` | `/sessions/:id/join` | Body: `{ displayName }` → worker |
+| `POST` | `/sessions/:id/join` | Body: `{ displayName }` → worker; **409** if name taken in session (see below) |
 | `POST` | `/sessions/:id/phase` | Lead: advance phase |
 
 ### Part-out fetch & import (Unit 1)
@@ -335,6 +342,22 @@ Connect: `ws://host/ws?sessionId=&workerId=`
 
 **Layout:** `AppShell` with session nav links, **“Storyboard — sample data”** badge (Unit 0 only), mobile bottom nav.
 
+**View ↔ service map:** [planned-views-services.md](../../docs/support/planned-views-services.md) — each view’s route, composables, REST groups, and example call flows.
+
+### Client composables (by Unit)
+
+| Composable | Unit | Responsibility |
+|------------|------|----------------|
+| `useFixtureSession` | 0 | In-memory session; no HTTP |
+| `useSession` | 1+ | Create/join/list sessions; phase; worker identity in `sessionStorage` |
+| `usePartOut` | 1+ | Part-out lines, exclude/restore, confirm, refetch |
+| `useWebSocket` | 1+ | Connect, subscribe, reconnect + refetch |
+| `useLots` | 2+ | Lot/cup CRUD, duplicate response handling |
+| `usePickList` | 3+ | Split, line status, list-complete |
+| `useReconciliation` | 4+ | Diff rows, resolve, export XML |
+
+`useSession` selects fixture vs API via `import.meta.env.VITE_USE_FIXTURES` (default `true` until Unit 1 lands).
+
 ### Shared components
 
 | Component | Purpose |
@@ -403,7 +426,7 @@ Local-network deployment assumed; document in README for production hardening la
 
 - [ ] `POST /sessions` creates session, fetches part-out, stores `part_out_lines`; phase starts `importing`
 - [ ] `GET /sessions` lists open sessions
-- [ ] Join with display name; duplicate name rejected or suffixed (document behavior)
+- [ ] Join with display name; duplicate name returns **409** with clear message (no auto-suffix)
 - [ ] Part-out import: list all lines, exclude/restore, confirm → `counting`
 - [ ] Fetch failure surfaces error with refetch action (fixture fallback in dev documented)
 - [ ] WebSocket connects on enter session
@@ -489,31 +512,81 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 
 ---
 
+## Product criteria traceability
+
+| Criterion | Primary Unit | Tech Spec anchor |
+|-----------|--------------|------------------|
+| #1 Parallel counting | 2 | Lots API + WebSocket `lot.updated` |
+| #2 Duplicate-lot awareness | 2 | `POST …/lots` duplicate response |
+| #3 Mobile-first entry | 0–2 | Lot form viewport + touch targets |
+| #4 Session lifecycle | 1–2 | Sessions + part-out confirm + join |
+| #5 Part search | 2 | `/bricklink/inventory-search` |
+| #6 Save and Add Another | 0–2 | Lot form client behavior |
+| #7 List cups navigation | 0–2 | Cup branching routes |
+| #8 Reconciliation | 4 | `GET …/reconciliation` + mismatch filter |
+| #9 Discrepancy resolution | 4 | `POST …/reconciliation/resolve` |
+| #10 Pick-list split | 3 | `POST …/pick-lists/split` |
+| #11 Organizer progress | 3 | Pick-list PATCH + complete |
+| #12 Pick-list delivery / print | 3 | Print CSS on List lots |
+| #13 Bricklink XML export | 4 | `export-xml` + validation URL |
+| #14 Routable views | 0 | All routes in [Routes](#routes-vue-router) |
+| #15 Storyboard walkthrough | 0 | Fixtures + [storyboard.md](../../docs/support/storyboard.md) |
+| #16 Part-out import curation | 1 | Part-out lines API + import view |
+
+---
+
 ## Design review passes
+
+*Run 2026-06-10 (`/design` orchestrator). Findings merged below; no blocking issues.*
 
 ### Architecture
 
-- Boundaries: client / API / WS / DB / Bricklink proxy — **pass**
-- Single Node + SQLite appropriate for single-business MVP ([ADR-0001](../../adr/0001-sqlite-single-node-persistence.md))
-- No iframe Bricklink — **pass** ([ADR-0002](../../adr/0002-bricklink-ajax-only-no-iframes.md))
+| Check | Result | Notes |
+|-------|--------|-------|
+| Client / API / WS / DB / Bricklink proxy boundaries | **Pass** | Thin client; server owns consolidation and Bricklink cookie |
+| Persistence | **Pass** | SQLite single-node ([ADR-0001](../../adr/0001-sqlite-single-node-persistence.md)) |
+| Bricklink integration | **Pass** | AJAX only ([ADR-0002](../../adr/0002-bricklink-ajax-only-no-iframes.md)); part-out server fetch ([ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md)) |
+| Unit sequencing | **Pass** | 0→1→2→3→4; no circular deps |
+| Offline / reconnect | **Advisory** | `sessionStorage` retry queue documented; full offline-first deferred |
 
 ### Frontend (`frontend-web`)
 
-- Mobile-first, shared `LotListTable`, fixture swap via composable — **pass**
-- shadcn-vue JS mode; avoid problematic registry components — **pass**
+| Check | Result | Notes |
+|-------|--------|-------|
+| Mobile-first Lot form | **Pass** | 390px no-scroll target; ≥44px touch targets |
+| Shared list component | **Pass** | `LotListTable` + `mode` query for three List lots contexts |
+| Fixture → live swap | **Pass** | `VITE_USE_FIXTURES` + composable boundary |
+| shadcn-vue JS mode | **Pass** | Avoid `chart`/`sidebar` registry blocks |
+| View/service documentation | **Pass** | [planned-views-services.md](../../docs/support/planned-views-services.md) linked |
 
 ### Backend (`backend-saas`)
 
-- REST versioning, explicit error model, server-side session authority — **pass**
-- Bricklink cookie server-only — **pass**
+| Check | Result | Notes |
+|-------|--------|-------|
+| REST `/api/v1` + error envelope | **Pass** | Consistent JSON errors |
+| Session authority | **Pass** | Phase transitions server-side only |
+| Join duplicate names | **Resolved** | **409 Conflict** — user picks another name (no auto-suffix) |
+| Bricklink cookie | **Pass** | Env only; never exposed to browser |
+| Idempotent lot upsert | **Pass** | Unique key on `(session_id, part_id, color_id, condition)` |
 
 ### Testing
 
-- Criteria mapped per Unit; Playwright for storyboard and parallel counting — **pass**
+| Check | Result | Notes |
+|-------|--------|-------|
+| Criteria → Unit mapping | **Pass** | Traceability table above |
+| Unit tests | **Pass** | Split algo, reconciliation diff, XML builder, composables |
+| Integration tests | **Pass** | API + SQLite from Unit 1 |
+| E2E | **Pass** | Playwright storyboard (0), parallel counting (2) |
+| Bricklink fixtures | **Pass** | `docs/support/` captures for parser regression |
 
 ### DevOps
 
-- No deploy workflow yet; add `ci.yml` in Unit 1 with build + unit tests — **action item**
+| Check | Result | Notes |
+|-------|--------|-------|
+| CI workflow | **Action — Unit 1** | Add `.github/workflows/ci.yml`: `npm run test:unit`, `npm run build` |
+| Health endpoint | **Pass** | `GET /api/v1/health` in Rollout section |
+| Local dev | **Pass** | `npm run dev:all` + Vite proxy for `/api`, `/ws` |
+| Deploy | **Advisory** | Single Node serves `dist/` + API; Docker optional later |
 
 ---
 
@@ -527,7 +600,7 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 | Two-sweep only for partial-bag | Brand-new (all N) and loose (all U) = one session, confirm with no exclusions |
 | `list.ajax` rate limits | Debounce search; cache colors per part id |
 | SQLite write contention | Single session MVP load is low; revisit if needed |
-| Product Spec not formally checked | Dave: check approval box before `/build` |
+| ~~Product Spec approval~~ | **Closed** — approved 2026-06-10 |
 
 ### Change requests to Product
 
@@ -541,8 +614,9 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 |------|--------|---------|
 | 2026-06-10 | `/design` | Initial Tech Spec: architecture, data model, APIs, Units 0–4, review passes |
 | 2026-06-10 | Dave | Locked part-out import: server fetch + Part-out import view (ADR-0004); seventh view; `importing` phase |
+| 2026-06-10 | `/design` | Linked [planned-views-services.md](../../docs/support/planned-views-services.md); criteria traceability; join **409** policy; expanded review passes |
 
 ## Human approval
 
-- [x] Product owner approved Product Spec
-- [x] Engineering lead / Dave approved Tech Spec before `/build`
+- [x] Product owner approved Product Spec (2026-06-10)
+- [ ] Engineering lead / Dave approved Tech Spec before `/build`
