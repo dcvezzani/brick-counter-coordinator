@@ -10,10 +10,10 @@
 | Field | Value |
 |-------|-------|
 | **Feature** | Part-Out Counting Coordinator |
-| **Status** | Draft — awaiting approval |
+| **Status** | Approved — ready for `/design` |
 | **Author** | David Vezzani (from [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md)) |
 | **Created** | 2026-06-09 |
-| **Last updated** | 2026-06-10 (server fetch + Part-out import; single vs two-sweep by purchase type) |
+| **Last updated** | 2026-06-10 (Plan phase complete — seven views, import curation, 16 success criteria) |
 | **Related Tech Spec** | [tech-spec.md](./tech-spec.md) |
 
 ## Problem & audience
@@ -229,12 +229,27 @@ Resolved in [qa-001.md](../../docs/support/qa-001.md):
 | 2026-06-09 | **Storage locations:** From Bricklink part-out **Remarks** ("My Remarks" / location) on each line — carried through to pick lists. |
 | 2026-06-09 | **Design reference codebase:** Sibling repo `bricklink-chrome-extension` at `/Users/dcvezzani/personal-projects/lego/bricklink-chrome-extension` — color picker, inventory lookup, part-out scrape, XML shapes. Module map in [PROJECT.md](../../PROJECT.md#design-reference--bricklink-chrome-extension). |
 | 2026-06-09 | **No iframes:** Coordinator must **not** use iframe-based BrickLink integration. Port AJAX patterns (e.g. extension `store-inventory-list.js` / `list.ajax`) instead. Extension iframe code (`inventory-iframe-lookup.js`) is **reference only for what to avoid** — do not modify extension repo. |
-| 2026-06-10 | **Application views:** Six canonical views per [application-views.md](../../docs/support/application-views.md). **Unit 1** registers all routes (Home + New session fully functional; others stubbed). Units 2–4 deliver full behavior on the same views. |
+| 2026-06-10 | **Application views:** Seven canonical views per [application-views.md](../../docs/support/application-views.md) (includes **Part-out import**). **Unit 0** registers all routes with fixture data; **Unit 1** delivers live session create/fetch/import; Units 2–4 add behavior on the same views. |
 | 2026-06-10 | **Organizer line states:** On **List lots**, a lot is **moved to storage** or **needs new storage location** (not a single generic checkbox). **Mark entire list complete** when all lines are in one of those states. |
 | 2026-06-10 | **Reconciled handoff:** **Reconciled** on **Part-out reconciliation** generates XML and opens Bricklink **bulk update validation** (not silent background upload). |
 | 2026-06-10 | **Storyboard (Unit 0):** Interactive shadcn-vue prototype with fixture data — all views navigable for stakeholder walkthroughs before backend ([storyboard.md](../../docs/support/storyboard.md)). |
 | 2026-06-10 | **UI stack:** **shadcn-vue** + Tailwind v4 + Lucide + Vue Router on Vite; client **JavaScript** (`typescript: false`). Supersedes Font Awesome / generic ShadCN notes. |
 | 2026-06-10 | **Part-out import:** **Server-side fetch** on session create (not JSON upload). New **Part-out import** view shows full fetched list; lead confirms before counting (excludes lines only when needed). **Single sweep** for brand-new sealed sets (all new) or loose bricks (all used). **Two sweeps** only for partial-bag sets (mixed opened/sealed bags). Supersedes [ADR-0003](../../adr/0003-part-out-import-json-upload-mvp.md) → [ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md). |
+
+### Assumptions (headless Plan — no live chat)
+
+Documented in lieu of interactive Q&A per cloud agent run:
+
+| Assumption | Rationale |
+|------------|-----------|
+| [qa-001.md](../../docs/support/qa-001.md) answers are final for MVP scope | Dave answered all six product questions; reflected in **Decisions** above |
+| Part search / picker API shape is a **Design** concern | Product requires searchable part lookup; mechanism deferred to `/design` and extension reference |
+| Bricklink session cookie handling is **Design** | Product requires server fetch of part-out list; auth/cookie storage not specified here |
+| **Two-sweep** applies only to partial-bag sets | Per Dave clarification and [ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md) |
+| Product owner approval stands | Issue [#2](https://github.com/dcvezzani/brick-counter-coordinator/issues/2) acceptance criteria and prior plan runs record Dave approval |
+| UI component library choice is a **product constraint** | Dave values polished mobile UX; shadcn-vue stack recorded as approved constraint, not implementation detail for Build |
+
+**Grounding review (advisory):** Spec aligns with [PROJECT.md](../../PROJECT.md), [application-views.md](../../docs/support/application-views.md), and ADRs 0002/0004. No blocking contradictions. Delivery-unit table is a product slice map — detailed contracts belong in Tech Spec (`/design`).
 
 ## Related documents
 
