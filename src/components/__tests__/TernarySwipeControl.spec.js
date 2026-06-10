@@ -95,6 +95,11 @@ describe('TernarySwipeControl', () => {
     const hidden = wrapper.get('[data-testid="ternary-swipe-hidden-input"]')
     expect(hidden.attributes('name')).toBe('status')
     expect(hidden.element.value).toBe('')
+
+    const anchor = wrapper.get('[data-testid="ternary-swipe-center-anchor"]')
+    expect(anchor.classes()).toContain('rounded-full')
+    expect(anchor.classes()).toContain('bg-transparent')
+    expect(anchor.attributes('style')).toContain('width: 10px')
   })
 
   it('syncs thumb zone when modelValue changes', async () => {
@@ -210,7 +215,8 @@ describe('TernarySwipeControl', () => {
 
     const thumb = wrapper.get('[data-testid="ternary-swipe-thumb"]')
     expect(thumb.attributes('data-zone')).toBe('center')
-    expect(thumb.classes()).toContain('bg-muted-foreground')
+    expect(thumb.classes()).toContain('bg-foreground')
+    expect(thumb.attributes('style')).toContain('width: 10px')
   })
 
   it('drags from left to right and selects option 2', async () => {

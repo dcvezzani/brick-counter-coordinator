@@ -21,8 +21,7 @@ const ZONE_BOUNDARIES = {
 }
 
 const DEMOTE_THRESHOLD = 0.125
-const CENTER_THUMB_WIDTH = 28
-const CENTER_THUMB_HEIGHT = 20
+const SELECTOR_SIZE_PX = 10
 const TRANSITION_MS = 220
 
 const props = defineProps({
@@ -97,11 +96,12 @@ const thumbLabel = computed(() => {
 
 const thumbClasses = computed(() =>
   cn(
-    'absolute z-10 flex items-center justify-center rounded-full border border-foreground font-medium select-none touch-none',
+    'absolute z-10 flex items-center justify-center rounded-full font-medium select-none touch-none',
     isSelectedThumb.value ? 'top-0 bottom-0' : 'top-1/2',
+    isSelectedThumb.value && 'border border-foreground',
     thumbSelectedZone.value === 'left' && 'bg-primary text-primary-foreground text-sm',
     thumbSelectedZone.value === 'right' && 'bg-accent text-accent-foreground text-sm',
-    thumbSelectedZone.value === 'center' && 'bg-muted-foreground',
+    thumbSelectedZone.value === 'center' && 'bg-foreground',
     animating.value &&
       !prefersReducedMotion.value &&
       'transition-[left,right,width,height,top,bottom,background-color,color,border-radius] duration-200 ease-out',
@@ -148,15 +148,17 @@ const thumbStyle = computed(() => {
     }
   }
 
-  const widthPct = CENTER_THUMB_WIDTH
+  const half = SELECTOR_SIZE_PX / 2
   return {
-    left: `${(displayX.value - widthPct / 200) * 100}%`,
+    left: `calc(${displayX.value * 100}% - ${half}px)`,
     right: 'auto',
-    width: `${widthPct}%`,
-    height: `${CENTER_THUMB_HEIGHT}px`,
+    width: `${SELECTOR_SIZE_PX}px`,
+    height: `${SELECTOR_SIZE_PX}px`,
+    maxWidth: `${SELECTOR_SIZE_PX}px`,
+    maxHeight: `${SELECTOR_SIZE_PX}px`,
     top: '50%',
     bottom: 'auto',
-    marginTop: `-${CENTER_THUMB_HEIGHT / 2}px`,
+    marginTop: `-${half}px`,
   }
 })
 
@@ -251,7 +253,7 @@ function finishDrag() {
 
 function onTrackPointerDown(event) {
   if (props.disabled || dragging.value) return
-  if (event.target.closest('[data-thumb]')) return
+  if (event.target.closest('[data-thumb], [data-center-anchor]')) return
 
   const x = pointerXAsFraction(event)
   const zone = zoneFromX(x)
@@ -392,21 +394,26 @@ onBeforeUnmount(() => {
         aria-hidden="true"
       />
 
-      <button
-        type="button"
-        tabindex="-1"
-        :disabled="disabled"
-        :data-testid="`${testId}-center-anchor`"
-        class="bg-foreground absolute top-1/2 left-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-foreground focus-visible:ring-ring/50 outline-none focus-visible:ring-2"
-        aria-label="Clear selection"
-        @click.stop="onCenterAnchorClick"
-      />
-
       <div
         ref="insetLayerRef"
         class="absolute inset-1"
         :data-testid="`${testId}-inset`"
       >
+        <button
+          type="button"
+          tabindex="-1"
+          data-center-anchor
+          :disabled="disabled"
+          :data-testid="`${testId}-center-anchor`"
+          class="absolute top-1/2 left-1/2 max-h-2.5 max-w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground bg-transparent focus-visible:ring-ring/50 outline-none focus-visible:ring-2"
+          :style="{
+            width: `${SELECTOR_SIZE_PX}px`,
+            height: `${SELECTOR_SIZE_PX}px`,
+          }"
+          aria-label="Clear selection"
+          @click.stop="onCenterAnchorClick"
+        />
+
         <div
           ref="thumbRef"
           data-thumb
