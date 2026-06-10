@@ -15,7 +15,7 @@
 | **Status** | In review — awaiting human approval before `/build` |
 | **Author** | AIDLC `/design` (David Vezzani, product owner) |
 | **Created** | 2026-06-10 |
-| **Last updated** | 2026-06-10 (view/service inventory; review passes; join-name policy) |
+| **Last updated** | 2026-06-10 (lead authorization, reconciliation schema, request bodies) |
 
 ### Summary
 
@@ -114,7 +114,7 @@ brick-counter-coordinator/
     router/index.js
   server/                 # Node coordinator (new in Unit 1)
     index.js              # HTTP + WS listen
-    app.js                # Express/Fastify app
+    app.js                # Fastify app
     db/                   # SQLite schema, migrations
     routes/
     ws/
@@ -154,6 +154,7 @@ SQLite schema (logical entities):
 | `part_out_fetch_status` | TEXT | `pending` \| `ok` \| `error` |
 | `part_out_fetch_error` | TEXT | Nullable; last fetch failure message |
 | `part_out_options` | JSON | Pricing, N/U, overwrite vs consolidate |
+| `lead_worker_id` | TEXT FK | Session creator; only this worker may advance phase, confirm import, split pick lists, export XML |
 | `created_at` | TEXT | ISO8601 |
 
 ### `workers`
@@ -220,7 +221,17 @@ Unique key: `(session_id, part_id, color_id, condition)`.
 
 ### `reconciliation_overrides` (Unit 4)
 
-Adjustments when resolving discrepancies (delta qty or agreed final qty per part-out line).
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | TEXT PK | |
+| `session_id` | TEXT FK | |
+| `part_out_line_id` | TEXT FK | Included line being adjusted |
+| `resolved_qty` | INTEGER | Agreed final quantity after resolution |
+| `resolved_by_worker_id` | TEXT FK | |
+| `note` | TEXT | Optional free-text reason |
+| `created_at` | TEXT | ISO8601 |
+
+Unique: `(session_id, part_out_line_id)`. Resolution updates session lot qty or creates adjustment lot so reconciled totals match `resolved_qty`.
 
 **Retention:** Session data kept until lead closes session; no cross-session inventory (MVP).
 
@@ -229,6 +240,17 @@ Adjustments when resolving discrepancies (delta qty or agreed final qty per part
 ## APIs & contracts
 
 Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message": "..." } }`.
+
+### Authorization (MVP)
+
+No auth tokens. The client sends `X-Worker-Id` on mutating requests after join. Server checks:
+
+| Role | How assigned | Allowed actions |
+|------|--------------|-----------------|
+| **Lead** | Worker who created the session (`lead_worker_id`) | Part-out confirm/refetch, phase advance, pick-list split, reconciliation export, session close |
+| **Worker** | Any joined worker | Lot entry, cup navigation, organizer line updates on own pick list, reconciliation resolve (any worker may fix mismatches) |
+
+Lead-only routes return **403** when `X-Worker-Id` ≠ `lead_worker_id`. Missing or unknown worker id returns **401**.
 
 ### Operations (Unit 1+)
 
@@ -241,10 +263,27 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/sessions` | List open sessions (enter existing) |
-| `POST` | `/sessions` | Create session (set number, options, lead name) |
+| `POST` | `/sessions` | Create session — see body below; creates lead worker |
 | `GET` | `/sessions/:id` | Session detail + phase |
 | `POST` | `/sessions/:id/join` | Body: `{ displayName }` → worker; **409** if name taken in session (see below) |
 | `POST` | `/sessions/:id/phase` | Lead: advance phase |
+
+**`POST /sessions` body:**
+
+```json
+{
+  "setNumber": "70404-1",
+  "name": "Castle 70404 — June part-out",
+  "displayName": "Alex",
+  "partOutOptions": {
+    "pricingBasis": "stock",
+    "itemCondition": "N",
+    "inventoryMode": "overwrite"
+  }
+}
+```
+
+Response **201**: `{ "session": { "id", "phase", "partOutFetchStatus", ... }, "worker": { "id", "displayName" } }`. Sets `lead_worker_id` to new worker id.
 
 ### Part-out fetch & import (Unit 1)
 
@@ -564,7 +603,7 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 | Check | Result | Notes |
 |-------|--------|-------|
 | REST `/api/v1` + error envelope | **Pass** | Consistent JSON errors |
-| Session authority | **Pass** | Phase transitions server-side only |
+| Session authority | **Pass** | Phase transitions server-side only; lead via `lead_worker_id` + `X-Worker-Id` |
 | Join duplicate names | **Resolved** | **409 Conflict** — user picks another name (no auto-suffix) |
 | Bricklink cookie | **Pass** | Env only; never exposed to browser |
 | Idempotent lot upsert | **Pass** | Unique key on `(session_id, part_id, color_id, condition)` |
@@ -615,8 +654,9 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 | 2026-06-10 | `/design` | Initial Tech Spec: architecture, data model, APIs, Units 0–4, review passes |
 | 2026-06-10 | Dave | Locked part-out import: server fetch + Part-out import view (ADR-0004); seventh view; `importing` phase |
 | 2026-06-10 | `/design` | Linked [planned-views-services.md](../../docs/support/planned-views-services.md); criteria traceability; join **409** policy; expanded review passes |
+| 2026-06-10 | `/design` (headless) | Lead authorization (`lead_worker_id`, `X-Worker-Id`); `reconciliation_overrides` schema; `POST /sessions` body; Fastify choice |
 
 ## Human approval
 
 - [x] Product owner approved Product Spec (2026-06-10)
-- [x] Engineering lead / Dave approved Tech Spec before `/build`
+- [ ] Engineering lead / Dave approved Tech Spec before `/build`
