@@ -1,0 +1,28 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies (add language-specific entries as app code is added)
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+dist/
+build/
+target/
+
+# Logs and temp
+*.log
+tmp/
+temp/
