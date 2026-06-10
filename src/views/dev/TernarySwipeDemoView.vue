@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import AppShell from '@/components/AppShell.vue'
 import TernarySwipeControl from '@/components/TernarySwipeControl.vue'
 import { Button } from '@/components/ui/button'
@@ -12,10 +13,38 @@ import {
 } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 
+const route = useRoute()
+
+const PICK_STATUS_VALUES = new Set([
+  'pending',
+  'moved_to_storage',
+  'needs_new_location',
+])
+
+function pickStatusFromQuery() {
+  const value = route.query.pick_status
+  return typeof value === 'string' && PICK_STATUS_VALUES.has(value) ? value : 'pending'
+}
+
 const defaultValue = ref('')
-const organizerValue = ref('pending')
+const organizerValue = ref(pickStatusFromQuery())
 const disabledValue = ref('moved_to_storage')
 const disabled = ref(false)
+
+const narrowExamples = [
+  { id: 'full', label: 'Full width (parent default)', class: 'w-full' },
+  { id: 'sm', label: 'max-w-sm (24rem)', class: 'w-full max-w-sm' },
+  { id: 'xs', label: 'max-w-xs (20rem)', class: 'w-full max-w-xs' },
+  { id: '48', label: 'max-w-48 (12rem) — table-cell-ish', class: 'w-full max-w-48' },
+  { id: '40', label: 'max-w-40 (10rem) — very narrow', class: 'w-full max-w-40' },
+]
+
+watch(
+  () => route.query.pick_status,
+  () => {
+    organizerValue.value = pickStatusFromQuery()
+  },
+)
 
 const lastChange = ref(null)
 const formPayload = ref(null)
@@ -122,23 +151,68 @@ function onFormSubmit(event) {
 
       <Card>
         <CardHeader>
+          <CardTitle>Narrow widths</CardTitle>
+          <CardDescription>
+            Constrain a wrapper around the control — the component is
+            <code class="rounded bg-muted px-1 py-0.5">w-full</code>
+            and fills its parent. Set
+            <code class="rounded bg-muted px-1 py-0.5">max-w-*</code>
+            on the parent, not on TernarySwipeControl itself. Try
+            <code class="rounded bg-muted px-1 py-0.5">?pick_status=pending</code>
+            (or
+            <code class="rounded bg-muted px-1 py-0.5">moved_to_storage</code>
+            /
+            <code class="rounded bg-muted px-1 py-0.5">needs_new_location</code>
+            ) to seed the organizer value.
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-6">
+          <div
+            v-for="example in narrowExamples"
+            :key="example.id"
+            class="flex flex-col gap-2"
+            :data-testid="`demo-narrow-${example.id}`"
+          >
+            <p class="text-sm text-muted-foreground">{{ example.label }}</p>
+            <div :class="example.class">
+              <TernarySwipeControl
+                v-model="organizerValue"
+                :name="`demo-narrow-${example.id}`"
+                :test-id="`demo-narrow-${example.id}`"
+                neutral-value="pending"
+                option1-value="moved_to_storage"
+                option2-value="needs_new_location"
+                option1-label="Moved"
+                option2-label="New loc"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Form submission</CardTitle>
           <CardDescription>
-            Hidden input value is included when the form is submitted.
+            Hidden input value is included when the form is submitted. Current
+            <code class="rounded bg-muted px-1 py-0.5">pick_status</code>:
+            {{ organizerValue }}.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form class="flex flex-col gap-4" data-testid="demo-form" @submit="onFormSubmit">
-            <TernarySwipeControl
-              v-model="organizerValue"
-              name="pick_status"
-              test-id="demo-form-control"
-              neutral-value="pending"
-              option1-value="moved_to_storage"
-              option2-value="needs_new_location"
-              option1-label="Moved"
-              option2-label="New loc"
-            />
+            <div class="w-full max-w-xs">
+              <TernarySwipeControl
+                v-model="organizerValue"
+                name="pick_status"
+                test-id="demo-form-control"
+                neutral-value="pending"
+                option1-value="moved_to_storage"
+                option2-value="needs_new_location"
+                option1-label="Moved"
+                option2-label="New loc"
+              />
+            </div>
             <Button type="submit" class="min-h-11" data-testid="demo-form-submit">
               Submit form
             </Button>
