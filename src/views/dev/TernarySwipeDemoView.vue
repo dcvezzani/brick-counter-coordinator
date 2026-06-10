@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppShell from '@/components/AppShell.vue'
 import TernarySwipeControl from '@/components/TernarySwipeControl.vue'
@@ -28,6 +28,7 @@ function pickStatusFromQuery() {
 
 const defaultValue = ref('')
 const organizerValue = ref(pickStatusFromQuery())
+const formValue = ref(pickStatusFromQuery())
 const disabledValue = ref('moved_to_storage')
 const disabled = ref(false)
 
@@ -48,10 +49,19 @@ const heightExamples = [
   { id: 'fixed-h6', label: 'Fixed h-6 (1.5rem / 24px) — very short', trackClass: 'h-6 min-h-0' },
 ]
 
+const narrowValues = reactive(
+  Object.fromEntries(narrowExamples.map(({ id }) => [id, pickStatusFromQuery()])),
+)
+const heightValues = reactive(
+  Object.fromEntries(heightExamples.map(({ id }) => [id, pickStatusFromQuery()])),
+)
+
 watch(
   () => route.query.pick_status,
   () => {
-    organizerValue.value = pickStatusFromQuery()
+    const value = pickStatusFromQuery()
+    organizerValue.value = value
+    formValue.value = value
   },
 )
 
@@ -172,7 +182,7 @@ function onFormSubmit(event) {
             <code class="rounded bg-muted px-1 py-0.5">moved_to_storage</code>
             /
             <code class="rounded bg-muted px-1 py-0.5">needs_new_location</code>
-            ) to seed the organizer value.
+            ) to seed the organizer and form examples only; width/height rows keep independent state.
           </CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-6">
@@ -185,7 +195,7 @@ function onFormSubmit(event) {
             <p class="text-sm text-muted-foreground">{{ example.label }}</p>
             <div :class="example.class">
               <TernarySwipeControl
-                v-model="organizerValue"
+                v-model="narrowValues[example.id]"
                 :name="`demo-narrow-${example.id}`"
                 :test-id="`demo-narrow-${example.id}`"
                 neutral-value="pending"
@@ -195,6 +205,9 @@ function onFormSubmit(event) {
                 option2-label="New loc"
               />
             </div>
+            <p class="text-xs text-muted-foreground">
+              value: {{ narrowValues[example.id] }}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -222,7 +235,7 @@ function onFormSubmit(event) {
             <p class="text-sm text-muted-foreground">{{ example.label }}</p>
             <div class="w-full max-w-xs">
               <TernarySwipeControl
-                v-model="organizerValue"
+                v-model="heightValues[example.id]"
                 :name="`demo-height-${example.id}`"
                 :test-id="`demo-height-${example.id}`"
                 :track-class="example.trackClass"
@@ -233,6 +246,9 @@ function onFormSubmit(event) {
                 option2-label="New loc"
               />
             </div>
+            <p class="text-xs text-muted-foreground">
+              value: {{ heightValues[example.id] }}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -243,14 +259,14 @@ function onFormSubmit(event) {
           <CardDescription>
             Hidden input value is included when the form is submitted. Current
             <code class="rounded bg-muted px-1 py-0.5">pick_status</code>:
-            {{ organizerValue }}.
+            {{ formValue }}.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form class="flex flex-col gap-4" data-testid="demo-form" @submit="onFormSubmit">
             <div class="w-full max-w-xs">
               <TernarySwipeControl
-                v-model="organizerValue"
+                v-model="formValue"
                 name="pick_status"
                 test-id="demo-form-control"
                 neutral-value="pending"
