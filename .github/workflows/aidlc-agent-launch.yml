@@ -7,7 +7,7 @@
 # Composite: .claude/deps/ai-dlc/.github/actions/aidlc-launch
 #
 # Required secrets: CURSOR_API_KEY, AIDLC_PROJECT_PAT
-# Required vars: AIDLC_PROJECT_NUMBER (+ optional AIDLC_PROJECT_OWNER, AIDLC_PROJECT_OWNER_TYPE, AIDLC_PHASE_FIELD_NAME)
+# Required vars: AIDLC_PROJECT_NUMBER (+ optional AIDLC_PROJECT_OWNER, AIDLC_PROJECT_OWNER_TYPE, AIDLC_PHASE_FIELD_NAME, AIDLC_CURSOR_MODEL)
 # Cursor dashboard env (not GitHub secret): AIDLC_GH_CALLBACK_TOKEN
 #
 name: AIDLC agent launch
@@ -52,3 +52,4 @@ jobs:
           project-number: ${{ vars.AIDLC_PROJECT_NUMBER }}
           phase-field-name: ${{ vars.AIDLC_PHASE_FIELD_NAME }}
           default-branch: main
+          cursor-model: ${{ vars.AIDLC_CURSOR_MODEL || 'composer-2.5' }}

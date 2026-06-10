@@ -133,6 +133,7 @@ jobs:
           project-number: ${{ vars.AIDLC_PROJECT_NUMBER }}
           phase-field-name: ${{ vars.AIDLC_PHASE_FIELD_NAME }}
           default-branch: main
+          cursor-model: ${{ vars.AIDLC_CURSOR_MODEL || 'composer-2.5' }}
           issue-number: ${{ steps.prep.outputs.issue_number }}
           ship-prs-json: ${{ steps.prep.outputs.ship_prs_json }}
           ship-deploy-sha: ${{ steps.prep.outputs.ship_deploy_sha }}

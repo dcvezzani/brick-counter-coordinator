@@ -42,6 +42,7 @@ Repo variables (configured):
 | `AIDLC_PROJECT_OWNER` | `dcvezzani` |
 | `AIDLC_PROJECT_OWNER_TYPE` | `user` |
 | `AIDLC_PROJECT_NUMBER` | `2` |
+| `AIDLC_CURSOR_MODEL` | *(optional)* Cloud Agent model ID for headless launches — default `composer-2.5` (Standard) when unset |
 
 ### 3 — Repository labels
 
