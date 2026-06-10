@@ -251,4 +251,4 @@ Resolved in [qa-001.md](../../docs/support/qa-001.md):
 
 ## Human approval
 
-- [ ] Product owner approved before Design
+- [x] Product owner approved before Design

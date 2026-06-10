@@ -544,5 +544,5 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 
 ## Human approval
 
-- [ ] Product owner approved Product Spec
-- [ ] Engineering lead / Dave approved Tech Spec before `/build`
+- [x] Product owner approved Product Spec
+- [x] Engineering lead / Dave approved Tech Spec before `/build`
