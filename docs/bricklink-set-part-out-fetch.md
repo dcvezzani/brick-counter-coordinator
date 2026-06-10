@@ -2,7 +2,7 @@
 
 How to obtain the official **part-out list** for a LEGO set from BrickLink. The coordinator uses this on session create ([ADR-0004](../adr/0004-part-out-server-fetch-curated-import.md)); this document is the contract for the upstream BrickLink call.
 
-**Raw capture:** [dcv/set-part-out-list/request.md](../dcv/set-part-out-list/request.md) · sample HTML response: [dcv/set-part-out-list/response.html](../dcv/set-part-out-list/response.html)
+**Raw capture:** [support/set-part-out-list/request.md](support/set-part-out-list/request.md) · sample HTML response: [support/set-part-out-list/response.html](support/set-part-out-list/response.html)
 
 ---
 
@@ -96,7 +96,7 @@ In Node, prefer `fetch` with `credentials` omitted and an explicit `Cookie` head
 ## Response
 
 - **Format:** HTML document titled “BrickLink Part out a Set into My Store Inventory”.
-- **Sample:** [dcv/set-part-out-list/response.html](../dcv/set-part-out-list/response.html) (~2.4 MB; full page for set 21306).
+- **Sample:** [support/set-part-out-list/response.html](support/set-part-out-list/response.html) (~2.4 MB; full page for set 21306).
 - **Must be transformed to JSON** before the counting tool can consume it.
 
 ### Row structure (parse targets)

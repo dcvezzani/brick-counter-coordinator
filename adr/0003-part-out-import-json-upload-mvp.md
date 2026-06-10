@@ -5,7 +5,7 @@
 | **Status** | Superseded by [ADR-0004](./0004-part-out-server-fetch-curated-import.md) |
 | **Date** | 2026-06-10 |
 | **Deciders** | David Vezzani |
-| **Related** | [dcv/qa-001.md](../dcv/qa-001.md), [tech-spec.md](../feature/part-out-coordinator/tech-spec.md) |
+| **Related** | [qa-001.md](../docs/support/qa-001.md), [tech-spec.md](../feature/part-out-coordinator/tech-spec.md) |
 
 ---
 

@@ -4,7 +4,7 @@ How to search **your store's inventory** on BrickLink by part number or lot ID. 
 
 **Not catalog search:** This returns lots already in **My Store Inventory**, not Rebrickable-style global part autocomplete. Workers can still type a part ID manually.
 
-**Raw capture:** [dcv/search-parts/store-inventory-detail-list-query.md](../dcv/search-parts/store-inventory-detail-list-query.md) (curl + full JSON fixture) · API notes: [dcv/search-parts/store-inventory-api.md](../dcv/search-parts/store-inventory-api.md)
+**Raw capture:** [support/search-parts/store-inventory-detail-list-query.md](support/search-parts/store-inventory-detail-list-query.md) (curl + full JSON fixture) · API notes: [support/search-parts/store-inventory-api.md](support/search-parts/store-inventory-api.md)
 
 **Reference implementation (sibling repo):** `bricklink-chrome-extension/src/lib/store-inventory-list.js`
 
@@ -44,7 +44,7 @@ Cookie must be from a logged-in BrickLink store account with access to the inven
 
 ### Example `curl`
 
-Replace `$cookies` with a valid BrickLink session cookie. See [dcv/search-parts/store-inventory-detail-list-query.md](../dcv/search-parts/store-inventory-detail-list-query.md) for the full baseline body.
+Replace `$cookies` with a valid BrickLink session cookie. See [support/search-parts/store-inventory-detail-list-query.md](support/search-parts/store-inventory-detail-list-query.md) for the full baseline body.
 
 ```bash
 curl 'https://www.bricklink.com/ajax/renovate/storeInventoryDetail/list.ajax' \
@@ -122,7 +122,7 @@ Expect 0 or 1 primary match.
 
 **Failure:** Non-zero `returnCode`, empty body, or HTTP error → treat as no lots; surface optional error in UI.
 
-**Fixture:** Full sample for part `3001` (11 rows) in [dcv/search-parts/store-inventory-detail-list-query.md](../dcv/search-parts/store-inventory-detail-list-query.md) (Response section).
+**Fixture:** Full sample for part `3001` (11 rows) in [support/search-parts/store-inventory-detail-list-query.md](support/search-parts/store-inventory-detail-list-query.md) (Response section).
 
 ### Key `inventoryList` row fields
 
@@ -251,7 +251,7 @@ sequenceDiagram
 | `normalizeImageUrl` | `//img...` → `https://img...` |
 | HTTP failure / `returnCode !== 0` | Returns empty array |
 
-Fixture source: truncated or full `inventoryList` from [store-inventory-detail-list-query.md](../dcv/search-parts/store-inventory-detail-list-query.md).
+Fixture source: truncated or full `inventoryList` from [store-inventory-detail-list-query.md](support/search-parts/store-inventory-detail-list-query.md).
 
 ---
 

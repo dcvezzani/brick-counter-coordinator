@@ -4,9 +4,9 @@ How to obtain **market average price** for a part + color + condition from Brick
 
 **Why this exists:** Store inventory search ([docs/bricklink-store-inventory-search.md](bricklink-store-inventory-search.md)) returns `invPrice` only when the part is **already in your store**. The catalog price guide supplies a **market average** from **Current Items for Sale** even when no store lot exists — useful for price hints during lot entry or export prep.
 
-**Reference code:** [dcv/prices/catalog-price-guide.js](../dcv/prices/catalog-price-guide.js) (copy of extension module) · extension source: `bricklink-chrome-extension/src/lib/catalog-price-guide.js`
+**Reference code:** [support/prices/catalog-price-guide.js](support/prices/catalog-price-guide.js) (copy of extension module) · extension source: `bricklink-chrome-extension/src/lib/catalog-price-guide.js`
 
-**HTML fixture:** [dcv/prices/fixtures/catalog-price-guide.html](../dcv/prices/fixtures/catalog-price-guide.html) (part `15540`, color `85` — New avg `0.07`, Used avg `0.05`)
+**HTML fixture:** [support/prices/fixtures/catalog-price-guide.html](support/prices/fixtures/catalog-price-guide.html) (part `15540`, color `85` — New avg `0.07`, Used avg `0.05`)
 
 ---
 
@@ -84,7 +84,7 @@ The parser reads **Avg Price:** from the gray data row (`bgcolor="#C0C0C0"`), no
 
 ### Server implementation note
 
-Extension uses browser `DOMParser`. On the coordinator server, use `cheerio` or `node-html-parser` with the **same selectors and column indices**. Export and test `parseAvgForSalePriceFromHtml` logic against [dcv/prices/fixtures/catalog-price-guide.html](../dcv/prices/fixtures/catalog-price-guide.html).
+Extension uses browser `DOMParser`. On the coordinator server, use `cheerio` or `node-html-parser` with the **same selectors and column indices**. Export and test `parseAvgForSalePriceFromHtml` logic against [support/prices/fixtures/catalog-price-guide.html](support/prices/fixtures/catalog-price-guide.html).
 
 ### Failure modes
 

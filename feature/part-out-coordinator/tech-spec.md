@@ -42,8 +42,8 @@ Units **1–4** depend on prior units only sequentially (2 needs 1, 3 needs 2, 4
 | Source | Use |
 |--------|-----|
 | [docs/tech-stack.md](../../docs/tech-stack.md) | Client stack (Vite, shadcn-vue, JS) |
-| [dcv/application-views.md](../../dcv/application-views.md) | View names, navigation |
-| [dcv/storyboard.md](../../dcv/storyboard.md) | Unit 0 walkthrough |
+| [application-views.md](../../docs/support/application-views.md) | View names, navigation |
+| [storyboard.md](../../docs/support/storyboard.md) | Unit 0 walkthrough |
 | [PROJECT.md](../../PROJECT.md) | Bricklink extension module map |
 | [docs/bricklink-colors.md](../../docs/bricklink-colors.md) | Color catalog JSON + `catalogitem.page` known-color scrape; picker contract |
 | [docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md) | Bricklink `invSetEdit.asp` POST contract, cookie, form fields, HTML parse |
@@ -243,7 +243,7 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 
 Triggered by `POST /sessions` (async or inline — inline OK for MVP). On failure, session stays in `importing` with `part_out_fetch_status=error`; lead can `POST …/part-out/refetch`.
 
-**Upstream Bricklink call:** `POST https://www.bricklink.com/invSetEdit.asp` — session cookie, urlencoded form (`itemNo`, `itemCondition`, `invAdjust*`, etc.), HTML response parsed to `part_out_lines`. Full contract: [docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md). Fixture HTML: [dcv/set-part-out-list/response.html](../../dcv/set-part-out-list/response.html).
+**Upstream Bricklink call:** `POST https://www.bricklink.com/invSetEdit.asp` — session cookie, urlencoded form (`itemNo`, `itemCondition`, `invAdjust*`, etc.), HTML response parsed to `part_out_lines`. Full contract: [docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md). Fixture HTML: [support/set-part-out-list/response.html](../../docs/support/set-part-out-list/response.html).
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -279,9 +279,9 @@ Triggered by `POST /sessions` (async or inline — inline OK for MVP). On failur
 | `GET` | `/bricklink/inventory-search` | Proxy `list.ajax` — query `q`/`partId`, optional `condition`, `colorId`, or `lotId` ([docs/bricklink-store-inventory-search.md](../../docs/bricklink-store-inventory-search.md)) |
 | `GET` | `/bricklink/parts/:partId/colors` | Known colors for part — catalog JSON + `catalogitem.page` scrape ([docs/bricklink-colors.md](../../docs/bricklink-colors.md)); optional `?q=` filter |
 
-**Upstream:** `POST https://www.bricklink.com/ajax/renovate/storeInventoryDetail/list.ajax` with `BRICKLINK_SESSION_COOKIE`. Port `buildListAjaxBody`, `filterInventoryRows`, `toSimplifiedLot` from extension `store-inventory-list.js`. Fixture: [dcv/search-parts/store-inventory-detail-list-query.md](../../dcv/search-parts/store-inventory-detail-list-query.md).
+**Upstream:** `POST https://www.bricklink.com/ajax/renovate/storeInventoryDetail/list.ajax` with `BRICKLINK_SESSION_COOKIE`. Port `buildListAjaxBody`, `filterInventoryRows`, `toSimplifiedLot` from extension `store-inventory-list.js`. Fixture: [support/search-parts/store-inventory-detail-list-query.md](../../docs/support/search-parts/store-inventory-detail-list-query.md).
 
-**Optional — catalog price guide:** `GET /bricklink/price-guide?partId=&colorId=&condition=` → scrape `catalogPG.asp` ([docs/bricklink-catalog-price-guide.md](../../docs/bricklink-catalog-price-guide.md)). Market avg when no store lot exists; port [dcv/prices/catalog-price-guide.js](../../dcv/prices/catalog-price-guide.js). Not required for MVP counting flows.
+**Optional — catalog price guide:** `GET /bricklink/price-guide?partId=&colorId=&condition=` → scrape `catalogPG.asp` ([docs/bricklink-catalog-price-guide.md](../../docs/bricklink-catalog-price-guide.md)). Market avg when no store lot exists; port [support/prices/catalog-price-guide.js](../../docs/support/prices/catalog-price-guide.js). Not required for MVP counting flows.
 
 ### Reconciliation (Unit 4)
 
@@ -352,7 +352,7 @@ Connect: `ws://host/ws?sessionId=&workerId=`
 
 ### Unit 0: fixture layer
 
-- `src/fixtures/demo-session.js` — data from [dcv/storyboard.md](../../dcv/storyboard.md)
+- `src/fixtures/demo-session.js` — data from [storyboard.md](../../docs/support/storyboard.md)
 - `composables/useFixtureSession.js` — in-memory mutations for walkthrough
 - `composables/useSession.js` — swaps fixture vs API by `import.meta.env.VITE_USE_FIXTURES` (default `true` until Unit 1)
 
@@ -385,7 +385,7 @@ Local-network deployment assumed; document in README for production hardening la
 
 **Acceptance (Review):**
 
-- [ ] All seven views reachable per [dcv/storyboard.md](../../dcv/storyboard.md)
+- [ ] All seven views reachable per [storyboard.md](../../docs/support/storyboard.md)
 - [ ] Storyboard badge visible; no API calls
 - [ ] Lot form fits mobile viewport without scroll
 - [ ] List lots supports `mode` query switching (organizer / cup / reconciliation UI)

@@ -4,7 +4,7 @@ How to turn a reconciled part-out list into **BrickLink bulk-update XML** and st
 
 **Coordinator use:** Unit 4 **Reconciled** → `POST /sessions/:id/reconciliation/export-xml` → download/copy XML → BrickLink validation page ([product-spec](../feature/part-out-coordinator/product-spec.md)).
 
-**Raw notes:** [dcv/validate-mass-update/readme.md](../dcv/validate-mass-update/readme.md)
+**Raw notes:** [support/mass-update/readme.md](support/mass-update/readme.md)
 
 ---
 
@@ -161,9 +161,9 @@ Extension **Add inventory** modal uses the **upload** textarea (`inv-upload-xml.
 | XML escape | `scripts/bulk-repair/lib/xml-escape.mjs` |
 | Upload XML (new lots — **not** coordinator export) | `src/lib/inv-upload-xml.js` |
 | Upload textarea DOM | `src/lib/inv-xml-upload-dom.js` |
-| Bulk-update help capture | `dcv/bulk-updates-02/bulk-update-documentation.md` |
-| Upload format spec | `dcv/bulk-updates-02/upload-xml-format.md` |
-| Planning / UX | `dcv/bulk-updates-02/overview-and-proposal.md`, `product-spec.md` |
+| Bulk-update help capture | `bricklink-chrome-extension/dcv/bulk-updates-02/bulk-update-documentation.md` |
+| Upload format spec | `bricklink-chrome-extension/dcv/bulk-updates-02/upload-xml-format.md` |
+| Planning / UX | `bricklink-chrome-extension/dcv/bulk-updates-02/overview-and-proposal.md`, `product-spec.md` |
 | CLI example | `scripts/bulk-repair/tsv-to-bulk-update-xml.mjs` |
 
 Tests: `tests/build-bulk-update-xml.test.js`

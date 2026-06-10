@@ -24,7 +24,7 @@
 src/
   components/ui/     # shadcn-vue primitives (added via CLI — JS output)
   views/             # One file per application view (storyboard → live)
-  router/            # Routes aligned to dcv/application-views.md
+  router/            # Routes aligned to docs/support/application-views.md
   lib/utils.js       # cn() helper
   style.css          # Tailwind + theme tokens
 ```

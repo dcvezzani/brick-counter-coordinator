@@ -69,6 +69,6 @@ The official part-out list for a set lives in Bricklink (`invSetEdit.asp`). [ADR
 ## References
 
 - **Fetch contract:** [docs/bricklink-set-part-out-fetch.md](../docs/bricklink-set-part-out-fetch.md) — POST body, session cookie, HTML response, parse targets
-- Raw capture: [dcv/set-part-out-list/request.md](../dcv/set-part-out-list/request.md), sample HTML [dcv/set-part-out-list/response.html](../dcv/set-part-out-list/response.html)
+- Raw capture: [support/set-part-out-list/request.md](../docs/support/set-part-out-list/request.md), sample HTML [support/set-part-out-list/response.html](../docs/support/set-part-out-list/response.html)
 - Extension: `bricklink-chrome-extension/scripts/code-scraper.js`, `src/lib/inv-set-edit-dom.js`
 - Bricklink URL: `POST https://www.bricklink.com/invSetEdit.asp`

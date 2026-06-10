@@ -72,7 +72,7 @@ These tie directly to the **scorecard** in `/ship`. Each should be **testable** 
 | 12 | **Pick-list delivery** — **List lots** is available on worker devices; worker can **send list to printer** when a printer is available. | View on device; print or print-ready output for one worker list. |
 | 13 | **Bricklink XML export** — From **Part-out reconciliation**, **Reconciled** generates **XML** and opens Bricklink **bulk update validation** (manual confirm/upload outside the app if required). | XML validates on Bricklink bulk-update validation page; spot-check row contents vs reconciled session. |
 | 14 | **Application views** — All seven canonical views (see below) are **routable** with session-aware navigation. | Navigate to every view from an active session; no dead-end routes. |
-| 15 | **Storyboard walkthrough** — Before live backend work, stakeholders complete key scenarios (below) on an **interactive UI prototype** using **fixture data** only; feedback informs spec updates. | [dcv/storyboard.md](../../dcv/storyboard.md) script checked off; at least one counter/organizer walkthrough; gaps logged. |
+| 15 | **Storyboard walkthrough** — Before live backend work, stakeholders complete key scenarios (below) on an **interactive UI prototype** using **fixture data** only; feedback informs spec updates. | [storyboard.md](../../docs/support/storyboard.md) script checked off; at least one counter/organizer walkthrough; gaps logged. |
 | 16 | **Part-out import curation** — After session create, lead sees the **full** server-fetched Bricklink part-out list, **confirms** scope (optionally excludes lines for partial-bag two-sweep); reconciliation compares session totals to **included** lines only. | Single-sweep: confirm all lines → count → reconcile. Partial-bag: exclude lines → confirm → count → reconcile; excluded lines not in expected quantities. |
 
 ### Business impact
@@ -84,7 +84,7 @@ These tie directly to the **scorecard** in `/ship`. Each should be **testable** 
 
 ## Application views
 
-Canonical screen inventory from [dcv/application-views.md](../../dcv/application-views.md). These names are the **product vocabulary** for navigation, Design Tech Specs, and Validate UI checks. `/design` maps each view to a route; **Unit 0 (storyboard)** implements every route with fixture UI before live backend work.
+Canonical screen inventory from [application-views.md](../../docs/support/application-views.md). These names are the **product vocabulary** for navigation, Design Tech Specs, and Validate UI checks. `/design` maps each view to a route; **Unit 0 (storyboard)** implements every route with fixture UI before live backend work.
 
 | View | Purpose | Primary actions |
 |------|---------|-----------------|
@@ -120,7 +120,7 @@ Work is split into **Units** at `/design` (one Tech Spec and one or more GitHub 
 | **3 — Organizer lists** | Worker **List lots** (split, progress, print, list-complete) | Pick-list split + persistence |
 | **4 — Reconciliation & export** | **Part-out reconciliation** (**Reconciled** → XML → Bricklink validation) | Reconciliation + XML export (import curation ships in Unit 1) |
 
-**Unit 0 (storyboard) — product intent:** Dave and stakeholders **walk through** the app in a browser, talk through scenarios, and refine the Product Spec **before** coordinator server or BrickLink integration. Same routes and view names as production; UI built with **shadcn-vue** per [docs/tech-stack.md](../../docs/tech-stack.md). Walkthrough script: [dcv/storyboard.md](../../dcv/storyboard.md).
+**Unit 0 (storyboard) — product intent:** Dave and stakeholders **walk through** the app in a browser, talk through scenarios, and refine the Product Spec **before** coordinator server or BrickLink integration. Same routes and view names as production; UI built with **shadcn-vue** per [docs/tech-stack.md](../../docs/tech-stack.md). Walkthrough script: [storyboard.md](../../docs/support/storyboard.md).
 
 **Unit 0 acceptance:** all views reachable; fixture data supports scenarios 1–8; storyboard labeled as non-persistent sample data; walkthrough feedback captured.
 
@@ -171,7 +171,7 @@ Success criteria **#15** → Unit 0; **#1–#7, #14, #16** → Units 0–2 ( **#
 
 ### In scope
 
-- **Storyboard prototype (Unit 0)** — Navigable UI for all views with fixture data; [dcv/storyboard.md](../../dcv/storyboard.md).
+- **Storyboard prototype (Unit 0)** — Navigable UI for all views with fixture data; [storyboard.md](../../docs/support/storyboard.md).
 - **Seven application views** — **Home**, **New session**, **Part-out import**, **Lot form**, **List cups**, **List lots**, **Part-out reconciliation** (see [Application views](#application-views)); routes established in **Unit 0**, live behavior added in Units 1–4.
 - Part-out **session** creation from a **Bricklink part-out** for a given set (set number and Bricklink part-out options); **server-side fetch** of the official list ([ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md)).
 - **Part-out import** curation — lead reviews fetched list and confirms before counting; excludes out-of-scope lines only when needed (**two-sweep** for partial-bag sets; single sweep for brand-new or loose purchases).
@@ -216,7 +216,7 @@ Success criteria **#15** → Unit 0; **#1–#7, #14, #16** → Units 0–2 ( **#
 
 ## Decisions
 
-Resolved in [dcv/qa-001.md](../../dcv/qa-001.md):
+Resolved in [qa-001.md](../../docs/support/qa-001.md):
 
 | Date | Decision |
 |------|----------|
@@ -229,19 +229,19 @@ Resolved in [dcv/qa-001.md](../../dcv/qa-001.md):
 | 2026-06-09 | **Storage locations:** From Bricklink part-out **Remarks** ("My Remarks" / location) on each line — carried through to pick lists. |
 | 2026-06-09 | **Design reference codebase:** Sibling repo `bricklink-chrome-extension` at `/Users/dcvezzani/personal-projects/lego/bricklink-chrome-extension` — color picker, inventory lookup, part-out scrape, XML shapes. Module map in [PROJECT.md](../../PROJECT.md#design-reference--bricklink-chrome-extension). |
 | 2026-06-09 | **No iframes:** Coordinator must **not** use iframe-based BrickLink integration. Port AJAX patterns (e.g. extension `store-inventory-list.js` / `list.ajax`) instead. Extension iframe code (`inventory-iframe-lookup.js`) is **reference only for what to avoid** — do not modify extension repo. |
-| 2026-06-10 | **Application views:** Six canonical views per [dcv/application-views.md](../../dcv/application-views.md). **Unit 1** registers all routes (Home + New session fully functional; others stubbed). Units 2–4 deliver full behavior on the same views. |
+| 2026-06-10 | **Application views:** Six canonical views per [application-views.md](../../docs/support/application-views.md). **Unit 1** registers all routes (Home + New session fully functional; others stubbed). Units 2–4 deliver full behavior on the same views. |
 | 2026-06-10 | **Organizer line states:** On **List lots**, a lot is **moved to storage** or **needs new storage location** (not a single generic checkbox). **Mark entire list complete** when all lines are in one of those states. |
 | 2026-06-10 | **Reconciled handoff:** **Reconciled** on **Part-out reconciliation** generates XML and opens Bricklink **bulk update validation** (not silent background upload). |
-| 2026-06-10 | **Storyboard (Unit 0):** Interactive shadcn-vue prototype with fixture data — all views navigable for stakeholder walkthroughs before backend ([dcv/storyboard.md](../../dcv/storyboard.md)). |
+| 2026-06-10 | **Storyboard (Unit 0):** Interactive shadcn-vue prototype with fixture data — all views navigable for stakeholder walkthroughs before backend ([storyboard.md](../../docs/support/storyboard.md)). |
 | 2026-06-10 | **UI stack:** **shadcn-vue** + Tailwind v4 + Lucide + Vue Router on Vite; client **JavaScript** (`typescript: false`). Supersedes Font Awesome / generic ShadCN notes. |
 | 2026-06-10 | **Part-out import:** **Server-side fetch** on session create (not JSON upload). New **Part-out import** view shows full fetched list; lead confirms before counting (excludes lines only when needed). **Single sweep** for brand-new sealed sets (all new) or loose bricks (all used). **Two sweeps** only for partial-bag sets (mixed opened/sealed bags). Supersedes [ADR-0003](../../adr/0003-part-out-import-json-upload-mvp.md) → [ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md). |
 
 ## Related documents
 
-- Storyboard walkthrough: [dcv/storyboard.md](../../dcv/storyboard.md)
+- Storyboard walkthrough: [storyboard.md](../../docs/support/storyboard.md)
 - Tech stack: [docs/tech-stack.md](../../docs/tech-stack.md)
-- Application views (canonical): [dcv/application-views.md](../../dcv/application-views.md)
-- Q&A: [dcv/qa-001.md](../../dcv/qa-001.md)
+- Application views (canonical): [application-views.md](../../docs/support/application-views.md)
+- Q&A: [qa-001.md](../../docs/support/qa-001.md)
 - Design reference map: [PROJECT.md — bricklink-chrome-extension](../../PROJECT.md#design-reference--bricklink-chrome-extension)
 - Seed proposal: [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md)
 - Tech Spec: [tech-spec.md](./tech-spec.md) (draft — `/design` 2026-06-10)

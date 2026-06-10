@@ -4,7 +4,7 @@ How to power the **color picker** and any UI that maps BrickLink **color ID** �
 
 **Consumers:** Lot form `ColorPicker`, part-out import rows, list tables, reconciliation display.
 
-**Raw notes:** [dcv/colors/readme.md](../dcv/colors/readme.md)
+**Raw notes:** [support/colors/readme.md](support/colors/readme.md)
 
 **Reference implementation (sibling repo):** `bricklink-chrome-extension/src/lib/bricklink-colors.js`, `catalog-known-colors.js`, `src/data/bricklink-colors.json`
 
@@ -69,7 +69,7 @@ flowchart LR
 | Approach | Notes |
 |----------|--------|
 | **Copy** | `bricklink-chrome-extension/src/data/bricklink-colors.json` → e.g. `server/data/bricklink-colors.json` (or `src/data/` if client-only resolve) |
-| **Rebuild** | Extension `npm run colors:build` from BrickLink color export — see extension `dcv/bulk-updates-02/colors-data-spec.md` |
+| **Rebuild** | Extension `npm run colors:build` from BrickLink color export — see `bricklink-chrome-extension/dcv/bulk-updates-02/colors-data-spec.md` |
 | **Load** | Server reads JSON at startup; cache in memory |
 
 ~200 colors × ~40 bytes ≈ 8 KB — ship with the app.
@@ -139,7 +139,7 @@ In-memory cache keyed by `partId` (`fetchKnownColorIdsForPart`). Server should c
 
 ### Fixture
 
-Inline HTML snippet for tests (part `15540` known order `85, 11, 63, 5, 2, 1`): extension `tests/catalog-known-colors.test.js` or copy to `dcv/colors/fixtures/known-colors-snippet.html` when implementing.
+Inline HTML snippet for tests (part `15540` known order `85, 11, 63, 5, 2, 1`): extension `tests/catalog-known-colors.test.js` or copy to `support/colors/fixtures/known-colors-snippet.html` when implementing.
 
 ---
 
@@ -217,4 +217,4 @@ Port from extension:
 - [Tech Spec — Bricklink helpers](../feature/part-out-coordinator/tech-spec.md#bricklink-helpers-unit-2)
 - [docs/bricklink-store-inventory-search.md](bricklink-store-inventory-search.md) — color filter after `list.ajax`
 - [PROJECT.md — Color picker row](../PROJECT.md#design-reference--bricklink-chrome-extension)
-- Extension: `dcv/bulk-updates-02/colors-data-spec.md`, `getting-known-colors.md`
+- Extension: `bricklink-chrome-extension/dcv/bulk-updates-02/colors-data-spec.md`, `getting-known-colors.md`

@@ -56,6 +56,6 @@ npm install
 npm run dev
 ```
 
-Stack: Vue 3, Vite, shadcn-vue, Tailwind, **JavaScript** — [docs/tech-stack.md](docs/tech-stack.md). UI components: `npx shadcn-vue@latest add <component>`. Path aliases: [jsconfig.json](jsconfig.json). Storyboard: [dcv/storyboard.md](dcv/storyboard.md).
+Stack: Vue 3, Vite, shadcn-vue, Tailwind, **JavaScript** — [docs/tech-stack.md](docs/tech-stack.md). UI components: `npx shadcn-vue@latest add <component>`. Path aliases: [jsconfig.json](jsconfig.json). Storyboard: [docs/support/storyboard.md](docs/support/storyboard.md).
 
 Coordinator server: after `/design` Tech Spec.

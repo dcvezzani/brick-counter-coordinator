@@ -47,6 +47,6 @@ Store session cookie lives in **server environment only** (`BRICKLINK_SESSION_CO
 ## References
 
 - **Store inventory search contract:** [docs/bricklink-store-inventory-search.md](../docs/bricklink-store-inventory-search.md)
-- Raw capture: [dcv/search-parts/store-inventory-detail-list-query.md](../dcv/search-parts/store-inventory-detail-list-query.md)
+- Raw capture: [support/search-parts/store-inventory-detail-list-query.md](../docs/support/search-parts/store-inventory-detail-list-query.md)
 - Extension: `bricklink-chrome-extension/src/lib/store-inventory-list.js`
 - [PROJECT.md — Design reference](../PROJECT.md#design-reference--bricklink-chrome-extension)
