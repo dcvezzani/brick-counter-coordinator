@@ -1,9 +1,18 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { ListChecks, Printer, Users } from '@lucide/vue'
 import AppShell from '@/components/AppShell.vue'
 import LotListTable from '@/components/LotListTable.vue'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useSession } from '@/composables/useSession'
 
 const route = useRoute()
@@ -19,12 +28,16 @@ const {
   updatePickListItem,
   completePickList,
   splitPickList,
+  deleteLot,
   getCurrentWorker,
-  workerName,
+  colorName,
 } = useSession()
 
 const session = computed(() => getSession(sessionId.value))
 const currentWorker = computed(() => getCurrentWorker())
+
+const lotToDelete = ref(null)
+const deleteDialogOpen = ref(false)
 
 const rows = computed(() => {
   if (mode.value === 'reconciliation') {
@@ -46,8 +59,33 @@ const rows = computed(() => {
   return getLots(sessionId.value, { cupId: cupId.value })
 })
 
+const deleteDialogDescription = computed(() => {
+  if (!lotToDelete.value) return ''
+  const partId = lotToDelete.value.partId ?? 'Unknown part'
+  const color = colorName(lotToDelete.value.colorId)
+  return `Remove lot ${partId} / ${color} from this session? This cannot be undone.`
+})
+
 function onStatusChange(row, status) {
   updatePickListItem(sessionId.value, row.pickItemId, status)
+}
+
+function requestDelete(row) {
+  lotToDelete.value = row
+  deleteDialogOpen.value = true
+}
+
+function confirmDelete() {
+  if (!lotToDelete.value) return
+  const lotId = lotToDelete.value.lotId ?? lotToDelete.value.id
+  deleteLot(sessionId.value, lotId)
+  lotToDelete.value = null
+  deleteDialogOpen.value = false
+}
+
+function cancelDelete() {
+  lotToDelete.value = null
+  deleteDialogOpen.value = false
 }
 
 function markComplete() {
@@ -78,12 +116,21 @@ function printList() {
           <Button
             v-if="mode === 'organizer' && !session.pickListSplit"
             size="sm"
+            class="inline-flex items-center gap-2"
             data-testid="split-pick-list"
             @click="runSplit"
           >
+            <Users class="size-4 shrink-0" />
             Split list
           </Button>
-          <Button v-if="mode === 'organizer'" size="sm" variant="outline" @click="printList">
+          <Button
+            v-if="mode === 'organizer'"
+            size="sm"
+            variant="outline"
+            class="inline-flex items-center gap-2"
+            @click="printList"
+          >
+            <Printer class="size-4 shrink-0" />
             Print
           </Button>
         </div>
@@ -95,16 +142,35 @@ function printList() {
         :mode="mode"
         :show-actions="mode !== 'reconciliation' || true"
         @status-change="onStatusChange"
+        @delete="requestDelete"
       />
 
       <Button
         v-if="mode === 'organizer'"
-        class="min-h-11 print:hidden"
+        class="inline-flex min-h-11 items-center gap-2 print:hidden"
         data-testid="mark-complete"
         @click="markComplete"
       >
+        <ListChecks class="size-4 shrink-0" />
         Mark entire list complete
       </Button>
+
+      <Dialog v-model:open="deleteDialogOpen">
+        <DialogContent data-testid="delete-lot-dialog">
+          <DialogHeader>
+            <DialogTitle>Delete lot?</DialogTitle>
+            <DialogDescription>{{ deleteDialogDescription }}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter class="gap-2 sm:gap-0">
+            <Button variant="outline" data-testid="delete-lot-cancel" @click="cancelDelete">
+              Cancel
+            </Button>
+            <Button variant="destructive" data-testid="delete-lot-confirm" @click="confirmDelete">
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   </AppShell>
 </template>

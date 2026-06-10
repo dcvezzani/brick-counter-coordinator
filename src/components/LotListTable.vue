@@ -1,6 +1,13 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import {
+  Archive,
+  CheckCircle,
+  MapPin,
+  Pencil,
+  Trash2,
+} from '@lucide/vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,10 +27,10 @@ const props = defineProps({
   showActions: { type: Boolean, default: true },
 })
 
-const emit = defineEmits(['status-change', 'resolve', 'open-cup'])
+const emit = defineEmits(['status-change', 'resolve', 'delete'])
 
 const router = useRouter()
-const { colorName, workerName } = useSession()
+const { colorName } = useSession()
 
 const statusLabel = {
   pending: 'Pending',
@@ -36,10 +43,8 @@ function openLot(row) {
   router.push(`/session/${props.sessionId}/lot/${lotId}`)
 }
 
-function openCup(cupId) {
-  if (cupId) {
-    router.push(`/session/${props.sessionId}/lots?mode=cup&cupId=${cupId}`)
-  }
+function requestDelete(row) {
+  emit('delete', row)
 }
 
 const title = computed(() => {
@@ -82,31 +87,41 @@ const title = computed(() => {
                 v-if="mode !== 'reconciliation'"
                 size="sm"
                 variant="outline"
+                class="inline-flex items-center gap-2"
+                data-testid="lot-edit"
                 @click="openLot(row)"
               >
+                <Pencil class="size-4 shrink-0" />
                 Edit
               </Button>
               <Button
-                v-if="mode === 'cup' && row.cupId"
+                v-if="mode !== 'reconciliation'"
                 size="sm"
-                variant="ghost"
-                @click="openCup(row.cupId)"
+                variant="outline"
+                class="inline-flex items-center gap-2"
+                data-testid="lot-delete"
+                @click="requestDelete(row)"
               >
-                Cup
+                <Trash2 class="size-4 shrink-0" />
+                Delete
               </Button>
               <template v-if="mode === 'organizer'">
                 <Button
                   size="sm"
                   variant="outline"
+                  class="inline-flex items-center gap-2"
                   @click="emit('status-change', row, 'moved_to_storage')"
                 >
+                  <Archive class="size-4 shrink-0" />
                   Moved
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
+                  class="inline-flex items-center gap-2"
                   @click="emit('status-change', row, 'needs_new_location')"
                 >
+                  <MapPin class="size-4 shrink-0" />
                   New loc
                 </Button>
               </template>
@@ -114,8 +129,10 @@ const title = computed(() => {
                 v-if="mode === 'reconciliation' && !row.resolved"
                 size="sm"
                 variant="outline"
+                class="inline-flex items-center gap-2"
                 @click="emit('resolve', row)"
               >
+                <CheckCircle class="size-4 shrink-0" />
                 Resolve
               </Button>
             </div>

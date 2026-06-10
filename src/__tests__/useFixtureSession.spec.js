@@ -64,4 +64,23 @@ describe('useFixtureSession', () => {
     fixture.confirmPartOut(session.id)
     expect(fixture.getSession(session.id).phase).toBe('counting')
   })
+
+  it('deleteLot removes lot and associated pick-list items', () => {
+    const session = fixture.getSession(fixture.DEMO_SESSION_ID)
+    const lot = session.lots[0]
+    fixture.splitPickList(fixture.DEMO_SESSION_ID)
+
+    fixture.deleteLot(fixture.DEMO_SESSION_ID, lot.id)
+
+    expect(fixture.getSession(fixture.DEMO_SESSION_ID).lots.find((l) => l.id === lot.id)).toBeUndefined()
+    expect(
+      fixture.getPickListItems(fixture.DEMO_SESSION_ID).some((item) => item.lotId === lot.id),
+    ).toBe(false)
+  })
+
+  it('deleteLot throws when lot is missing', () => {
+    expect(() => fixture.deleteLot(fixture.DEMO_SESSION_ID, 'missing-lot-id')).toThrow(
+      /Lot not found/,
+    )
+  })
 })

@@ -180,6 +180,17 @@ export function useFixtureSession() {
     return { lot, duplicate: false }
   }
 
+  function deleteLot(sessionId, lotId) {
+    const session = ensureSession(sessionId)
+    const index = session.lots.findIndex((l) => l.id === lotId)
+    if (index === -1) {
+      throw new Error(`Lot not found: ${lotId}`)
+    }
+    session.lots.splice(index, 1)
+    session.pickListItems = session.pickListItems.filter((item) => item.lotId !== lotId)
+    return { ok: true }
+  }
+
   function splitPickList(sessionId) {
     const session = ensureSession(sessionId)
     const workers = session.workers
@@ -332,6 +343,7 @@ export function useFixtureSession() {
     getLots,
     getLot,
     saveLot,
+    deleteLot,
     splitPickList,
     getPickListItems,
     updatePickListItem,

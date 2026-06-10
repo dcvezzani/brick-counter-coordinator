@@ -25,6 +25,7 @@ export function useSession() {
     getLots: fixture.getLots,
     getLot: fixture.getLot,
     saveLot: fixture.saveLot,
+    deleteLot: fixture.deleteLot,
     splitPickList: fixture.splitPickList,
     getPickListItems: fixture.getPickListItems,
     updatePickListItem: fixture.updatePickListItem,
