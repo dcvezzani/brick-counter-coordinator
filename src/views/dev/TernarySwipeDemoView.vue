@@ -39,6 +39,15 @@ const narrowExamples = [
   { id: '40', label: 'max-w-40 (10rem) — very narrow', class: 'w-full max-w-40' },
 ]
 
+const heightExamples = [
+  { id: 'default', label: 'Default — min-h-11 (2.75rem / 44px)', trackClass: '' },
+  { id: 'h9', label: 'min-h-9 (2.25rem / 36px)', trackClass: 'min-h-9' },
+  { id: 'h8', label: 'min-h-8 (2rem / 32px)', trackClass: 'min-h-8' },
+  { id: 'h7', label: 'min-h-7 (1.75rem / 28px)', trackClass: 'min-h-7' },
+  { id: 'fixed-h8', label: 'Fixed h-8 — no min-height growth', trackClass: 'h-8 min-h-0' },
+  { id: 'fixed-h6', label: 'Fixed h-6 (1.5rem / 24px) — very short', trackClass: 'h-6 min-h-0' },
+]
+
 watch(
   () => route.query.pick_status,
   () => {
@@ -179,6 +188,44 @@ function onFormSubmit(event) {
                 v-model="organizerValue"
                 :name="`demo-narrow-${example.id}`"
                 :test-id="`demo-narrow-${example.id}`"
+                neutral-value="pending"
+                option1-value="moved_to_storage"
+                option2-value="needs_new_location"
+                option1-label="Moved"
+                option2-label="New loc"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Varying heights</CardTitle>
+          <CardDescription>
+            Default track height is
+            <code class="rounded bg-muted px-1 py-0.5">min-h-11</code>
+            for touch targets. Pass
+            <code class="rounded bg-muted px-1 py-0.5">track-class</code>
+            to shorten the control (e.g. compact table rows). Examples use
+            <code class="rounded bg-muted px-1 py-0.5">max-w-xs</code>
+            width.
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-6">
+          <div
+            v-for="example in heightExamples"
+            :key="example.id"
+            class="flex flex-col gap-2"
+            :data-testid="`demo-height-${example.id}`"
+          >
+            <p class="text-sm text-muted-foreground">{{ example.label }}</p>
+            <div class="w-full max-w-xs">
+              <TernarySwipeControl
+                v-model="organizerValue"
+                :name="`demo-height-${example.id}`"
+                :test-id="`demo-height-${example.id}`"
+                :track-class="example.trackClass"
                 neutral-value="pending"
                 option1-value="moved_to_storage"
                 option2-value="needs_new_location"

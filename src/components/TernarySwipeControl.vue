@@ -34,6 +34,8 @@ const props = defineProps({
   neutralValue: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   testId: { type: String, default: 'ternary-swipe' },
+  /** Optional classes merged onto the track (e.g. min-h-8 for a shorter control). */
+  trackClass: { type: [String, Object, Array], default: '' },
 })
 
 const emit = defineEmits(['update:modelValue', 'change'])
@@ -351,6 +353,7 @@ onBeforeUnmount(() => {
           'bg-muted relative min-h-11 w-full rounded-full border p-1',
           'focus-visible:ring-ring/50 outline-none focus-visible:ring-3',
           disabled && 'pointer-events-none opacity-50',
+          trackClass,
         )
       "
       @pointerdown="onTrackPointerDown"
