@@ -17,6 +17,7 @@ import { useSession } from '@/composables/useSession'
 
 const router = useRouter()
 const { listSessions, joinSession, setCurrentWorker } = useSession()
+const isDev = import.meta.env.DEV
 
 const displayName = ref('')
 const error = ref(null)
@@ -95,6 +96,15 @@ function createNew() {
           @click="openExisting"
         >
           Enter existing session
+        </Button>
+        <Button
+          v-if="isDev"
+          variant="ghost"
+          class="min-h-11"
+          data-testid="dev-ternary-swipe"
+          @click="router.push('/dev/ternary-swipe')"
+        >
+          Dev: Ternary swipe playground
         </Button>
       </div>
     </div>

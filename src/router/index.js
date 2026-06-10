@@ -6,6 +6,7 @@ import LotFormView from '@/views/LotFormView.vue'
 import ListCupsView from '@/views/ListCupsView.vue'
 import ListLotsView from '@/views/ListLotsView.vue'
 import ReconciliationView from '@/views/ReconciliationView.vue'
+import TernarySwipeDemoView from '@/views/dev/TernarySwipeDemoView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -41,6 +42,11 @@ const router = createRouter({
       path: '/sessions',
       name: 'sessions',
       redirect: '/',
+    },
+    {
+      path: '/dev/ternary-swipe',
+      name: 'dev-ternary-swipe',
+      component: TernarySwipeDemoView,
     },
   ],
 })
