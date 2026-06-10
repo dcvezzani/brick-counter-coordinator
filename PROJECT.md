@@ -2,7 +2,7 @@
 
 **Owner:** David Vezzani (Dave)  
 **Last updated:** 2026-06-10  
-**Status:** Plan — Product Spec ready; GitHub Projects v2 board [#2](https://github.com/users/dcvezzani/projects/2) live for **`dcvezzani`**
+**Status:** Plan — Product Spec finalized and ready for approval; GitHub Projects v2 board [#2](https://github.com/users/dcvezzani/projects/2) live for **`dcvezzani`**
 
 ## What this project is
 
@@ -10,7 +10,7 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 
 **Primary users:** counters/sorters (pick name at join), session lead, organizers.
 
-**Seed documents:** [OVERVIEW_AND_PROPOSAL.md](OVERVIEW_AND_PROPOSAL.md) · [dcv/qa-001.md](dcv/qa-001.md) · extension reference below
+**Seed documents:** [OVERVIEW_AND_PROPOSAL.md](OVERVIEW_AND_PROPOSAL.md) · extension reference below
 
 ## Architecture overview (high level — detail in `/design`)
 
@@ -93,7 +93,7 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 
 | Feature | Status | Folder |
 |---------|--------|--------|
-| Part-Out Counting Coordinator | Plan — Product Spec draft (qa-001 incorporated) | [feature/part-out-coordinator/](feature/part-out-coordinator/) |
+| Part-Out Counting Coordinator | Plan — Product Spec ready for approval | [feature/part-out-coordinator/](feature/part-out-coordinator/) |
 
 ## Conventions
 
@@ -110,4 +110,4 @@ _Not yet defined. Update after `/design` and application scaffold._
 
 ## Resolved product decisions (2026-06-09)
 
-Full detail in [dcv/qa-001.md](dcv/qa-001.md) and [feature/part-out-coordinator/product-spec.md](feature/part-out-coordinator/product-spec.md#decisions).
+Full detail in [feature/part-out-coordinator/product-spec.md](feature/part-out-coordinator/product-spec.md#decisions).

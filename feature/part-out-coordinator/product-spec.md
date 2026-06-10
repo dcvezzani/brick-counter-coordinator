@@ -10,10 +10,10 @@
 | Field | Value |
 |-------|-------|
 | **Feature** | Part-Out Counting Coordinator |
-| **Status** | Draft — awaiting approval |
+| **Status** | Ready for approval |
 | **Author** | David Vezzani (from [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md)) |
 | **Created** | 2026-06-09 |
-| **Last updated** | 2026-06-09 |
+| **Last updated** | 2026-06-10 |
 | **Related Tech Spec** | [tech-spec.md](./tech-spec.md) (created in `/design`) |
 
 ## Problem & audience
@@ -157,12 +157,12 @@ These tie directly to the **scorecard** in `/ship`. Each should be **testable** 
 
 ## Decisions
 
-Resolved in [dcv/qa-001.md](../../dcv/qa-001.md):
+Key product decisions established during planning (based on [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md) and iterative refinement):
 
 | Date | Decision |
 |------|----------|
-| 2026-06-09 | Feature slug: `part-out-coordinator`. Seed: [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md). |
-| 2026-06-09 | **Part catalog / search:** Searchable parts via an API-style lookup; color picker reuses patterns from Dave's existing extension (Design to align with reference code). |
+| 2026-06-09 | Feature slug: `part-out-coordinator`. |
+| 2026-06-09 | **Part catalog / search:** Searchable parts via an API-style lookup; color picker reuses patterns from Dave's existing LEGO Chrome extension (Design to align with reference code). |
 | 2026-06-09 | **Part-out list source:** Bricklink part-out for a set (set number + Bricklink options: pricing, new/used, overwrite vs consolidate inventory). Import mechanism (e.g. JSON from extension scrape vs authenticated fetch) is a **Design** choice; Dave has reference implementations. |
 | 2026-06-09 | **Bricklink handoff:** MVP exports reconciled list as **XML** for **Bricklink bulk update** — not live API submit. |
 | 2026-06-09 | **Worker identity:** **Pick display name at join** — no auth system for MVP. |
@@ -173,13 +173,12 @@ Resolved in [dcv/qa-001.md](../../dcv/qa-001.md):
 
 ## Related documents
 
-- Q&A: [dcv/qa-001.md](../../dcv/qa-001.md)
 - Design reference map: [PROJECT.md — bricklink-chrome-extension](../../PROJECT.md#design-reference--bricklink-chrome-extension)
 - Seed proposal: [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md)
 - Tech Spec: [tech-spec.md](./tech-spec.md) (pending `/design`)
 - Process: [docs/AIDLC.md](../../docs/AIDLC.md)
 - Project memory: [PROJECT.md](../../PROJECT.md)
-- Issues: _Parent GitHub issue not yet created — body should include `AIDLC feature folder: feature/part-out-coordinator/`_
+- Parent GitHub issue: [#2](https://github.com/dcvezzani/brick-counter-coordinator/issues/2)
 
 ## Human approval
 
