@@ -18,9 +18,9 @@ vi.mock('vue-router', () => ({
 
 const SESSION_ID = 'test-session'
 
-function setupSession(partOutCondition = 'used') {
+function setupSession(partOutCondition = 'used', saveLotImpl) {
   const session = { partOutOptions: { condition: partOutCondition } }
-  const saveLot = vi.fn(() => ({ lot: { id: 'lot-test' }, duplicate: false }))
+  const saveLot = saveLotImpl ?? vi.fn(() => ({ lot: { id: 'lot-test' }, duplicate: false }))
   vi.mocked(useSession).mockReturnValue(
     /** @type {any} */ ({
       getSession: () => session,
@@ -35,12 +35,20 @@ function setupSession(partOutCondition = 'used') {
   return { session, saveLot }
 }
 
-function checkedCondition(wrapper) {
-  const selected = wrapper.find('[data-testid="cond-n"][data-state="checked"]')
-  if (selected.exists()) return 'N'
-  const used = wrapper.find('[data-testid="cond-u"][data-state="checked"]')
-  if (used.exists()) return 'U'
-  return null
+async function fillLotForm(wrapper) {
+  if (!wrapper.find('[data-testid="part-search-panel"]').exists()) {
+    await wrapper.get('[data-testid="part-search-trigger"]').trigger('click')
+  }
+  const filter = wrapper.get('[data-testid="part-search-filter"]')
+  await filter.setValue('30')
+  vi.advanceTimersByTime(150)
+  await flushPromises()
+  await filter.trigger('keydown', { key: 'Enter' })
+  await flushPromises()
+
+  await wrapper.get('[data-testid="color-picker-trigger"]').trigger('click')
+  await wrapper.get('[data-testid="color-picker-option-11"]').trigger('click')
+  await flushPromises()
 }
 
 describe('lot-entry-defaults', () => {
@@ -94,32 +102,33 @@ describe('LotForm', () => {
     vi.useRealTimers()
   })
 
-  it('defaults condition to N when session is new-only', async () => {
+  it('shows read-only session condition for new-only sessions', async () => {
     setupSession('new')
     const wrapper = mount(LotForm, {
       props: { sessionId: SESSION_ID, lotId: null },
     })
     await flushPromises()
-    expect(checkedCondition(wrapper)).toBe('N')
+    expect(wrapper.get('[data-testid="lot-condition"]').text()).toBe('Condition: New')
+    expect(wrapper.find('[data-testid="cond-n"]').exists()).toBe(false)
   })
 
-  it('defaults condition to U when session is used-only', async () => {
+  it('shows read-only session condition for used-only sessions', async () => {
     setupSession('used')
     const wrapper = mount(LotForm, {
       props: { sessionId: SESSION_ID, lotId: null },
     })
     await flushPromises()
-    expect(checkedCondition(wrapper)).toBe('U')
+    expect(wrapper.get('[data-testid="lot-condition"]').text()).toBe('Condition: Used')
   })
 
-  it('defaults condition from sessionStorage for mixed sessions', async () => {
+  it('shows read-only condition from sessionStorage for mixed sessions', async () => {
     sessionStorage.setItem(`lot-entry-condition:${SESSION_ID}`, 'N')
     setupSession('mixed')
     const wrapper = mount(LotForm, {
       props: { sessionId: SESSION_ID, lotId: null },
     })
     await flushPromises()
-    expect(checkedCondition(wrapper)).toBe('N')
+    expect(wrapper.get('[data-testid="lot-condition"]').text()).toBe('Condition: New')
   })
 
   it('focuses part search filter on mount for new lots', async () => {
@@ -141,17 +150,7 @@ describe('LotForm', () => {
     })
     await flushPromises()
 
-    await wrapper.get('[data-testid="part-search-trigger"]').trigger('click')
-    const filter = wrapper.get('[data-testid="part-search-filter"]')
-    await filter.setValue('30')
-    vi.advanceTimersByTime(150)
-    await flushPromises()
-    await filter.trigger('keydown', { key: 'Enter' })
-    await flushPromises()
-
-    await wrapper.get('[data-testid="color-picker-trigger"]').trigger('click')
-    await wrapper.get('[data-testid="color-picker-option-11"]').trigger('click')
-    await flushPromises()
+    await fillLotForm(wrapper)
 
     await wrapper.get('[data-testid="save-lot"]').trigger('click')
     await flushPromises()
@@ -171,23 +170,73 @@ describe('LotForm', () => {
     })
     await flushPromises()
 
-    await wrapper.get('[data-testid="part-search-trigger"]').trigger('click')
-    const filter = wrapper.get('[data-testid="part-search-filter"]')
-    await filter.setValue('30')
-    vi.advanceTimersByTime(150)
-    await flushPromises()
-    await filter.trigger('keydown', { key: 'Enter' })
-    await flushPromises()
-
-    await wrapper.get('[data-testid="color-picker-trigger"]').trigger('click')
-    await wrapper.get('[data-testid="color-picker-option-11"]').trigger('click')
-    await flushPromises()
+    await fillLotForm(wrapper)
 
     await wrapper.get('[data-testid="save-and-add-another"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.find('[data-testid="color-picker-panel"]').exists()).toBe(true)
     expect(document.activeElement?.dataset.testid).toBe('color-picker-filter')
-    expect(sessionStorage.getItem(`lot-entry-condition:${SESSION_ID}`)).toBe('U')
+  })
+
+  it('shows duplicate confirm dialog and merges on confirm', async () => {
+    const saveLot = vi
+      .fn()
+      .mockReturnValueOnce({
+        duplicate: true,
+        existing: { createdBy: 'Alex', qty: 4 },
+      })
+      .mockReturnValueOnce({ lot: { id: 'lot-merged' }, duplicate: false, merged: true })
+
+    setupSession('used', saveLot)
+    const wrapper = mount(LotForm, {
+      props: { sessionId: SESSION_ID, lotId: null },
+      attachTo: document.body,
+    })
+    await flushPromises()
+
+    await fillLotForm(wrapper)
+    await wrapper.get('[data-testid="save-lot"]').trigger('click')
+    await flushPromises()
+
+    expect(document.body.querySelector('[data-testid="duplicate-confirm-dialog"]')).toBeTruthy()
+    expect(document.body.textContent).toContain('Already counted by Alex (qty 4)')
+
+    const confirmBtn = document.body.querySelector('[data-testid="duplicate-confirm"]')
+    expect(confirmBtn).toBeTruthy()
+    await confirmBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushPromises()
+
+    expect(saveLot).toHaveBeenCalledTimes(2)
+    expect(saveLot.mock.calls[1][1]).toMatchObject({ mergeDuplicate: true })
+    expect(document.body.querySelector('[data-testid="duplicate-confirm-dialog"]')).toBeNull()
+    expect(wrapper.find('[data-testid="part-search-panel"]').exists()).toBe(true)
+  })
+
+  it('cancels duplicate save without a second saveLot call', async () => {
+    const saveLot = vi.fn(() => ({
+      duplicate: true,
+      existing: { createdBy: 'Alex', qty: 4 },
+    }))
+
+    setupSession('used', saveLot)
+    const wrapper = mount(LotForm, {
+      props: { sessionId: SESSION_ID, lotId: null },
+      attachTo: document.body,
+    })
+    await flushPromises()
+
+    await fillLotForm(wrapper)
+    await wrapper.get('[data-testid="save-lot"]').trigger('click')
+    await flushPromises()
+
+    const cancelBtn = document.body.querySelector('[data-testid="duplicate-cancel"]')
+    expect(cancelBtn).toBeTruthy()
+    await cancelBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushPromises()
+
+    expect(saveLot).toHaveBeenCalledTimes(1)
+    expect(document.body.querySelector('[data-testid="duplicate-confirm-dialog"]')).toBeNull()
+    expect(wrapper.get('[data-testid="part-search-trigger"]').text()).toContain('3001')
   })
 })

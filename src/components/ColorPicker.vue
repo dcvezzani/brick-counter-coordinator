@@ -11,7 +11,7 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'tabForward', 'tabBackward'])
 
 const pickerRef = ref(null)
 
@@ -37,7 +37,11 @@ function focus() {
   pickerRef.value?.focusTrigger()
 }
 
-defineExpose({ focus })
+function focusFilter() {
+  pickerRef.value?.focusFilter()
+}
+
+defineExpose({ focus, focusFilter })
 </script>
 
 <template>
@@ -54,6 +58,8 @@ defineExpose({ focus })
     empty-filter-message="No colors match"
     test-id="color-picker"
     @update:model-value="onUpdate"
+    @tab-forward="emit('tabForward')"
+    @tab-backward="emit('tabBackward')"
   >
     <template #trigger-leading="{ selected }">
       <span

@@ -54,7 +54,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['update:modelValue', 'change'])
+const emit = defineEmits(['update:modelValue', 'change', 'tabBackward'])
 
 const handleRef = useTemplateRef('handleRef')
 const slideTrackRef = useTemplateRef('slideTrackRef')
@@ -551,6 +551,11 @@ function onHandleKeydown(event) {
   if (props.disabled || dragging.value) return
   if (event.metaKey || event.ctrlKey || event.altKey) return
 
+  if (event.key === 'Tab' && event.shiftKey) {
+    emit('tabBackward')
+    return
+  }
+
   if (event.key === 'Escape') {
     if (keyboardEngaged.value) {
       event.preventDefault()
@@ -861,6 +866,12 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect()
   reducedMotionQuery?.removeEventListener('change', onReducedMotionChange)
 })
+
+function focusHandle() {
+  handleRef.value?.focus()
+}
+
+defineExpose({ focus: focusHandle })
 </script>
 
 <template>

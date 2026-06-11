@@ -27,7 +27,7 @@
 - add Lego parts to a cup
   - enter or find part number
   - select color
-  - select condition
+  - session condition shown read-only (not selected on this form)
   - enter count
   - press button: "Save" or "Save and Add Another"
 

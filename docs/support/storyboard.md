@@ -51,9 +51,10 @@ Check off during a review session; note feedback inline or in a new `qa-NNN.md`.
 
 ### 4. Lot form
 
-- [ ] Part lookup field, color, condition, count fit on one mobile viewport
+- [ ] Part lookup field, color, session condition label, count fit on one mobile viewport
+- [ ] Tab / Shift+Tab through part → color → count
 - [ ] **Save** and **Save and Add Another** (part id pre-filled)
-- [ ] Submit duplicate lot → see “already exists” message with creator + qty
+- [ ] Submit duplicate lot → confirm dialog; can proceed and entered qty merges into existing lot
 
 ### 5. List cups
 
