@@ -102,7 +102,7 @@ describe('FilterablePicker', () => {
     expect(wrapper.findAll('[data-testid^="picker-option-"]')).toHaveLength(1)
   })
 
-  it('focuses the trigger via focusTrigger', async () => {
+  it('focuses the trigger via focusTrigger and opens the panel', async () => {
     const wrapper = mount(FilterablePicker, {
       props: { modelValue: null, options: OPTIONS, testId: 'picker' },
       attachTo: document.body,
@@ -111,6 +111,37 @@ describe('FilterablePicker', () => {
     wrapper.vm.focusTrigger()
     await wrapper.vm.$nextTick()
 
-    expect(document.activeElement?.dataset.testid).toBe('picker-trigger')
+    expect(wrapper.find('[data-testid="picker-panel"]').exists()).toBe(true)
+    expect(document.activeElement?.dataset.testid).toBe('picker-filter')
+  })
+
+  it('opens the panel on a single click without immediately closing', async () => {
+    const wrapper = mount(FilterablePicker, {
+      props: { modelValue: null, options: OPTIONS, testId: 'picker' },
+      attachTo: document.body,
+    })
+
+    await wrapper.get('[data-testid="picker-trigger"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="picker-panel"]').exists()).toBe(true)
+    expect(document.activeElement?.dataset.testid).toBe('picker-filter')
+  })
+
+  it('closes the panel when the trigger is clicked while already open', async () => {
+    const wrapper = mount(FilterablePicker, {
+      props: { modelValue: null, options: OPTIONS, testId: 'picker' },
+      attachTo: document.body,
+    })
+
+    const trigger = wrapper.get('[data-testid="picker-trigger"]')
+    await trigger.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="picker-panel"]').exists()).toBe(true)
+
+    await trigger.trigger('pointerdown')
+    await trigger.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="picker-panel"]').exists()).toBe(false)
   })
 })

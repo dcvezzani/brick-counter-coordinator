@@ -35,6 +35,7 @@ describe('ColorPicker', () => {
     const trigger = wrapper.get('[data-testid="color-picker-trigger"]')
     await trigger.trigger('click')
     expect(wrapper.find('[data-testid="color-picker-panel"]').exists()).toBe(true)
+    await trigger.trigger('pointerdown')
     await trigger.trigger('click')
     expect(wrapper.find('[data-testid="color-picker-panel"]').exists()).toBe(false)
   })
@@ -77,5 +78,18 @@ describe('ColorPicker', () => {
     })
 
     expect(wrapper.get('[data-testid="color-picker-trigger"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('opens the panel when focus() is called', async () => {
+    const wrapper = mount(ColorPicker, {
+      props: { colors: COLORS, modelValue: null },
+      attachTo: document.body,
+    })
+
+    wrapper.vm.focus()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="color-picker-panel"]').exists()).toBe(true)
+    expect(document.activeElement?.dataset.testid).toBe('color-picker-filter')
   })
 })

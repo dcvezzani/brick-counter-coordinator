@@ -108,17 +108,18 @@ describe('LotForm', () => {
     expect(checkedCondition(wrapper)).toBe('N')
   })
 
-  it('focuses part number on mount for new lots', async () => {
+  it('focuses part search filter on mount for new lots', async () => {
     setupSession('used')
-    mount(LotForm, {
+    const wrapper = mount(LotForm, {
       props: { sessionId: SESSION_ID, lotId: null },
       attachTo: document.body,
     })
     await flushPromises()
-    expect(document.activeElement?.dataset.testid).toBe('part-search-trigger')
+    expect(wrapper.find('[data-testid="part-search-panel"]').exists()).toBe(true)
+    expect(document.activeElement?.dataset.testid).toBe('part-search-filter')
   })
 
-  it('focuses color picker after Save and Add Another', async () => {
+  it('opens color picker panel after Save and Add Another', async () => {
     setupSession('mixed')
     const wrapper = mount(LotForm, {
       props: { sessionId: SESSION_ID, lotId: null },
@@ -141,7 +142,8 @@ describe('LotForm', () => {
     await wrapper.get('[data-testid="save-and-add-another"]').trigger('click')
     await flushPromises()
 
-    expect(document.activeElement?.dataset.testid).toBe('color-picker-trigger')
+    expect(wrapper.find('[data-testid="color-picker-panel"]').exists()).toBe(true)
+    expect(document.activeElement?.dataset.testid).toBe('color-picker-filter')
     expect(sessionStorage.getItem(`lot-entry-condition:${SESSION_ID}`)).toBe('U')
   })
 })

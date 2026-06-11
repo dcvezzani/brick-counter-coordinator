@@ -38,6 +38,8 @@ const rootRef = ref(null)
 const triggerRef = ref(null)
 
 let debounceTimer = null
+/** True when pointerdown started while the panel was already open (click-to-close). */
+let panelOpenBeforePointerDown = false
 
 watch(filterQuery, (value) => {
   clearTimeout(debounceTimer)
@@ -88,18 +90,20 @@ const triggerLabel = computed(() => {
   return props.placeholder
 })
 
-function togglePanel() {
-  if (isDisabled.value) return
-  if (open.value) {
-    closePanel()
-    return
-  }
-  open.value = true
-  filterQuery.value = ''
-  debouncedQuery.value = ''
+function focusFilterInput() {
   nextTick(() => {
     rootRef.value?.querySelector(`[data-testid="${props.testId}-filter"]`)?.focus()
   })
+}
+
+function openPanel() {
+  if (isDisabled.value) return
+  if (!open.value) {
+    open.value = true
+    filterQuery.value = ''
+    debouncedQuery.value = ''
+  }
+  focusFilterInput()
 }
 
 function closePanel() {
@@ -109,6 +113,25 @@ function closePanel() {
   filterQuery.value = ''
   debouncedQuery.value = ''
   emit('close', { filterQuery: query })
+}
+
+function onTriggerFocus() {
+  openPanel()
+}
+
+function onTriggerPointerDown() {
+  panelOpenBeforePointerDown = open.value
+}
+
+function onTriggerClick() {
+  if (isDisabled.value) return
+  if (panelOpenBeforePointerDown) {
+    closePanel()
+    return
+  }
+  if (!open.value) {
+    openPanel()
+  }
 }
 
 function selectNone() {
@@ -176,7 +199,9 @@ defineExpose({ focusTrigger })
           'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
         )
       "
-      @click="togglePanel"
+      @focus="onTriggerFocus"
+      @pointerdown="onTriggerPointerDown"
+      @click="onTriggerClick"
     >
       <slot name="trigger-leading" :selected="selectedOption" />
       <span
