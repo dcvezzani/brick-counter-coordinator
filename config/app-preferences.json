@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "storyboard": {
+    "badgeSubtitle": "Storyboard — sample data",
+    "newSessionHelper": "Set number and Bricklink part-out options. Server fetch is simulated in storyboard."
+  },
+  "newSession": {
+    "defaultSetNumber": "70404-1",
+    "defaults": {
+      "pricing": "stock",
+      "condition": "mixed",
+      "existingLots": "consolidate"
+    }
+  },
+  "partSearch": {
+    "minFilterChars": 2
+  },
+  "picker": {
+    "debounceMs": 150
+  },
+  "lotEntry": {
+    "defaultQty": 1,
+    "countMin": 0
+  },
+  "swipeNumberInput": {
+    "rate": {
+      "minRate": 2,
+      "maxRate": 50,
+      "deadZonePx": 8
+    }
+  }
+}

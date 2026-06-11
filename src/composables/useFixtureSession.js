@@ -6,6 +6,7 @@ import {
   DEMO_SESSION_ID,
   OPEN_SESSIONS,
 } from '@/fixtures/demo-session'
+import { appConfig } from '@/lib/app-config'
 
 const sessions = reactive(new Map())
 const currentWorker = ref(null)
@@ -152,6 +153,11 @@ export function useFixtureSession() {
     const existing = session.lots.find((l) => lotKey(l.partId, l.colorId, l.condition) === key)
 
     if (existing && existing.id !== payload.id) {
+      if (payload.mergeDuplicate) {
+        existing.qty += payload.qty
+        existing.updatedAt = new Date().toISOString()
+        return { lot: existing, duplicate: false, merged: true }
+      }
       const creator = session.workers.find((w) => w.id === existing.createdByWorkerId)
       return {
         lot: existing,
@@ -328,7 +334,7 @@ export function useFixtureSession() {
     currentWorker.value = null
   }
 
-  const storyboardBadge = computed(() => 'Storyboard — sample data')
+  const storyboardBadge = computed(() => appConfig.storyboard.badgeSubtitle)
 
   return {
     isFixtureMode,

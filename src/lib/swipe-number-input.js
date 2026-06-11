@@ -1,12 +1,9 @@
+import { appConfig } from '@/lib/app-config'
 import { clampValue } from '@/lib/numeric-field'
 
 export { clampValue, parseNumericValue } from '@/lib/numeric-field'
 
-export const DEFAULT_RATE_CONFIG = {
-  minRate: 2,
-  maxRate: 50,
-  deadZonePx: 8,
-}
+export const DEFAULT_RATE_CONFIG = { ...appConfig.swipeNumberInput.rate }
 
 /**
  * Logical displacement from center rest (positive = increment, negative = decrement).

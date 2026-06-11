@@ -1,7 +1,7 @@
 # Tech stack — Brick Counter Coordinator
 
 **Status:** Frontend scaffold in repo; coordinator server detail in `/design`.  
-**Last updated:** 2026-06-10
+**Last updated:** 2026-06-11
 
 ## Summary
 
@@ -30,6 +30,19 @@ src/
 ```
 
 Config: [`components.json`](../components.json) · [`jsconfig.json`](../jsconfig.json) · MCP: [`.cursor/mcp.json`](../.cursor/mcp.json) · Skills: [shadcn-vue](../.agents/skills/shadcn-vue/SKILL.md) · [vue-js-ide-hygiene](../.agents/skills/vue-js-ide-hygiene/SKILL.md)
+
+## Application preferences
+
+Product and behavioral defaults live in one committed JSON file. Import through the loader — do not read the JSON path directly from components.
+
+| Kind | Location |
+|------|----------|
+| Product/behavior defaults | [`config/app-preferences.json`](../config/app-preferences.json) via [`src/lib/app-config.js`](../src/lib/app-config.js) |
+| Secrets & deploy flags | `.env` (`VITE_*`, future `BRICKLINK_*`) |
+| Storyboard demo data | `src/fixtures/` |
+| UI toolchain | `components.json`, `vite.config.js` |
+
+Sections in `app-preferences.json`: `storyboard`, `newSession`, `partSearch`, `picker`, `lotEntry`, `swipeNumberInput`.
 
 ## shadcn-vue workflow
 

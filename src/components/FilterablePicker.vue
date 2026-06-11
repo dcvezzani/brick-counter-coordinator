@@ -3,6 +3,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { appConfig } from '@/lib/app-config'
 import { defaultPrefixFilter, findPickerOption } from '@/lib/filterable-picker'
 
 const props = defineProps({
@@ -29,7 +30,7 @@ const props = defineProps({
   emptyPlaceholder: { type: String, default: 'No options available' },
   filterPlaceholder: { type: String, default: 'Filter…' },
   emptyFilterMessage: { type: String, default: 'No matches for' },
-  debounceMs: { type: Number, default: 150 },
+  debounceMs: { type: Number, default: appConfig.picker.debounceMs },
   /** Minimum filter length before options are shown (0 = show immediately). */
   minFilterChars: { type: Number, default: 0 },
   /** Hint when filter is shorter than minFilterChars; `{n}` replaced with the count. */
@@ -38,7 +39,7 @@ const props = defineProps({
   testId: { type: String, default: 'filterable-picker' },
 })
 
-const emit = defineEmits(['update:modelValue', 'select', 'close'])
+const emit = defineEmits(['update:modelValue', 'select', 'close', 'tabForward', 'tabBackward'])
 
 const open = ref(false)
 const filterQuery = ref('')
@@ -165,6 +166,14 @@ function onFilterKeydown(event) {
   } else if (event.key === 'Escape') {
     event.preventDefault()
     closePanel()
+  } else if (event.key === 'Tab') {
+    event.preventDefault()
+    closePanel()
+    if (event.shiftKey) {
+      emit('tabBackward')
+    } else {
+      emit('tabForward')
+    }
   }
 }
 
@@ -182,7 +191,11 @@ function focusTrigger() {
   triggerRef.value?.focus()
 }
 
-defineExpose({ focusTrigger })
+function focusFilter() {
+  openPanel()
+}
+
+defineExpose({ focusTrigger, focusFilter })
 </script>
 
 <template>

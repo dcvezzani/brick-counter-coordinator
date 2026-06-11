@@ -3,12 +3,13 @@ import { computed, ref } from 'vue'
 import { Label } from '@/components/ui/label'
 import FilterablePicker from '@/components/FilterablePicker.vue'
 import { useSession } from '@/composables/useSession'
+import { appConfig } from '@/lib/app-config'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
 })
 
-const emit = defineEmits(['update:modelValue', 'select'])
+const emit = defineEmits(['update:modelValue', 'select', 'tabForward', 'tabBackward'])
 
 const pickerRef = ref(null)
 const { searchParts, resolvePartId, lookupPart } = useSession()
@@ -56,7 +57,7 @@ function onClose({ filterQuery, fromSelection }) {
 }
 
 function focus() {
-  pickerRef.value?.focusTrigger()
+  pickerRef.value?.focusFilter()
 }
 
 defineExpose({ focus })
@@ -79,7 +80,7 @@ defineExpose({ focus })
       :model-value="modelValue || null"
       :options="partOptions"
       :filter-options="filterPartOptions"
-      :min-filter-chars="2"
+      :min-filter-chars="appConfig.partSearch.minFilterChars"
       placeholder="Search parts…"
       filter-placeholder="Filter parts"
       empty-filter-message="No parts match"
@@ -87,6 +88,8 @@ defineExpose({ focus })
       @update:model-value="onUpdate"
       @select="onSelect"
       @close="onClose"
+      @tab-forward="emit('tabForward')"
+      @tab-backward="emit('tabBackward')"
     >
       <template #option-label="{ option }">
         <span class="block font-medium">{{ option.data.partId }}</span>

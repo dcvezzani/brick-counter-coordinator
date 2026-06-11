@@ -7,14 +7,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useSession } from '@/composables/useSession'
+import { appConfig } from '@/lib/app-config'
 
 const router = useRouter()
 const { createSession, setCurrentWorker } = useSession()
 
-const setNumber = ref('70404-1')
-const pricing = ref('stock')
-const condition = ref('mixed')
-const overwrite = ref('consolidate')
+const setNumber = ref(appConfig.newSession.defaultSetNumber)
+const pricing = ref(appConfig.newSession.defaults.pricing)
+const condition = ref(appConfig.newSession.defaults.condition)
+const overwrite = ref(appConfig.newSession.defaults.existingLots)
 
 function submit() {
   const displayName = sessionStorage.getItem('workerDisplayName') || 'Session Lead'
@@ -39,7 +40,7 @@ function submit() {
       <div>
         <h2 class="text-xl font-semibold">New session</h2>
         <p class="text-sm text-muted-foreground">
-          Set number and Bricklink part-out options. Server fetch is simulated in storyboard.
+          {{ appConfig.storyboard.newSessionHelper }}
         </p>
       </div>
 
@@ -48,7 +49,7 @@ function submit() {
         <Input
           id="set-number"
           v-model="setNumber"
-          placeholder="70404-1"
+          :placeholder="appConfig.newSession.defaultSetNumber"
           class="min-h-11"
           data-testid="set-number"
         />
