@@ -278,6 +278,7 @@ function tickDragFrame(timestamp) {
     logicalDisplacement,
     deltaSeconds,
     stepAccumulator,
+    maxHandleOffsetPx.value,
   )
   stepAccumulator = accumulator
 

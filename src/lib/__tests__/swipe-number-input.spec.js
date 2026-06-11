@@ -3,6 +3,7 @@ import {
   accumulateDragSteps,
   applySignedSteps,
   clampValue,
+  DEFAULT_RATE_CONFIG,
   displacementToStepRate,
   parseNumericValue,
   signedDisplacement,
@@ -38,16 +39,24 @@ describe('swipe-number-input helpers', () => {
     expect(signedDisplacement(-20, 'left')).toBe(-20)
   })
 
-  it('displacementToStepRate is zero in dead zone and accelerates', () => {
-    expect(displacementToStepRate(4)).toBe(0)
-    const slow = displacementToStepRate(20)
-    const fast = displacementToStepRate(120)
-    expect(fast).toBeGreaterThan(slow)
-    expect(fast).toBeGreaterThan(0)
+  it('displacementToStepRate is zero in dead zone and scales linearly with track max', () => {
+    const { minRate, maxRate, deadZonePx } = DEFAULT_RATE_CONFIG
+    const maxDisplacementPx = 80
+
+    expect(displacementToStepRate(4, maxDisplacementPx)).toBe(0)
+    expect(displacementToStepRate(10, 0)).toBe(0)
+
+    const halfSpan = deadZonePx + (maxDisplacementPx - deadZonePx) / 2
+    expect(displacementToStepRate(halfSpan, maxDisplacementPx)).toBe(
+      minRate + (maxRate - minRate) * 0.5,
+    )
+
+    expect(displacementToStepRate(maxDisplacementPx, maxDisplacementPx)).toBe(maxRate)
+    expect(displacementToStepRate(100, maxDisplacementPx)).toBe(maxRate)
   })
 
   it('accumulateDragSteps emits whole steps over time', () => {
-    const first = accumulateDragSteps(120, 0.5, 0)
+    const first = accumulateDragSteps(80, 0.5, 0, 80)
     expect(first.steps).toBeGreaterThan(0)
     expect(first.accumulator).toBeGreaterThanOrEqual(0)
     expect(first.accumulator).toBeLessThan(1)

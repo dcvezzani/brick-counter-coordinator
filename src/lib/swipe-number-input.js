@@ -1,5 +1,4 @@
 export const DEFAULT_RATE_CONFIG = {
-  maxDragPx: 120,
   minRate: 2,
   maxRate: 50,
   deadZonePx: 8,
@@ -59,28 +58,42 @@ export function signedDisplacement(pointerDeltaPx, handlePosition) {
 
 /**
  * @param {number} displacementPx - signed logical displacement
+ * @param {number} maxDisplacementPx - physical max handle offset from center
  * @param {typeof DEFAULT_RATE_CONFIG} [config]
  * @returns {number} steps per second (0 inside dead zone)
  */
-export function displacementToStepRate(displacementPx, config = DEFAULT_RATE_CONFIG) {
+export function displacementToStepRate(
+  displacementPx,
+  maxDisplacementPx,
+  config = DEFAULT_RATE_CONFIG,
+) {
+  if (maxDisplacementPx <= 0) return 0
+
   const magnitude = Math.abs(displacementPx)
   if (magnitude <= config.deadZonePx) return 0
 
+  const span = Math.max(1, maxDisplacementPx - config.deadZonePx)
   const effective = magnitude - config.deadZonePx
-  const span = Math.max(1, config.maxDragPx - config.deadZonePx)
-  const t = Math.min(1, effective / span)
-  return config.minRate + (config.maxRate - config.minRate) * t * t
+  const t = Math.min(1, Math.max(0, effective / span))
+  return config.minRate + (config.maxRate - config.minRate) * t
 }
 
 /**
  * @param {number} displacementPx
  * @param {number} deltaSeconds
  * @param {number} accumulator
+ * @param {number} maxDisplacementPx - physical max handle offset from center
  * @param {typeof DEFAULT_RATE_CONFIG} [config]
  * @returns {{ accumulator: number, steps: number }}
  */
-export function accumulateDragSteps(displacementPx, deltaSeconds, accumulator, config) {
-  const rate = displacementToStepRate(displacementPx, config)
+export function accumulateDragSteps(
+  displacementPx,
+  deltaSeconds,
+  accumulator,
+  maxDisplacementPx,
+  config = DEFAULT_RATE_CONFIG,
+) {
+  const rate = displacementToStepRate(displacementPx, maxDisplacementPx, config)
   if (rate <= 0 || deltaSeconds <= 0) {
     return { accumulator, steps: 0 }
   }
