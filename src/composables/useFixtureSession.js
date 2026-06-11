@@ -32,6 +32,9 @@ export function useFixtureSession() {
     return ensureSession(sessionId)
   }
 
+  /**
+   * @param {{ setNumber: string, displayName: string, name?: string, partOutOptions?: object }} params
+   */
   function createSession({ setNumber, name, displayName, partOutOptions }) {
     const id = `session-${Date.now()}`
     const session = reactive({
@@ -58,9 +61,9 @@ export function useFixtureSession() {
       (w) => w.displayName.toLowerCase() === displayName.toLowerCase(),
     )
     if (existing) {
-      const error = new Error('Display name already taken in this session')
-      error.code = 'DUPLICATE_NAME'
-      throw error
+      throw Object.assign(new Error('Display name already taken in this session'), {
+        code: 'DUPLICATE_NAME',
+      })
     }
     const worker = {
       id: `worker-${Date.now()}`,
@@ -114,6 +117,10 @@ export function useFixtureSession() {
     }))
   }
 
+  /**
+   * @param {string} sessionId
+   * @param {{ cupId?: string, workerId?: string, mode?: string }} [filters]
+   */
   function getLots(sessionId, { cupId, workerId, mode } = {}) {
     const session = ensureSession(sessionId)
     let lots = [...session.lots]
@@ -142,9 +149,7 @@ export function useFixtureSession() {
   function saveLot(sessionId, payload) {
     const session = ensureSession(sessionId)
     const key = lotKey(payload.partId, payload.colorId, payload.condition)
-    const existing = session.lots.find(
-      (l) => lotKey(l.partId, l.colorId, l.condition) === key,
-    )
+    const existing = session.lots.find((l) => lotKey(l.partId, l.colorId, l.condition) === key)
 
     if (existing && existing.id !== payload.id) {
       const creator = session.workers.find((w) => w.id === existing.createdByWorkerId)
@@ -283,11 +288,11 @@ export function useFixtureSession() {
 
   /** Known color ids per part — storyboard subset of DEMO_COLORS. */
   const DEMO_PART_KNOWN_COLOR_IDS = {
-    '3001': [86, 11, 1, 5, 15],
-    '3003': [5, 11, 1],
-    '3020': [1, 86, 11],
+    3001: [86, 11, 1, 5, 15],
+    3003: [5, 11, 1],
+    3020: [1, 86, 11],
     '3062b': [11, 86, 5],
-    '4070': [15, 1, 86],
+    4070: [15, 1, 86],
   }
 
   function getColorsForPart(partId) {

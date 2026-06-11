@@ -74,9 +74,7 @@ const queryMeetsMinLength = computed(
   () => debouncedQuery.value.trim().length >= props.minFilterChars,
 )
 
-const showMinCharsHint = computed(
-  () => props.minFilterChars > 0 && !queryMeetsMinLength.value,
-)
+const showMinCharsHint = computed(() => props.minFilterChars > 0 && !queryMeetsMinLength.value)
 
 const minCharsHintText = computed(() =>
   props.minFilterCharsHint.replace('{n}', String(props.minFilterChars)),
@@ -188,12 +186,7 @@ defineExpose({ focusTrigger })
 </script>
 
 <template>
-  <div
-    ref="rootRef"
-    class="relative"
-    :data-testid="testId"
-    @focusout="onRootFocusOut"
-  >
+  <div ref="rootRef" class="relative" :data-testid="testId" @focusout="onRootFocusOut">
     <button
       ref="triggerRef"
       type="button"
@@ -213,9 +206,7 @@ defineExpose({ focusTrigger })
       @click="onTriggerClick"
     >
       <slot name="trigger-leading" :selected="selectedOption" />
-      <span
-        :class="cn('min-w-0 flex-1 truncate', !selectedOption && 'text-muted-foreground')"
-      >
+      <span :class="cn('min-w-0 flex-1 truncate', !selectedOption && 'text-muted-foreground')">
         <slot name="trigger-label" :selected="selectedOption" :label="triggerLabel">
           {{ triggerLabel }}
         </slot>

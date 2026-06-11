@@ -62,8 +62,7 @@ describe('FilterablePicker', () => {
         modelValue: null,
         options: OPTIONS,
         testId: 'picker',
-        filterOptions: (query) =>
-          query === 'x' ? [{ value: 'x', label: 'Custom' }] : OPTIONS,
+        filterOptions: (query) => (query === 'x' ? [{ value: 'x', label: 'Custom' }] : OPTIONS),
       },
     })
 

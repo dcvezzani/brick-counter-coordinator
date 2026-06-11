@@ -116,8 +116,8 @@ describe('TernarySwipeControl', () => {
     })
 
     expect(wrapper.get('[data-testid="ternary-swipe-label-left"]').text()).toContain('Moved')
-    expect(wrapper.get('[data-testid="ternary-swipe-label-none"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="ternary-swipe-none-segment"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ternary-swipe-label-none"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ternary-swipe-none-segment"]').exists()).toBe(true)
 
     const hidden = wrapper.get('[data-testid="ternary-swipe-hidden-input"]')
     expect(hidden.element.value).toBe('')

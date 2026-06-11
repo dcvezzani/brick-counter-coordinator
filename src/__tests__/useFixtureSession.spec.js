@@ -36,9 +36,9 @@ describe('useFixtureSession', () => {
   it('excludes and restores part-out lines', () => {
     const lineId = fixture.getPartOutLines(fixture.DEMO_SESSION_ID)[0].id
     fixture.setPartOutLineExcluded(fixture.DEMO_SESSION_ID, lineId, true)
-    expect(fixture.getPartOutLines(fixture.DEMO_SESSION_ID, { includedOnly: true })).not.toContainEqual(
-      expect.objectContaining({ id: lineId }),
-    )
+    expect(
+      fixture.getPartOutLines(fixture.DEMO_SESSION_ID, { includedOnly: true }),
+    ).not.toContainEqual(expect.objectContaining({ id: lineId }))
     fixture.setPartOutLineExcluded(fixture.DEMO_SESSION_ID, lineId, false)
     expect(fixture.getPartOutLines(fixture.DEMO_SESSION_ID, { includedOnly: true })).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: lineId })]),
@@ -72,7 +72,9 @@ describe('useFixtureSession', () => {
 
     fixture.deleteLot(fixture.DEMO_SESSION_ID, lot.id)
 
-    expect(fixture.getSession(fixture.DEMO_SESSION_ID).lots.find((l) => l.id === lot.id)).toBeUndefined()
+    expect(
+      fixture.getSession(fixture.DEMO_SESSION_ID).lots.find((l) => l.id === lot.id),
+    ).toBeUndefined()
     expect(
       fixture.getPickListItems(fixture.DEMO_SESSION_ID).some((item) => item.lotId === lot.id),
     ).toBe(false)

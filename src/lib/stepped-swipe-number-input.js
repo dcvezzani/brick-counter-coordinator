@@ -81,7 +81,7 @@ export function horizontalSlotToOffset(slot, maxOffsetPx) {
 }
 
 /**
- * @param {-1 | 0 | 1} slot - physical vertical slot
+ * @param {number} slot - physical vertical slot (-1, 0, or 1)
  * @param {number} maxOffsetPx
  * @returns {number}
  */

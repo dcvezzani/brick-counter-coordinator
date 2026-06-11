@@ -75,10 +75,7 @@ export function useNumericField(props, emit, { isLocked = () => false } = {}) {
 
   function stepBy(delta) {
     if (props.disabled || isLocked()) return
-    const base =
-      parseNumericValue(inputText.value, { emptyAsZero: true }) ??
-      props.modelValue ??
-      0
+    const base = parseNumericValue(inputText.value, { emptyAsZero: true }) ?? props.modelValue ?? 0
     const next = clampValue(base + delta, clampOptions.value)
     inputText.value = formatDisplayValue(next)
     commitValue(next)

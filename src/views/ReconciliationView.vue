@@ -17,12 +17,8 @@ import { useSession } from '@/composables/useSession'
 const route = useRoute()
 const sessionId = computed(() => route.params.sessionId)
 
-const {
-  getSession,
-  getReconciliation,
-  resolveReconciliation,
-  exportReconciliationXml,
-} = useSession()
+const { getSession, getReconciliation, resolveReconciliation, exportReconciliationXml } =
+  useSession()
 
 const session = computed(() => getSession(sessionId.value))
 const allRows = computed(() => getReconciliation(sessionId.value))

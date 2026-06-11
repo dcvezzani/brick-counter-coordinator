@@ -39,7 +39,14 @@ function mockSlideTrackSize(wrapper, width = 200, height = 44, testId = 'stepped
   })
 }
 
-function pointerOnHandle(wrapper, type, clientX, clientY = 22, pointerId = 1, testId = 'stepped-swipe-number') {
+function pointerOnHandle(
+  wrapper,
+  type,
+  clientX,
+  clientY = 22,
+  pointerId = 1,
+  testId = 'stepped-swipe-number',
+) {
   const handle = wrapper.get(`[data-testid="${testId}-handle"]`).element
   handle.dispatchEvent(
     new PointerEvent(type, {
@@ -132,9 +139,9 @@ function focusHandle(wrapper, testId = 'stepped-swipe-number') {
 }
 
 async function keyOnHandle(wrapper, key, testId = 'stepped-swipe-number') {
-  wrapper.get(`[data-testid="${testId}-handle"]`).element.dispatchEvent(
-    new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }),
-  )
+  wrapper
+    .get(`[data-testid="${testId}-handle"]`)
+    .element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
   await flushPromises()
 }
 
@@ -151,9 +158,7 @@ async function keyOnInput(wrapper, key, options = {}, testId = 'stepped-swipe-nu
 }
 
 async function keyUpOnWindow(key) {
-  window.dispatchEvent(
-    new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true }),
-  )
+  window.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true }))
   await flushPromises()
 }
 
@@ -190,8 +195,8 @@ describe('SteppedSwipeNumberInput', () => {
       props: { name: 'qty', modelValue: 5 },
     })
 
-    expect(wrapper.get('[data-testid="stepped-swipe-number-input"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="stepped-swipe-number-handle"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="stepped-swipe-number-input"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="stepped-swipe-number-handle"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="stepped-swipe-number-hidden-input"]').element.value).toBe('5')
   })
 

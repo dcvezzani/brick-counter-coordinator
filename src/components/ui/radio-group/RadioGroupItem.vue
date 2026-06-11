@@ -1,8 +1,8 @@
 <script setup>
-import { CircleIcon } from "@lucide/vue";
-import { reactiveOmit } from "@vueuse/core";
-import { RadioGroupIndicator, RadioGroupItem, useForwardProps } from "reka-ui";
-import { cn } from "@/lib/utils";
+import { CircleIcon } from '@lucide/vue'
+import { reactiveOmit } from '@vueuse/core'
+import { RadioGroupIndicator, RadioGroupItem, useForwardProps } from 'reka-ui'
+import { cn } from '@/lib/utils'
 
 const props = defineProps({
   id: { type: String, required: false },
@@ -17,11 +17,11 @@ const props = defineProps({
     required: false,
     skipCheck: true,
   },
-});
+})
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = reactiveOmit(props, 'class')
 
-const forwardedProps = useForwardProps(delegatedProps);
+const forwardedProps = useForwardProps(delegatedProps)
 </script>
 
 <template>

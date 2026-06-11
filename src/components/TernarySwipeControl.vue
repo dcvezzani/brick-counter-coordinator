@@ -1,13 +1,5 @@
 <script setup>
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  useTemplateRef,
-  watch,
-} from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { X } from '@lucide/vue'
 import { cn } from '@/lib/utils'
 
@@ -88,8 +80,7 @@ const displayX = computed(() => {
 })
 
 const showThumb = computed(
-  () =>
-    dragging.value || committedZone.value !== 'none' || dismissingToNone.value,
+  () => dragging.value || committedZone.value !== 'none' || dismissingToNone.value,
 )
 
 const labelGridStyle = computed(() => ({
@@ -99,9 +90,7 @@ const labelGridStyle = computed(() => ({
 const noneIconClass = computed(() =>
   cn(
     'size-4 shrink-0',
-    committedZone.value !== 'none' || dragging.value
-      ? 'text-destructive'
-      : 'text-muted-foreground',
+    committedZone.value !== 'none' || dragging.value ? 'text-destructive' : 'text-muted-foreground',
   ),
 )
 
@@ -118,10 +107,7 @@ function updateInsetDimensions() {
 }
 
 function segmentIndexFromX(x) {
-  return Math.min(
-    trackSegmentCount.value - 1,
-    Math.max(0, Math.floor(x * trackSegmentCount.value)),
-  )
+  return Math.min(trackSegmentCount.value - 1, Math.max(0, Math.floor(x * trackSegmentCount.value)))
 }
 
 function zoneFromSegmentIndex(segmentIndex) {
@@ -240,8 +226,7 @@ const thumbStyle = computed(() => {
   const insetH = insetHeightPx.value || 44
   const pillW = insetW / trackSegmentCount.value
   const pillH = insetH
-  const segmentProximity =
-    segmentIndex >= 0 ? proximity(x, snapPoints.value[segmentIndex]) : 0
+  const segmentProximity = segmentIndex >= 0 ? proximity(x, snapPoints.value[segmentIndex]) : 0
 
   let pillLeft = x * insetW - pillW / 2
   pillLeft = Math.max(0, Math.min(pillLeft, insetW - pillW))
@@ -520,11 +505,7 @@ onBeforeUnmount(() => {
         aria-hidden="true"
       />
 
-      <div
-        ref="insetLayerRef"
-        class="absolute inset-1 z-10"
-        :data-testid="`${testId}-inset`"
-      >
+      <div ref="insetLayerRef" class="absolute inset-1 z-10" :data-testid="`${testId}-inset`">
         <div
           v-if="showThumb"
           ref="thumbRef"

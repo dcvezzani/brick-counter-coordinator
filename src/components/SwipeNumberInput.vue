@@ -1,11 +1,5 @@
 <script setup>
-import {
-  computed,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  useTemplateRef,
-} from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { GripVertical } from '@lucide/vue'
 import { useNumericField } from '@/composables/useNumericField'
 import {
@@ -82,18 +76,14 @@ const {
   stepBy,
 } = useNumericField(props, emit, { isLocked: () => dragging.value })
 
-const slideControlPosition = computed(() =>
-  props.handlePosition === 'left' ? 'left' : 'right',
-)
+const slideControlPosition = computed(() => (props.handlePosition === 'left' ? 'left' : 'right'))
 
 const displayValueForHidden = computed(() => {
   if (props.modelValue != null) return String(props.modelValue)
   return ''
 })
 
-const maxHandleOffsetPx = computed(() =>
-  Math.max(0, slideTrackWidthPx.value / 2 - 28),
-)
+const maxHandleOffsetPx = computed(() => Math.max(0, slideTrackWidthPx.value / 2 - 28))
 
 const handleStyle = computed(() => ({
   transform: `translateX(calc(-50% + ${handleOffsetPx.value}px))`,
@@ -283,10 +273,7 @@ function beginHandleDrag(event) {
   dragStartClientX = event.clientX
   handleOffsetPx.value = 0
 
-  const base =
-    parseNumericValue(inputText.value, { emptyAsZero: true }) ??
-    props.modelValue ??
-    0
+  const base = parseNumericValue(inputText.value, { emptyAsZero: true }) ?? props.modelValue ?? 0
   dragValue = clampValue(base, clampOptions.value)
   inputText.value = formatDisplayValue(dragValue)
 

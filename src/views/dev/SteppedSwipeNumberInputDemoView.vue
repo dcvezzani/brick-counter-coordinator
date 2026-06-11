@@ -3,13 +3,7 @@ import { reactive, ref } from 'vue'
 import AppShell from '@/components/AppShell.vue'
 import SteppedSwipeNumberInput from '@/components/SteppedSwipeNumberInput.vue'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const defaultValue = ref(1)
 const negativeValue = ref(0)
@@ -51,11 +45,11 @@ function onFormSubmit(event) {
         <p class="text-sm text-muted-foreground">
           Default axis: slide <strong>right</strong> or <strong>up</strong> to increment (±1 per
           horizontal slot, ±10 vertical). At rest the swipe zone shows plain <strong>+</strong> and
-          <strong>−</strong>; while displaced, labels reflect distance from the rest origin
-          (e.g. <strong>+3</strong> three slots toward increment). Moving back toward center
-          reduces the shown amount to zero. Hold at any extreme for 1s to repeat. The
-          <strong>+</strong> label always sits on the configured increment side (right/left,
-          up/down). Axis props flip both drag direction and label placement.
+          <strong>−</strong>; while displaced, labels reflect distance from the rest origin (e.g.
+          <strong>+3</strong> three slots toward increment). Moving back toward center reduces the
+          shown amount to zero. Hold at any extreme for 1s to repeat. The <strong>+</strong> label
+          always sits on the configured increment side (right/left, up/down). Axis props flip both
+          drag direction and label placement.
         </p>
       </div>
 
@@ -84,7 +78,8 @@ function onFormSubmit(event) {
         <CardHeader>
           <CardTitle>Horizontal increment left</CardTitle>
           <CardDescription>
-            <code>horizontal-increment-direction="left"</code> — slide left for +1; + label on the left.
+            <code>horizontal-increment-direction="left"</code> — slide left for +1; + label on the
+            left.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -102,7 +97,8 @@ function onFormSubmit(event) {
         <CardHeader>
           <CardTitle>Vertical increment down</CardTitle>
           <CardDescription>
-            <code>vertical-increment-direction="down"</code> — slide down for +10; +10 label on the bottom.
+            <code>vertical-increment-direction="down"</code> — slide down for +10; +10 label on the
+            bottom.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -186,11 +182,7 @@ function onFormSubmit(event) {
           <CardTitle>Narrow widths</CardTitle>
         </CardHeader>
         <CardContent class="flex flex-col gap-4">
-          <div
-            v-for="example in narrowExamples"
-            :key="example.id"
-            class="flex flex-col gap-2"
-          >
+          <div v-for="example in narrowExamples" :key="example.id" class="flex flex-col gap-2">
             <p class="text-sm font-medium">{{ example.label }}</p>
             <div :class="example.class">
               <SteppedSwipeNumberInput

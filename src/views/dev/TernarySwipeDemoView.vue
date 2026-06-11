@@ -4,22 +4,12 @@ import { useRoute } from 'vue-router'
 import AppShell from '@/components/AppShell.vue'
 import TernarySwipeControl from '@/components/TernarySwipeControl.vue'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 
 const route = useRoute()
 
-const PICK_STATUS_VALUES = new Set([
-  'pending',
-  'moved_to_storage',
-  'needs_new_location',
-])
+const PICK_STATUS_VALUES = new Set(['pending', 'moved_to_storage', 'needs_new_location'])
 
 function pickStatusFromQuery() {
   const value = route.query.pick_status
@@ -118,9 +108,7 @@ function onFormSubmit(event) {
       <Card>
         <CardHeader>
           <CardTitle>Organizer pick-list preset</CardTitle>
-          <CardDescription>
-            Same values planned for List lots organizer rows.
-          </CardDescription>
+          <CardDescription> Same values planned for List lots organizer rows. </CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-4">
           <TernarySwipeControl
@@ -184,7 +172,8 @@ function onFormSubmit(event) {
             <code class="rounded bg-muted px-1 py-0.5">moved_to_storage</code>
             /
             <code class="rounded bg-muted px-1 py-0.5">needs_new_location</code>
-            ) to seed the organizer and form examples only; width/height rows keep independent state.
+            ) to seed the organizer and form examples only; width/height rows keep independent
+            state.
           </CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-6">
@@ -207,9 +196,7 @@ function onFormSubmit(event) {
                 option2-label="New loc"
               />
             </div>
-            <p class="text-xs text-muted-foreground">
-              value: {{ narrowValues[example.id] }}
-            </p>
+            <p class="text-xs text-muted-foreground">value: {{ narrowValues[example.id] }}</p>
           </div>
         </CardContent>
       </Card>
@@ -248,9 +235,7 @@ function onFormSubmit(event) {
                 option2-label="New loc"
               />
             </div>
-            <p class="text-xs text-muted-foreground">
-              value: {{ heightValues[example.id] }}
-            </p>
+            <p class="text-xs text-muted-foreground">value: {{ heightValues[example.id] }}</p>
           </div>
         </CardContent>
       </Card>
@@ -260,8 +245,7 @@ function onFormSubmit(event) {
           <CardTitle>Form submission</CardTitle>
           <CardDescription>
             Hidden input value is included when the form is submitted. Current
-            <code class="rounded bg-muted px-1 py-0.5">pick_status</code>:
-            {{ formValue }}.
+            <code class="rounded bg-muted px-1 py-0.5">pick_status</code>: {{ formValue }}.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -1,5 +1,5 @@
 <script setup>
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils'
 
 const props = defineProps({
   class: {
@@ -7,14 +7,11 @@ const props = defineProps({
     required: false,
     skipCheck: true,
   },
-});
+})
 </script>
 
 <template>
-  <caption
-    data-slot="table-caption"
-    :class="cn('text-muted-foreground mt-4 text-sm', props.class)"
-  >
+  <caption data-slot="table-caption" :class="cn('text-muted-foreground mt-4 text-sm', props.class)">
     <slot />
   </caption>
 </template>

@@ -1,13 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  Archive,
-  CheckCircle,
-  MapPin,
-  Pencil,
-  Trash2,
-} from '@lucide/vue'
+import { Archive, CheckCircle, MapPin, Pencil, Trash2 } from '@lucide/vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {

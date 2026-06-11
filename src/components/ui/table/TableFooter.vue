@@ -1,5 +1,5 @@
 <script setup>
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils'
 
 const props = defineProps({
   class: {
@@ -7,15 +7,13 @@ const props = defineProps({
     required: false,
     skipCheck: true,
   },
-});
+})
 </script>
 
 <template>
   <tfoot
     data-slot="table-footer"
-    :class="
-      cn('bg-muted/50 border-t font-medium [&>tr]:last:border-b-0', props.class)
-    "
+    :class="cn('bg-muted/50 border-t font-medium [&>tr]:last:border-b-0', props.class)"
   >
     <slot />
   </tfoot>

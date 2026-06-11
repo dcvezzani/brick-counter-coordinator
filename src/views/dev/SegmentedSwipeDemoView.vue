@@ -3,13 +3,7 @@ import { reactive, ref } from 'vue'
 import AppShell from '@/components/AppShell.vue'
 import SegmentedSwipeControl from '@/components/SegmentedSwipeControl.vue'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const mockupOptions = [
   { value: 'moved', label: 'Moved' },
@@ -38,9 +32,7 @@ const narrowExamples = [
   { id: '48', label: 'max-w-48 — table-cell-ish', class: 'w-full max-w-48' },
 ]
 
-const narrowValues = reactive(
-  Object.fromEntries(narrowExamples.map(({ id }) => [id, ''])),
-)
+const narrowValues = reactive(Object.fromEntries(narrowExamples.map(({ id }) => [id, ''])))
 
 const lastChange = ref(null)
 const formPayload = ref(null)
@@ -158,11 +150,7 @@ function onFormSubmit(event) {
           </CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-4">
-          <div
-            v-for="example in narrowExamples"
-            :key="example.id"
-            class="flex flex-col gap-2"
-          >
+          <div v-for="example in narrowExamples" :key="example.id" class="flex flex-col gap-2">
             <p class="text-sm font-medium">{{ example.label }}</p>
             <div :class="example.class">
               <SegmentedSwipeControl

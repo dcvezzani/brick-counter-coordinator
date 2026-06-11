@@ -9,10 +9,7 @@ import ColorPicker from '@/components/ColorPicker.vue'
 import PartSearchCombobox from '@/components/PartSearchCombobox.vue'
 import SteppedSwipeNumberInput from '@/components/SteppedSwipeNumberInput.vue'
 import { useSession } from '@/composables/useSession'
-import {
-  persistLotConditionChoice,
-  resolveDefaultLotCondition,
-} from '@/lib/lot-entry-defaults'
+import { persistLotConditionChoice, resolveDefaultLotCondition } from '@/lib/lot-entry-defaults'
 
 const props = defineProps({
   sessionId: { type: String, required: true },
@@ -90,11 +87,7 @@ async function handleSave(addAnother = false) {
     return
   }
 
-  persistLotConditionChoice(
-    props.sessionId,
-    getSession(props.sessionId),
-    condition.value,
-  )
+  persistLotConditionChoice(props.sessionId, getSession(props.sessionId), condition.value)
 
   if (addAnother) {
     resetForAnother()
@@ -145,12 +138,7 @@ onMounted(async () => {
 
     <div class="flex flex-col gap-2">
       <Label>Count</Label>
-      <SteppedSwipeNumberInput
-        v-model="qty"
-        name="qty"
-        :min="0"
-        test-id="lot-qty"
-      />
+      <SteppedSwipeNumberInput v-model="qty" name="qty" :min="0" test-id="lot-qty" />
     </div>
 
     <Alert v-if="duplicateMessage" variant="destructive" data-testid="duplicate-alert">

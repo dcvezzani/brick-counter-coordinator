@@ -11,9 +11,7 @@
 export function filterColors(colors, query) {
   const q = query.trim().toLowerCase()
   if (!q) return [...colors]
-  return colors.filter(
-    (c) => c.name.toLowerCase().startsWith(q) || String(c.id).startsWith(q),
-  )
+  return colors.filter((c) => c.name.toLowerCase().startsWith(q) || String(c.id).startsWith(q))
 }
 
 /**

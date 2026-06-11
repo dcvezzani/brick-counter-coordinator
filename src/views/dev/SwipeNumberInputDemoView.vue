@@ -3,13 +3,7 @@ import { reactive, ref } from 'vue'
 import AppShell from '@/components/AppShell.vue'
 import SwipeNumberInput from '@/components/SwipeNumberInput.vue'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const defaultValue = ref(1)
 const leftHandleValue = ref(5)
@@ -48,8 +42,8 @@ function onFormSubmit(event) {
         <h2 class="text-xl font-semibold">Swipe number playground</h2>
         <p class="text-sm text-muted-foreground">
           Tap the field for the native number keypad. Drag the center handle toward
-          <strong>+</strong> to count up or toward <strong>−</strong> to count down — farther
-          from center counts faster. Release to snap the handle home.
+          <strong>+</strong> to count up or toward <strong>−</strong> to count down — farther from
+          center counts faster. Release to snap the handle home.
         </p>
       </div>
 
@@ -143,11 +137,7 @@ function onFormSubmit(event) {
           <CardTitle>Narrow widths</CardTitle>
         </CardHeader>
         <CardContent class="flex flex-col gap-4">
-          <div
-            v-for="example in narrowExamples"
-            :key="example.id"
-            class="flex flex-col gap-2"
-          >
+          <div v-for="example in narrowExamples" :key="example.id" class="flex flex-col gap-2">
             <p class="text-sm font-medium">{{ example.label }}</p>
             <div :class="example.class">
               <SwipeNumberInput
@@ -168,11 +158,7 @@ function onFormSubmit(event) {
         <CardContent>
           <form class="flex flex-col gap-4" data-testid="demo-form" @submit.prevent="onFormSubmit">
             <div class="w-full max-w-md">
-              <SwipeNumberInput
-                v-model="formValue"
-                name="count"
-                test-id="demo-form-control"
-              />
+              <SwipeNumberInput v-model="formValue" name="count" test-id="demo-form-control" />
             </div>
             <Button type="submit" class="min-h-11" data-testid="demo-form-submit">
               Submit form

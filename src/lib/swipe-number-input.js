@@ -90,7 +90,10 @@ export function applySignedSteps(value, signedSteps, clampOptions) {
   for (let i = 0; i < Math.abs(signedSteps); i += 1) {
     result = clampValue(result + direction, clampOptions)
     if (direction > 0 && clampOptions.max != null && result >= clampOptions.max) break
-    if (direction < 0 && result <= (clampOptions.min ?? (clampOptions.allowNegative ? Number.NEGATIVE_INFINITY : 0))) {
+    if (
+      direction < 0 &&
+      result <= (clampOptions.min ?? (clampOptions.allowNegative ? Number.NEGATIVE_INFINITY : 0))
+    ) {
       break
     }
   }

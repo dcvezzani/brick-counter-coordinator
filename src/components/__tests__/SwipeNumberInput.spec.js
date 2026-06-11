@@ -112,8 +112,8 @@ describe('SwipeNumberInput', () => {
       props: { name: 'qty', modelValue: 5 },
     })
 
-    expect(wrapper.get('[data-testid="swipe-number-input"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="swipe-number-handle"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="swipe-number-input"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="swipe-number-handle"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="swipe-number-hidden-input"]').element.value).toBe('5')
   })
 
@@ -349,7 +349,7 @@ describe('SwipeNumberInput', () => {
 
     const track = wrapper.get('[data-testid="swipe-number-track"]')
     expect(track.element.firstElementChild?.getAttribute('data-testid')).toBe('swipe-number-slide')
-    expect(wrapper.get('[data-testid="swipe-number-plus"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="swipe-number-minus"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="swipe-number-plus"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="swipe-number-minus"]').exists()).toBe(true)
   })
 })

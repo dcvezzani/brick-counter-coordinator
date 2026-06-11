@@ -2,10 +2,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import LotForm from '@/components/LotForm.vue'
 import { useSession } from '@/composables/useSession'
-import {
-  persistLotConditionChoice,
-  resolveDefaultLotCondition,
-} from '@/lib/lot-entry-defaults'
+import { persistLotConditionChoice, resolveDefaultLotCondition } from '@/lib/lot-entry-defaults'
 
 vi.mock('@/composables/useSession')
 const routerPush = vi.fn()
@@ -23,18 +20,18 @@ const SESSION_ID = 'test-session'
 
 function setupSession(partOutCondition = 'used') {
   const session = { partOutOptions: { condition: partOutCondition } }
-  const saveLot = vi.fn(() => ({ duplicate: false }))
-  vi.mocked(useSession).mockReturnValue({
-    getSession: () => session,
-    getLot: vi.fn(),
-    saveLot,
-    getColorsForPart: vi.fn(() => [{ id: 11, name: 'Black', hex: '#05131d' }]),
-    resolvePartId: vi.fn((id) => id || ''),
-    searchParts: vi.fn(() => [{ partId: '3001', name: 'Brick 2 x 4' }]),
-    lookupPart: vi.fn((id) =>
-      id === '3001' ? { partId: '3001', name: 'Brick 2 x 4' } : null,
-    ),
-  })
+  const saveLot = vi.fn(() => ({ lot: { id: 'lot-test' }, duplicate: false }))
+  vi.mocked(useSession).mockReturnValue(
+    /** @type {any} */ ({
+      getSession: () => session,
+      getLot: vi.fn(),
+      saveLot,
+      getColorsForPart: vi.fn(() => [{ id: 11, name: 'Black', hex: '#05131d' }]),
+      resolvePartId: vi.fn((id) => id || ''),
+      searchParts: vi.fn(() => [{ partId: '3001', name: 'Brick 2 x 4' }]),
+      lookupPart: vi.fn((id) => (id === '3001' ? { partId: '3001', name: 'Brick 2 x 4' } : null)),
+    }),
+  )
   return { session, saveLot }
 }
 
@@ -52,19 +49,13 @@ describe('lot-entry-defaults', () => {
   })
 
   it('maps session new/used mix to lot condition', () => {
-    expect(resolveDefaultLotCondition('s1', { partOutOptions: { condition: 'new' } })).toBe(
-      'N',
-    )
-    expect(resolveDefaultLotCondition('s1', { partOutOptions: { condition: 'used' } })).toBe(
-      'U',
-    )
+    expect(resolveDefaultLotCondition('s1', { partOutOptions: { condition: 'new' } })).toBe('N')
+    expect(resolveDefaultLotCondition('s1', { partOutOptions: { condition: 'used' } })).toBe('U')
   })
 
   it('reads last choice from sessionStorage for mixed sessions', () => {
     sessionStorage.setItem('lot-entry-condition:s1', 'N')
-    expect(
-      resolveDefaultLotCondition('s1', { partOutOptions: { condition: 'mixed' } }),
-    ).toBe('N')
+    expect(resolveDefaultLotCondition('s1', { partOutOptions: { condition: 'mixed' } })).toBe('N')
   })
 
   it('persists last choice only for mixed sessions', () => {

@@ -90,9 +90,9 @@ describe('stepped-swipe-number-input helpers', () => {
   it('toLogicalHorizontalSlot inverts when increment direction is right', () => {
     const axis = createSteppedAxisConfig({ horizontalIncrement: 'right' })
     expect(toLogicalHorizontalSlot(5, axis)).toBe(-5)
-    expect(toLogicalHorizontalSlot(-3, createSteppedAxisConfig({ horizontalIncrement: 'left' }))).toBe(
-      -3,
-    )
+    expect(
+      toLogicalHorizontalSlot(-3, createSteppedAxisConfig({ horizontalIncrement: 'left' })),
+    ).toBe(-3)
   })
 
   it('toLogicalVerticalSlot inverts when increment direction is down', () => {

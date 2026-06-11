@@ -16,8 +16,7 @@ export function defaultPrefixFilter(options, query) {
   if (!q) return [...options]
   return options.filter(
     (option) =>
-      option.label.toLowerCase().startsWith(q) ||
-      String(option.value).toLowerCase().startsWith(q),
+      option.label.toLowerCase().startsWith(q) || String(option.value).toLowerCase().startsWith(q),
   )
 }
 
@@ -32,8 +31,7 @@ export function defaultContainsFilter(options, query) {
   if (!q) return [...options]
   return options.filter(
     (option) =>
-      option.label.toLowerCase().includes(q) ||
-      String(option.value).toLowerCase().includes(q),
+      option.label.toLowerCase().includes(q) || String(option.value).toLowerCase().includes(q),
   )
 }
 

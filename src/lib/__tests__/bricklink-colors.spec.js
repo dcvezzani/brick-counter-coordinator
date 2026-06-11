@@ -13,9 +13,7 @@ describe('bricklink-colors', () => {
   })
 
   it('filterColors matches names that start with query (case insensitive)', () => {
-    expect(filterColors(SAMPLE, 'a')).toEqual([
-      { id: 41, name: 'Aqua' },
-    ])
+    expect(filterColors(SAMPLE, 'a')).toEqual([{ id: 41, name: 'Aqua' }])
     expect(filterColors(SAMPLE, 'bl')).toEqual([{ id: 11, name: 'Black' }])
   })
 

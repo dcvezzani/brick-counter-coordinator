@@ -17,8 +17,7 @@ const condition = ref('mixed')
 const overwrite = ref('consolidate')
 
 function submit() {
-  const displayName =
-    sessionStorage.getItem('workerDisplayName') || 'Session Lead'
+  const displayName = sessionStorage.getItem('workerDisplayName') || 'Session Lead'
   const { session, worker } = createSession({
     setNumber: setNumber.value,
     name: `${setNumber.value} part-out`,

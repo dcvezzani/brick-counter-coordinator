@@ -1,11 +1,5 @@
 <script setup>
-import {
-  computed,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  useTemplateRef,
-} from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { GripVertical } from '@lucide/vue'
 import { useNumericField } from '@/composables/useNumericField'
 import { clampValue, parseNumericValue } from '@/lib/numeric-field'
@@ -125,9 +119,7 @@ const displayValueForHidden = computed(() => {
   return ''
 })
 
-const maxHandleOffsetXPx = computed(() =>
-  Math.max(0, slideTrackWidthPx.value / 2 - 28),
-)
+const maxHandleOffsetXPx = computed(() => Math.max(0, slideTrackWidthPx.value / 2 - 28))
 
 const maxHandleOffsetYPx = computed(() => VERTICAL_HANDLE_RANGE_PX)
 
@@ -160,20 +152,14 @@ const handleAriaLabel = computed(() => {
   return `Drag ${hInc} or ${vInc} to increase, ${hDec} or ${vDec} to decrease. Use arrow keys or WASD when focused. Space resets handle position.`
 })
 
-const hasFiniteFloor = computed(
-  () => effectiveMin.value !== Number.NEGATIVE_INFINITY,
-)
+const hasFiniteFloor = computed(() => effectiveMin.value !== Number.NEGATIVE_INFINITY)
 
 const plusAriaLabel = computed(() =>
-  props.max != null
-    ? 'Increase by 1. Hold to set to maximum.'
-    : 'Increase by 1',
+  props.max != null ? 'Increase by 1. Hold to set to maximum.' : 'Increase by 1',
 )
 
 const minusAriaLabel = computed(() =>
-  hasFiniteFloor.value
-    ? 'Decrease by 1. Hold to set to minimum.'
-    : 'Decrease by 1',
+  hasFiniteFloor.value ? 'Decrease by 1. Hold to set to minimum.' : 'Decrease by 1',
 )
 
 const isDisplaced = computed(
@@ -186,9 +172,7 @@ const isDisplaced = computed(
     currentVSlot.value !== 0,
 )
 
-const positionAmounts = computed(() =>
-  slotLabelAmounts(currentHSlot.value, currentVSlot.value),
-)
+const positionAmounts = computed(() => slotLabelAmounts(currentHSlot.value, currentVSlot.value))
 
 const incrementHorizontalLabel = computed(() => {
   if (!isDisplaced.value) return '+'
@@ -212,32 +196,23 @@ const decrementVerticalLabel = computed(() => {
   return amount > 0 ? `−${amount}` : '−'
 })
 
-const incrementHorizontalOnRight = computed(
-  () => props.horizontalIncrementDirection === 'right',
-)
+const incrementHorizontalOnRight = computed(() => props.horizontalIncrementDirection === 'right')
 
-const incrementVerticalOnBottom = computed(
-  () => props.verticalIncrementDirection === 'down',
-)
+const incrementVerticalOnBottom = computed(() => props.verticalIncrementDirection === 'down')
 
-const hSideNearCenterClass =
-  'absolute top-1/2 h-11 min-w-8 -translate-y-1/2 px-1'
+const hSideNearCenterClass = 'absolute top-1/2 h-11 min-w-8 -translate-y-1/2 px-1'
 
 const hIncrementClass = computed(() =>
   cn(
     hSideNearCenterClass,
-    incrementHorizontalOnRight.value
-      ? 'left-[calc(50%+2rem)]'
-      : 'right-[calc(50%+2rem)]',
+    incrementHorizontalOnRight.value ? 'left-[calc(50%+2rem)]' : 'right-[calc(50%+2rem)]',
   ),
 )
 
 const hDecrementClass = computed(() =>
   cn(
     hSideNearCenterClass,
-    incrementHorizontalOnRight.value
-      ? 'right-[calc(50%+2rem)]'
-      : 'left-[calc(50%+2rem)]',
+    incrementHorizontalOnRight.value ? 'right-[calc(50%+2rem)]' : 'left-[calc(50%+2rem)]',
   ),
 )
 
@@ -247,18 +222,14 @@ const vOverlayBaseClass =
 const vIncrementOverlayClass = computed(() =>
   cn(
     vOverlayBaseClass,
-    incrementVerticalOnBottom.value
-      ? 'bottom-0 translate-y-1/2'
-      : 'top-0 -translate-y-1/2',
+    incrementVerticalOnBottom.value ? 'bottom-0 translate-y-1/2' : 'top-0 -translate-y-1/2',
   ),
 )
 
 const vDecrementOverlayClass = computed(() =>
   cn(
     vOverlayBaseClass,
-    incrementVerticalOnBottom.value
-      ? 'top-0 -translate-y-1/2'
-      : 'bottom-0 translate-y-1/2',
+    incrementVerticalOnBottom.value ? 'top-0 -translate-y-1/2' : 'bottom-0 translate-y-1/2',
   ),
 )
 
@@ -405,10 +376,7 @@ function onInputKeydown(event) {
 }
 
 function seedDragValueFromInput() {
-  const base =
-    parseNumericValue(inputText.value, { emptyAsZero: true }) ??
-    props.modelValue ??
-    0
+  const base = parseNumericValue(inputText.value, { emptyAsZero: true }) ?? props.modelValue ?? 0
   dragValue = clampValue(base, clampOptions.value)
   inputText.value = formatDisplayValue(dragValue)
 }
@@ -490,10 +458,7 @@ function snapKeyboardOneSlotInward(dH, dV) {
   if (dH !== 0) {
     const curPhysicalH = readPhysicalSlots().h
     const nextPhysicalH = curPhysicalH - Math.sign(dH)
-    handleOffsetXPx.value = horizontalSlotToOffset(
-      nextPhysicalH,
-      maxHandleOffsetXPx.value,
-    )
+    handleOffsetXPx.value = horizontalSlotToOffset(nextPhysicalH, maxHandleOffsetXPx.value)
   }
   if (dV !== 0) {
     const curPhysicalV = readPhysicalSlots().v
@@ -508,23 +473,11 @@ function snapKeyboardOneSlotInward(dH, dV) {
 
 function nudgeHandleByPhysicalSlots(dH, dV) {
   beginKeyboardControl()
-  const curPhysicalH = offsetToHorizontalSlot(
-    handleOffsetXPx.value,
-    maxHandleOffsetXPx.value,
-  )
-  const curPhysicalV = offsetToVerticalSlot(
-    handleOffsetYPx.value,
-    maxHandleOffsetYPx.value,
-  )
-  const nextPhysicalH = Math.max(
-    -HORIZONTAL_SLOTS,
-    Math.min(HORIZONTAL_SLOTS, curPhysicalH + dH),
-  )
+  const curPhysicalH = offsetToHorizontalSlot(handleOffsetXPx.value, maxHandleOffsetXPx.value)
+  const curPhysicalV = offsetToVerticalSlot(handleOffsetYPx.value, maxHandleOffsetYPx.value)
+  const nextPhysicalH = Math.max(-HORIZONTAL_SLOTS, Math.min(HORIZONTAL_SLOTS, curPhysicalH + dH))
   const nextPhysicalV = Math.max(-1, Math.min(1, curPhysicalV + dV))
-  handleOffsetXPx.value = horizontalSlotToOffset(
-    nextPhysicalH,
-    maxHandleOffsetXPx.value,
-  )
+  handleOffsetXPx.value = horizontalSlotToOffset(nextPhysicalH, maxHandleOffsetXPx.value)
   handleOffsetYPx.value = verticalSlotToOffset(
     /** @type {-1 | 0 | 1} */ (nextPhysicalV),
     maxHandleOffsetYPx.value,
@@ -765,10 +718,7 @@ function finishSnapHome() {
 function animateHandleHome() {
   cancelSnapAnimation()
 
-  if (
-    prefersReducedMotion.value ||
-    (handleOffsetXPx.value === 0 && handleOffsetYPx.value === 0)
-  ) {
+  if (prefersReducedMotion.value || (handleOffsetXPx.value === 0 && handleOffsetYPx.value === 0)) {
     finishSnapHome()
     return
   }

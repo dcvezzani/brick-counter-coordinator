@@ -1,13 +1,5 @@
 <script setup>
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  useTemplateRef,
-  watch,
-} from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { X } from '@lucide/vue'
 import { cn } from '@/lib/utils'
 
@@ -28,9 +20,7 @@ const props = defineProps({
         value.length >= 2 &&
         value.every(
           (option) =>
-            option &&
-            typeof option.value === 'string' &&
-            typeof option.label === 'string',
+            option && typeof option.value === 'string' && typeof option.label === 'string',
         )
       )
     },
@@ -66,19 +56,13 @@ let resizeObserver = null
 let transitionTimer = null
 let reducedMotionQuery = null
 
-const trackSegmentCount = computed(() =>
-  props.options.length + (props.allowNeutral ? 1 : 0),
-)
+const trackSegmentCount = computed(() => props.options.length + (props.allowNeutral ? 1 : 0))
 
-const noneSegmentIndex = computed(() =>
-  props.allowNeutral ? props.options.length : -1,
-)
+const noneSegmentIndex = computed(() => (props.allowNeutral ? props.options.length : -1))
 
 const segmentWidthPercent = computed(() => 100 / trackSegmentCount.value)
 
-const proximityFalloff = computed(() =>
-  Math.min(0.25, 0.5 / trackSegmentCount.value),
-)
+const proximityFalloff = computed(() => Math.min(0.25, 0.5 / trackSegmentCount.value))
 
 const snapPoints = computed(() =>
   Array.from(
@@ -124,9 +108,7 @@ const labelGridStyle = computed(() => ({
 const noneIconClass = computed(() =>
   cn(
     'size-4 shrink-0',
-    committedIndex.value != null || dragging.value
-      ? 'text-destructive'
-      : 'text-muted-foreground',
+    committedIndex.value != null || dragging.value ? 'text-destructive' : 'text-muted-foreground',
   ),
 )
 
@@ -136,8 +118,7 @@ function proximity(x, target) {
 
 function thumbClassForIndex(index) {
   return (
-    props.options[index]?.thumbClass ??
-    DEFAULT_THUMB_CLASSES[index % DEFAULT_THUMB_CLASSES.length]
+    props.options[index]?.thumbClass ?? DEFAULT_THUMB_CLASSES[index % DEFAULT_THUMB_CLASSES.length]
   )
 }
 
@@ -150,10 +131,7 @@ function updateInsetDimensions() {
 }
 
 function segmentIndexFromX(x) {
-  return Math.min(
-    trackSegmentCount.value - 1,
-    Math.max(0, Math.floor(x * trackSegmentCount.value)),
-  )
+  return Math.min(trackSegmentCount.value - 1, Math.max(0, Math.floor(x * trackSegmentCount.value)))
 }
 
 function indexFromSegment(segmentIndex) {
@@ -196,15 +174,12 @@ function labelTextClassForIndex(index) {
 
 const thumbClasses = computed(() => {
   const segmentIndex = activeSegmentIndex.value
-  const onNoneSegment =
-    props.allowNeutral && segmentIndex === noneSegmentIndex.value
+  const onNoneSegment = props.allowNeutral && segmentIndex === noneSegmentIndex.value
 
   return cn(
     'absolute z-10 flex items-center justify-center rounded-full font-medium select-none touch-none',
     onNoneSegment && 'bg-destructive text-destructive-foreground text-sm',
-    !onNoneSegment &&
-      segmentIndex >= 0 &&
-      thumbClassForIndex(segmentIndex),
+    !onNoneSegment && segmentIndex >= 0 && thumbClassForIndex(segmentIndex),
     !onNoneSegment && segmentIndex >= 0 && 'border border-foreground',
     dismissingToNone.value &&
       !prefersReducedMotion.value &&
@@ -273,8 +248,7 @@ const thumbStyle = computed(() => {
   const insetH = insetHeightPx.value || 44
   const pillW = insetW / trackSegmentCount.value
   const pillH = insetH
-  const segmentProximity =
-    segmentIndex >= 0 ? proximity(x, snapPoints.value[segmentIndex]) : 0
+  const segmentProximity = segmentIndex >= 0 ? proximity(x, snapPoints.value[segmentIndex]) : 0
 
   let pillLeft = x * insetW - pillW / 2
   pillLeft = Math.max(0, Math.min(pillLeft, insetW - pillW))
@@ -560,11 +534,7 @@ onBeforeUnmount(() => {
         aria-hidden="true"
       />
 
-      <div
-        ref="insetLayerRef"
-        class="absolute inset-1 z-10"
-        :data-testid="`${testId}-inset`"
-      >
+      <div ref="insetLayerRef" class="absolute inset-1 z-10" :data-testid="`${testId}-inset`">
         <div
           v-if="showThumb"
           ref="thumbRef"
@@ -584,9 +554,7 @@ onBeforeUnmount(() => {
           class="pointer-events-none flex items-center justify-center px-1"
           :data-testid="`${testId}-label-${index}`"
         >
-          <span
-            :class="cn('truncate text-sm font-medium', labelTextClassForIndex(index))"
-          >
+          <span :class="cn('truncate text-sm font-medium', labelTextClassForIndex(index))">
             {{ option.label }}
           </span>
         </div>

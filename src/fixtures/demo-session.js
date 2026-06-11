@@ -168,9 +168,7 @@ export function createDemoSession() {
     .map((line) => {
       const lot = lots.find(
         (l) =>
-          l.partId === line.partId &&
-          l.colorId === line.colorId &&
-          l.condition === line.condition,
+          l.partId === line.partId && l.colorId === line.colorId && l.condition === line.condition,
       )
       const counted = lot?.qty ?? 0
       const delta = counted - line.qtyExpected

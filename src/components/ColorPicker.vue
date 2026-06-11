@@ -64,9 +64,7 @@ defineExpose({ focus })
             !selected && 'border-dashed bg-background',
           )
         "
-        :style="
-          selected?.data ? { backgroundColor: colorSwatch(selected.data) } : undefined
-        "
+        :style="selected?.data ? { backgroundColor: colorSwatch(selected.data) } : undefined"
       />
     </template>
 

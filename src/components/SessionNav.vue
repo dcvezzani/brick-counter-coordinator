@@ -50,7 +50,9 @@ function isActive(segment) {
           variant="ghost"
           size="sm"
           :data-testid="link.path === 'home' ? 'nav-home' : `nav-${link.path}`"
-          :class="cn('min-h-11 min-w-16 flex-col gap-0.5 text-xs', isActive(link.path) && 'bg-accent')"
+          :class="
+            cn('min-h-11 min-w-16 flex-col gap-0.5 text-xs', isActive(link.path) && 'bg-accent')
+          "
           @click="navigate"
         >
           {{ link.label }}

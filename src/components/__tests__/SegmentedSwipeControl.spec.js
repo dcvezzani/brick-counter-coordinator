@@ -121,8 +121,8 @@ describe('SegmentedSwipeControl', () => {
     })
 
     expect(wrapper.get('[data-testid="segmented-swipe-label-0"]').text()).toContain('Moved')
-    expect(wrapper.get('[data-testid="segmented-swipe-label-none"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="segmented-swipe-none-segment"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="segmented-swipe-label-none"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="segmented-swipe-none-segment"]').exists()).toBe(true)
 
     const hidden = wrapper.get('[data-testid="segmented-swipe-hidden-input"]')
     expect(hidden.element.value).toBe('')
