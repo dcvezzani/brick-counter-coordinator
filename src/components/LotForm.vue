@@ -27,6 +27,7 @@ const colorPickerRef = useTemplateRef('colorPickerRef')
 
 const partId = ref('')
 const colorId = ref(null)
+/** @type {import('vue').Ref<'U' | 'N'>} */
 const condition = ref('U')
 const qty = ref(1)
 const duplicateMessage = ref(null)
