@@ -1,7 +1,7 @@
 export const DEFAULT_RATE_CONFIG = {
   maxDragPx: 120,
   minRate: 2,
-  maxRate: 25,
+  maxRate: 50,
   deadZonePx: 8,
 }
 

@@ -44,6 +44,35 @@ function pointerOnHandle(wrapper, type, clientX, pointerId = 1) {
   )
 }
 
+function pointerOnMinus(wrapper, type, pointerId = 1) {
+  const minus = wrapper.get('[data-testid="swipe-number-minus"]').element
+  minus.dispatchEvent(
+    new PointerEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      clientX: 10,
+      clientY: 22,
+      pointerId,
+      pointerType: 'mouse',
+    }),
+  )
+}
+
+async function tapMinus(wrapper, pointerId = 1) {
+  pointerOnMinus(wrapper, 'pointerdown', pointerId)
+  window.dispatchEvent(
+    new PointerEvent('pointerup', {
+      bubbles: true,
+      cancelable: true,
+      clientX: 10,
+      clientY: 22,
+      pointerId,
+      pointerType: 'mouse',
+    }),
+  )
+  await flushPromises()
+}
+
 /** Drive drag rAF ticks with increasing timestamps. */
 async function runDragFrames(count, startTime = 1000, stepMs = 50) {
   for (let i = 0; i < count; i += 1) {
@@ -245,26 +274,72 @@ describe('SwipeNumberInput', () => {
     expect(wrapper.get('[data-testid="swipe-number-input"]').element.value).toBe('6')
   })
 
-  it('clicking minus decrements by 1', async () => {
+  it('tapping minus decrements by 1', async () => {
     const wrapper = mount(SwipeNumberInput, {
       props: { name: 'qty', modelValue: 5 },
     })
 
-    await wrapper.get('[data-testid="swipe-number-minus"]').trigger('click')
+    await tapMinus(wrapper)
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([4])
     expect(wrapper.get('[data-testid="swipe-number-input"]').element.value).toBe('4')
   })
 
-  it('clicking minus does not go below zero when allowNegative is false', async () => {
+  it('tapping minus does not go below zero when allowNegative is false', async () => {
     const wrapper = mount(SwipeNumberInput, {
       props: { name: 'qty', modelValue: 0, allowNegative: false },
     })
 
-    await wrapper.get('[data-testid="swipe-number-minus"]').trigger('click')
+    await tapMinus(wrapper)
 
     expect(wrapper.emitted('update:modelValue')).toBeUndefined()
     expect(wrapper.get('[data-testid="swipe-number-input"]').element.value).toBe('0')
+  })
+
+  it('holding minus for 1 second sets the value to zero', async () => {
+    const wrapper = mount(SwipeNumberInput, {
+      props: { name: 'qty', modelValue: 42 },
+    })
+
+    pointerOnMinus(wrapper, 'pointerdown')
+    await vi.advanceTimersByTimeAsync(1000)
+    await flushPromises()
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([0])
+    expect(wrapper.emitted('change')?.at(-1)).toEqual([0])
+    expect(wrapper.get('[data-testid="swipe-number-input"]').element.value).toBe('0')
+
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        pointerId: 1,
+        pointerType: 'mouse',
+      }),
+    )
+    await flushPromises()
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([0])
+  })
+
+  it('releasing minus before 1 second does not reset the value to zero', async () => {
+    const wrapper = mount(SwipeNumberInput, {
+      props: { name: 'qty', modelValue: 42 },
+    })
+
+    pointerOnMinus(wrapper, 'pointerdown')
+    await vi.advanceTimersByTimeAsync(500)
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        pointerId: 1,
+        pointerType: 'mouse',
+      }),
+    )
+    await flushPromises()
+
+    const updates = wrapper.emitted('update:modelValue') ?? []
+    expect(updates.some(([value]) => value === 0)).toBe(false)
+    expect(wrapper.get('[data-testid="swipe-number-input"]').element.value).toBe('41')
   })
 
   it('renders slide control on the left when configured', () => {

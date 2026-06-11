@@ -18,6 +18,7 @@ import {
 } from '@/lib/swipe-number-input'
 
 const SNAP_MS = 220
+const MINUS_HOLD_CLEAR_MS = 1000
 
 const props = defineProps({
   modelValue: { type: Number, default: null },
@@ -61,6 +62,9 @@ let snapStartTime = 0
 let snapFromOffset = 0
 let resizeObserver = null
 let reducedMotionQuery = null
+let minusHoldTimerId = null
+let minusHoldPointerId = null
+let minusHoldClearFired = false
 
 const effectiveMin = computed(() => {
   if (props.min != null) return props.min
@@ -181,6 +185,61 @@ function stepCurrentValue(delta) {
   const next = clampValue(base + delta, clampOptions.value)
   inputText.value = formatDisplayValue(next)
   commitValue(next)
+}
+
+function resetNumericValueToZero() {
+  if (props.disabled || dragging.value) return
+  inputText.value = '0'
+  commitValue(0)
+}
+
+function detachMinusHoldListeners() {
+  window.removeEventListener('pointerup', onMinusHoldPointerEnd)
+  window.removeEventListener('pointercancel', onMinusHoldPointerEnd)
+}
+
+function cancelMinusHoldTimer() {
+  if (minusHoldTimerId != null) {
+    clearTimeout(minusHoldTimerId)
+    minusHoldTimerId = null
+  }
+}
+
+function resetMinusHoldState() {
+  cancelMinusHoldTimer()
+  detachMinusHoldListeners()
+  minusHoldPointerId = null
+  minusHoldClearFired = false
+}
+
+function onMinusHoldPointerEnd(event) {
+  if (minusHoldPointerId == null) return
+  if (event != null && event.pointerId !== minusHoldPointerId) return
+
+  const clearFired = minusHoldClearFired
+  resetMinusHoldState()
+
+  if (!clearFired) {
+    stepCurrentValue(-1)
+  }
+}
+
+function onMinusPointerDown(event) {
+  if (props.disabled || dragging.value) return
+  event.preventDefault()
+
+  resetMinusHoldState()
+  minusHoldPointerId = event.pointerId
+  minusHoldClearFired = false
+
+  minusHoldTimerId = setTimeout(() => {
+    minusHoldTimerId = null
+    minusHoldClearFired = true
+    resetNumericValueToZero()
+  }, MINUS_HOLD_CLEAR_MS)
+
+  window.addEventListener('pointerup', onMinusHoldPointerEnd)
+  window.addEventListener('pointercancel', onMinusHoldPointerEnd)
 }
 
 function onInputKeydown(event) {
@@ -378,6 +437,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  resetMinusHoldState()
   detachWindowPointerListeners()
   releasePointerCaptureIfNeeded(activePointerId)
   stopDragLoop()
@@ -423,8 +483,8 @@ onBeforeUnmount(() => {
           :disabled="disabled"
           :class="cn(stepButtonClass, 'left-0.5')"
           :data-testid="`${testId}-minus`"
-          aria-label="Decrease by 1"
-          @click="stepCurrentValue(-1)"
+          aria-label="Decrease by 1. Hold to set to zero."
+          @pointerdown="onMinusPointerDown"
         >
           −
         </button>
@@ -502,8 +562,8 @@ onBeforeUnmount(() => {
           :disabled="disabled"
           :class="cn(stepButtonClass, 'right-0.5')"
           :data-testid="`${testId}-minus`"
-          aria-label="Decrease by 1"
-          @click="stepCurrentValue(-1)"
+          aria-label="Decrease by 1. Hold to set to zero."
+          @pointerdown="onMinusPointerDown"
         >
           −
         </button>
