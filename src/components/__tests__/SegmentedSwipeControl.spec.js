@@ -95,6 +95,17 @@ function stubMatchMedia() {
   })
 }
 
+/** Wait for shrink/fade dismiss animation (220ms) to finish and emit. */
+async function flushDismissAnimation(wrapper) {
+  await wrapper.vm.$nextTick()
+  await new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      setTimeout(resolve, 220)
+    })
+  })
+  await wrapper.vm.$nextTick()
+}
+
 describe('SegmentedSwipeControl', () => {
   beforeEach(() => {
     stubMatchMedia()
@@ -211,6 +222,7 @@ describe('SegmentedSwipeControl', () => {
     })
 
     await wrapper.get('[data-testid="segmented-swipe-none-segment"]').trigger('click')
+    await flushDismissAnimation(wrapper)
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['none'])
     expect(wrapper.find('[data-testid="segmented-swipe-thumb"]').exists()).toBe(false)
@@ -230,10 +242,36 @@ describe('SegmentedSwipeControl', () => {
     trackPointerAt(wrapper, 'pointerdown', 40)
     trackPointerAt(wrapper, 'pointermove', 260)
     trackPointerAt(wrapper, 'pointerup', 260)
-    await wrapper.vm.$nextTick()
+    await flushDismissAnimation(wrapper)
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['none'])
     expect(wrapper.find('[data-testid="segmented-swipe-thumb"]').exists()).toBe(false)
+  })
+
+  it('plays dismiss animation when dragging from neutral onto none segment', async () => {
+    const wrapper = mount(SegmentedSwipeControl, {
+      props: {
+        name: 'status',
+        modelValue: '',
+        options: THREE_OPTIONS,
+        neutralValue: 'none',
+      },
+    })
+
+    mockTrackRect(wrapper)
+    trackPointerAt(wrapper, 'pointerdown', 40)
+    trackPointerAt(wrapper, 'pointermove', 150)
+    trackPointerAt(wrapper, 'pointermove', 260)
+    trackPointerAt(wrapper, 'pointerup', 260)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="segmented-swipe-thumb"]').exists()).toBe(true)
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+    await flushDismissAnimation(wrapper)
+
+    expect(wrapper.find('[data-testid="segmented-swipe-thumb"]').exists()).toBe(false)
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
   })
 
   it('drags from first to last option segment', async () => {
@@ -291,6 +329,7 @@ describe('SegmentedSwipeControl', () => {
 
     await wrapper.setProps({ modelValue: 'new_loc' })
     await track.trigger('keydown', { key: 'Home' })
+    await flushDismissAnimation(wrapper)
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['none'])
   })
 

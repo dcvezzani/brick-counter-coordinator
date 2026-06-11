@@ -1,6 +1,7 @@
 <script setup>
 import {
   computed,
+  nextTick,
   onBeforeUnmount,
   onMounted,
   ref,
@@ -54,6 +55,8 @@ const committedIndex = ref(null)
 const dragging = ref(false)
 const dragX = ref(null)
 const animating = ref(false)
+const dismissingToNone = ref(false)
+const dismissVisualActive = ref(false)
 const prefersReducedMotion = ref(false)
 const insetWidthPx = ref(0)
 const insetHeightPx = ref(0)
@@ -102,13 +105,16 @@ const ariaValueText = computed(() => {
 })
 
 const displayX = computed(() => {
+  if (dismissingToNone.value && props.allowNeutral) {
+    return snapPoints.value[noneSegmentIndex.value]
+  }
   if (dragging.value && dragX.value != null) return dragX.value
   if (committedIndex.value == null) return null
   return snapPoints.value[committedIndex.value]
 })
 
 const showThumb = computed(
-  () => dragging.value || committedIndex.value != null,
+  () => dragging.value || committedIndex.value != null || dismissingToNone.value,
 )
 
 const labelGridStyle = computed(() => ({
@@ -200,9 +206,13 @@ const thumbClasses = computed(() => {
       segmentIndex >= 0 &&
       thumbClassForIndex(segmentIndex),
     !onNoneSegment && segmentIndex >= 0 && 'border border-foreground',
+    dismissingToNone.value &&
+      !prefersReducedMotion.value &&
+      'bg-destructive text-destructive-foreground transition-[transform,opacity] duration-200 ease-out',
     animating.value &&
       !prefersReducedMotion.value &&
       !dragging.value &&
+      !dismissingToNone.value &&
       'transition-[left,width,height,top,opacity,background-color,color] duration-200 ease-out',
     dragging.value && 'cursor-grabbing',
     !dragging.value && !props.disabled && 'cursor-grab',
@@ -215,6 +225,31 @@ const thumbStyle = computed(() => {
 
   const segmentIndex = activeSegmentIndex.value
   const opacityStyle = props.disabled ? {} : { opacity: 1 }
+
+  if (dismissingToNone.value) {
+    const leftPercent = (noneSegmentIndex.value / trackSegmentCount.value) * 100
+    const shrinkStyle = prefersReducedMotion.value
+      ? {}
+      : {
+          transform: dismissVisualActive.value ? 'scale(0)' : 'scale(1)',
+          opacity: dismissVisualActive.value ? 0 : 1,
+        }
+    return {
+      display: 'flex',
+      left: `${leftPercent}%`,
+      right: 'auto',
+      width: `${segmentWidthPercent.value}%`,
+      top: '0',
+      bottom: '0',
+      height: 'auto',
+      marginTop: '0',
+      maxWidth: 'none',
+      maxHeight: 'none',
+      transformOrigin: 'center center',
+      ...shrinkStyle,
+      ...opacityStyle,
+    }
+  }
 
   if (!dragging.value && committedIndex.value != null) {
     const leftPercent = (committedIndex.value / trackSegmentCount.value) * 100
@@ -287,7 +322,7 @@ function commitIndex(index, { animate = true } = {}) {
   committedIndex.value = index
   const value = committedValue.value
 
-  if (animate && !prefersReducedMotion.value) {
+  if (animate && !prefersReducedMotion.value && !dismissingToNone.value) {
     animating.value = true
     clearTimeout(transitionTimer)
     transitionTimer = setTimeout(() => {
@@ -303,9 +338,48 @@ function commitIndex(index, { animate = true } = {}) {
   }
 }
 
-function commitNeutral({ animate = true } = {}) {
+function dismissToNone({ fromDrag = false } = {}) {
   if (!props.allowNeutral || props.disabled) return
-  commitIndex(null, { animate })
+
+  const previous = committedIndex.value
+  if (previous == null && !fromDrag) {
+    commitIndex(null, { animate: false })
+    return
+  }
+
+  if (prefersReducedMotion.value) {
+    if (previous != null) commitIndex(null, { animate: false })
+    return
+  }
+
+  dismissingToNone.value = true
+  dismissVisualActive.value = false
+  animating.value = false
+
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      dismissVisualActive.value = true
+    })
+  })
+
+  clearTimeout(transitionTimer)
+  transitionTimer = setTimeout(() => {
+    const value = props.neutralValue
+    dismissingToNone.value = false
+    dismissVisualActive.value = false
+    committedIndex.value = null
+
+    if (previous != null && value !== props.modelValue) {
+      emit('update:modelValue', value)
+      emit('change', value)
+    } else if (previous != null) {
+      emit('change', value)
+    }
+  }, TRANSITION_MS)
+}
+
+function commitNeutral() {
+  dismissToNone()
 }
 
 function snapToIndex(index) {
@@ -317,6 +391,8 @@ function beginPointerDrag(event) {
   if (props.disabled || dragging.value) return
   if (event.target.closest('[data-none-segment]')) return
   event.preventDefault()
+  dismissingToNone.value = false
+  dismissVisualActive.value = false
   activePointerId = event.pointerId
   dragging.value = true
   dragX.value = pointerXAsFraction(event)
@@ -332,6 +408,12 @@ function finishDrag() {
   dragging.value = false
   dragX.value = null
   activePointerId = null
+
+  if (resolved === null) {
+    dismissToNone({ fromDrag: true })
+    return
+  }
+
   commitIndex(resolved)
 }
 
@@ -374,7 +456,7 @@ function onKeydown(event) {
     } else if (committedIndex.value > 0) {
       snapToIndex(committedIndex.value - 1)
     } else {
-      commitNeutral()
+      dismissToNone()
     }
     return
   }
@@ -386,7 +468,7 @@ function onKeydown(event) {
     } else if (committedIndex.value < props.options.length - 1) {
       snapToIndex(committedIndex.value + 1)
     } else {
-      commitNeutral()
+      dismissToNone()
     }
   }
 }
@@ -394,7 +476,7 @@ function onKeydown(event) {
 watch(
   () => props.modelValue,
   (value) => {
-    if (dragging.value) return
+    if (dragging.value || dismissingToNone.value) return
     committedIndex.value = indexFromValue(value)
   },
   { immediate: true },
@@ -403,7 +485,7 @@ watch(
 watch(
   () => [props.allowNeutral, props.neutralValue, props.options],
   () => {
-    if (dragging.value) return
+    if (dragging.value || dismissingToNone.value) return
     committedIndex.value = indexFromValue(props.modelValue)
   },
   { deep: true },

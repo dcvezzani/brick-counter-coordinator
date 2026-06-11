@@ -89,6 +89,17 @@ function stubMatchMedia() {
   })
 }
 
+/** Wait for shrink/fade dismiss animation (220ms) to finish and emit. */
+async function flushDismissAnimation(wrapper) {
+  await wrapper.vm.$nextTick()
+  await new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      setTimeout(resolve, 220)
+    })
+  })
+  await wrapper.vm.$nextTick()
+}
+
 describe('TernarySwipeControl', () => {
   beforeEach(() => {
     stubMatchMedia()
@@ -181,6 +192,7 @@ describe('TernarySwipeControl', () => {
     })
 
     await wrapper.get('[data-testid="ternary-swipe-none-segment"]').trigger('click')
+    await flushDismissAnimation(wrapper)
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['pending'])
     expect(wrapper.find('[data-testid="ternary-swipe-thumb"]').exists()).toBe(false)
@@ -201,9 +213,36 @@ describe('TernarySwipeControl', () => {
     trackPointerAt(wrapper, 'pointerdown', 53)
     trackPointerAt(wrapper, 'pointermove', 247)
     trackPointerAt(wrapper, 'pointerup', 247)
-    await wrapper.vm.$nextTick()
+    await flushDismissAnimation(wrapper)
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['pending'])
+  })
+
+  it('plays dismiss animation when dragging from neutral onto none segment', async () => {
+    const wrapper = mount(TernarySwipeControl, {
+      props: {
+        name: 'status',
+        modelValue: '',
+        option1Value: 'moved',
+        option2Value: 'new_loc',
+        neutralValue: 'pending',
+      },
+    })
+
+    mockTrackRect(wrapper)
+    trackPointerAt(wrapper, 'pointerdown', 53)
+    trackPointerAt(wrapper, 'pointermove', 150)
+    trackPointerAt(wrapper, 'pointermove', 247)
+    trackPointerAt(wrapper, 'pointerup', 247)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="ternary-swipe-thumb"]').exists()).toBe(true)
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+    await flushDismissAnimation(wrapper)
+
+    expect(wrapper.find('[data-testid="ternary-swipe-thumb"]').exists()).toBe(false)
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
   })
 
   it('drags from left to right and selects option 2', async () => {
@@ -260,6 +299,7 @@ describe('TernarySwipeControl', () => {
 
     await wrapper.setProps({ modelValue: 'moved' })
     await track.trigger('keydown', { key: 'ArrowLeft' })
+    await flushDismissAnimation(wrapper)
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['pending'])
   })
 })
