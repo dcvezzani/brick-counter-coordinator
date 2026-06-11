@@ -1,7 +1,15 @@
 /**
+ * @typedef {object} PickerOption
+ * @property {string | number} value
+ * @property {string} label
+ * @property {unknown} [data]
+ */
+
+/**
  * Default prefix filter for FilterablePicker options.
- * @param {{ value: string | number, label: string }[]} options
+ * @param {PickerOption[]} options
  * @param {string} query
+ * @returns {PickerOption[]}
  */
 export function defaultPrefixFilter(options, query) {
   const q = query.trim().toLowerCase()
@@ -15,8 +23,9 @@ export function defaultPrefixFilter(options, query) {
 
 /**
  * Substring filter for FilterablePicker options (label or value contains query).
- * @param {{ value: string | number, label: string }[]} options
+ * @param {PickerOption[]} options
  * @param {string} query
+ * @returns {PickerOption[]}
  */
 export function defaultContainsFilter(options, query) {
   const q = query.trim().toLowerCase()
@@ -29,8 +38,9 @@ export function defaultContainsFilter(options, query) {
 }
 
 /**
- * @param {{ value: string | number, label: string }[]} options
+ * @param {PickerOption[]} options
  * @param {string | number | null | undefined} value
+ * @returns {PickerOption | undefined}
  */
 export function findPickerOption(options, value) {
   if (value == null || value === '') return undefined

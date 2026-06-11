@@ -1,4 +1,5 @@
 <script setup>
+/** @import { PickerOption } from '@/lib/filterable-picker' */
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -8,9 +9,17 @@ const props = defineProps({
   /** Selected option value (string, number, or null/empty for none). */
   modelValue: { type: [String, Number, null], default: null },
   /** Full option list used for display lookup and default filtering. */
-  options: { type: Array, default: () => [] },
+  options: {
+    type: /** @type {import('vue').PropType<PickerOption[]>} */ (Array),
+    default: () => [],
+  },
   /** Optional custom filter: `(query, options) => filteredOptions`. */
-  filterOptions: { type: Function, default: null },
+  filterOptions: {
+    type: /** @type {import('vue').PropType<(query: string, options: PickerOption[]) => PickerOption[]>} */ (
+      Function
+    ),
+    default: null,
+  },
   disabled: { type: Boolean, default: false },
   allowNone: { type: Boolean, default: false },
   noneLabel: { type: String, default: 'None' },
