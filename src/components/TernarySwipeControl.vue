@@ -7,23 +7,11 @@ import {
   useTemplateRef,
   watch,
 } from 'vue'
+import { X } from '@lucide/vue'
 import { cn } from '@/lib/utils'
 
-const SNAP_X = {
-  left: 0.25,
-  center: 0.5,
-  right: 0.75,
-}
-
-const ZONE_BOUNDARIES = {
-  left: 1 / 3,
-  right: 2 / 3,
-}
-
-const PROXIMITY_FALLOFF = 0.25
-const SELECTOR_SIZE_PX = 10
 const TRANSITION_MS = 220
-const LABEL_VISIBILITY_THRESHOLD = 0.6
+const PROXIMITY_FALLOFF = 0.25
 
 const props = defineProps({
   modelValue: { type: [String, null], default: '' },
@@ -33,9 +21,9 @@ const props = defineProps({
   option1Label: { type: String, default: 'Option 1' },
   option2Label: { type: String, default: 'Option 2' },
   neutralValue: { type: String, default: '' },
+  allowNeutral: { type: Boolean, default: true },
   disabled: { type: Boolean, default: false },
   testId: { type: String, default: 'ternary-swipe' },
-  /** Optional classes merged onto the track (e.g. min-h-8 for a shorter control). */
   trackClass: { type: [String, Object, Array], default: '' },
 })
 
@@ -45,7 +33,8 @@ const trackRef = useTemplateRef('trackRef')
 const insetLayerRef = useTemplateRef('insetLayerRef')
 const thumbRef = useTemplateRef('thumbRef')
 
-const committedZone = ref('center')
+/** 'left' | 'right' | 'none' */
+const committedZone = ref('none')
 const dragging = ref(false)
 const dragX = ref(null)
 const animating = ref(false)
@@ -58,6 +47,19 @@ let resizeObserver = null
 let transitionTimer = null
 let reducedMotionQuery = null
 
+const trackSegmentCount = computed(() => (props.allowNeutral ? 3 : 2))
+
+const noneSegmentIndex = computed(() => (props.allowNeutral ? 2 : -1))
+
+const segmentWidthPercent = computed(() => 100 / trackSegmentCount.value)
+
+const snapPoints = computed(() =>
+  Array.from(
+    { length: trackSegmentCount.value },
+    (_, index) => (index + 0.5) / trackSegmentCount.value,
+  ),
+)
+
 const committedValue = computed(() => valueFromZone(committedZone.value))
 
 const ariaValueNow = computed(() => {
@@ -66,17 +68,38 @@ const ariaValueNow = computed(() => {
   return 0
 })
 
+const ariaValueText = computed(() => {
+  if (committedZone.value === 'left') return props.option1Label
+  if (committedZone.value === 'right') return props.option2Label
+  return 'None selected'
+})
+
 const displayX = computed(() => {
   if (dragging.value && dragX.value != null) return dragX.value
-  return SNAP_X[committedZone.value]
+  if (committedZone.value === 'none') return null
+  if (committedZone.value === 'left') return snapPoints.value[0]
+  return snapPoints.value[1]
 })
+
+const showThumb = computed(
+  () => dragging.value || committedZone.value !== 'none',
+)
+
+const labelGridStyle = computed(() => ({
+  gridTemplateColumns: `repeat(${trackSegmentCount.value}, minmax(0, 1fr))`,
+}))
+
+const noneIconClass = computed(() =>
+  cn(
+    'size-4 shrink-0',
+    committedZone.value !== 'none' || dragging.value
+      ? 'text-destructive'
+      : 'text-muted-foreground',
+  ),
+)
 
 function proximity(x, target) {
   return Math.max(0, 1 - Math.abs(x - target) / PROXIMITY_FALLOFF)
-}
-
-function lerp(start, end, amount) {
-  return start + (end - start) * amount
 }
 
 function updateInsetDimensions() {
@@ -87,61 +110,65 @@ function updateInsetDimensions() {
   insetHeightPx.value = rect.height
 }
 
-const thumbMorph = computed(() => {
-  const x = displayX.value
+function segmentIndexFromX(x) {
+  return Math.min(
+    trackSegmentCount.value - 1,
+    Math.max(0, Math.floor(x * trackSegmentCount.value)),
+  )
+}
 
-  if (dragging.value) {
-    const neutralBlend = proximity(x, SNAP_X.center)
-    const leftProximity = proximity(x, SNAP_X.left)
-    const rightProximity = proximity(x, SNAP_X.right)
-    const optionProximity = Math.max(leftProximity, rightProximity)
-    const dominantOption = leftProximity >= rightProximity ? 'left' : 'right'
+function zoneFromSegmentIndex(segmentIndex) {
+  if (segmentIndex === 0) return 'left'
+  if (segmentIndex === 1) return 'right'
+  return 'none'
+}
 
-    return { neutralBlend, optionProximity, dominantOption }
-  }
+function segmentIndexFromZone(zone) {
+  if (zone === 'left') return 0
+  if (zone === 'right') return 1
+  return noneSegmentIndex.value
+}
 
-  if (committedZone.value === 'center') {
-    return { neutralBlend: 1, optionProximity: 0, dominantOption: 'left' }
-  }
-
-  return {
-    neutralBlend: 0,
-    optionProximity: 1,
-    dominantOption: committedZone.value,
-  }
+const activeSegmentIndex = computed(() => {
+  if (!showThumb.value || displayX.value == null) return -1
+  return segmentIndexFromX(displayX.value)
 })
 
 const visualZone = computed(() => {
-  if (thumbMorph.value.neutralBlend >= 0.5) return 'center'
-  return thumbMorph.value.dominantOption
+  const index = activeSegmentIndex.value
+  if (index === noneSegmentIndex.value) return 'none'
+  if (index === 0) return 'left'
+  if (index === 1) return 'right'
+  return 'none'
 })
 
-const thumbLabel = computed(() => {
-  if (thumbMorph.value.neutralBlend > 0.5) return ''
-  if (thumbMorph.value.optionProximity <= LABEL_VISIBILITY_THRESHOLD) return ''
-  if (thumbMorph.value.dominantOption === 'left') return props.option1Label
-  if (thumbMorph.value.dominantOption === 'right') return props.option2Label
-  return ''
+const highlightedSide = computed(() => {
+  if (activeSegmentIndex.value === noneSegmentIndex.value) return null
+  if (activeSegmentIndex.value === 0) return 'left'
+  if (activeSegmentIndex.value === 1) return 'right'
+  if (!dragging.value && committedZone.value !== 'none') return committedZone.value
+  return null
 })
+
+function labelTextClass(side) {
+  if (highlightedSide.value !== side) return 'text-muted-foreground'
+  return side === 'left' ? 'text-primary-foreground' : 'text-accent-foreground'
+}
 
 const thumbClasses = computed(() => {
-  const { neutralBlend, optionProximity, dominantOption } = thumbMorph.value
-  const isCircleDominant = neutralBlend > 0.5
+  const index = activeSegmentIndex.value
+  const onNoneSegment = props.allowNeutral && index === noneSegmentIndex.value
 
   return cn(
     'absolute z-10 flex items-center justify-center rounded-full font-medium select-none touch-none',
-    isCircleDominant && 'bg-foreground',
-    !isCircleDominant &&
-      dominantOption === 'left' &&
-      'bg-primary text-primary-foreground text-sm',
-    !isCircleDominant &&
-      dominantOption === 'right' &&
-      'bg-accent text-accent-foreground text-sm',
-    !isCircleDominant && optionProximity > 0.2 && 'border border-foreground',
+    onNoneSegment && 'bg-destructive text-destructive-foreground text-sm',
+    !onNoneSegment && index === 0 && 'bg-primary text-primary-foreground text-sm',
+    !onNoneSegment && index === 1 && 'bg-accent text-accent-foreground text-sm',
+    !onNoneSegment && index >= 0 && 'border border-foreground',
     animating.value &&
       !prefersReducedMotion.value &&
       !dragging.value &&
-      'transition-[left,width,height,top,opacity,background-color,color,border-radius] duration-200 ease-out',
+      'transition-[left,width,height,top,opacity,background-color,color] duration-200 ease-out',
     dragging.value && 'cursor-grabbing',
     !dragging.value && !props.disabled && 'cursor-grab',
     props.disabled && 'cursor-not-allowed opacity-50',
@@ -149,84 +176,52 @@ const thumbClasses = computed(() => {
 })
 
 const thumbStyle = computed(() => {
-  const { neutralBlend, optionProximity } = thumbMorph.value
-  const opacity = dragging.value ? (neutralBlend > 0.5 ? 1 : optionProximity) : 1
-  const opacityStyle = props.disabled ? {} : { opacity }
+  if (!showThumb.value || displayX.value == null) return { display: 'none' }
 
-  if (!dragging.value) {
-    if (committedZone.value === 'left') {
-      return {
-        left: '0',
-        right: 'auto',
-        width: '50%',
-        top: '0',
-        bottom: '0',
-        height: 'auto',
-        marginTop: '0',
-        maxWidth: 'none',
-        maxHeight: 'none',
-        ...opacityStyle,
-      }
-    }
+  const opacityStyle = props.disabled ? {} : { opacity: 1 }
+  const segmentIndex = activeSegmentIndex.value
 
-    if (committedZone.value === 'right') {
-      return {
-        left: 'auto',
-        right: '0',
-        width: '50%',
-        top: '0',
-        bottom: '0',
-        height: 'auto',
-        marginTop: '0',
-        maxWidth: 'none',
-        maxHeight: 'none',
-        ...opacityStyle,
-      }
-    }
-
-    const half = SELECTOR_SIZE_PX / 2
+  if (!dragging.value && committedZone.value !== 'none') {
+    const zoneIndex = segmentIndexFromZone(committedZone.value)
+    const leftPercent = (zoneIndex / trackSegmentCount.value) * 100
     return {
-      left: `calc(${displayX.value * 100}% - ${half}px)`,
+      display: 'flex',
+      left: `${leftPercent}%`,
       right: 'auto',
-      width: `${SELECTOR_SIZE_PX}px`,
-      height: `${SELECTOR_SIZE_PX}px`,
-      maxWidth: `${SELECTOR_SIZE_PX}px`,
-      maxHeight: `${SELECTOR_SIZE_PX}px`,
-      top: '50%',
-      bottom: 'auto',
-      marginTop: `-${half}px`,
+      width: `${segmentWidthPercent.value}%`,
+      top: '0',
+      bottom: '0',
+      height: 'auto',
+      marginTop: '0',
+      maxWidth: 'none',
+      maxHeight: 'none',
       ...opacityStyle,
     }
   }
 
   const x = displayX.value
   const insetW = insetWidthPx.value || 1
-  const insetH = insetHeightPx.value || SELECTOR_SIZE_PX
-
-  const pillW = insetW * 0.5
+  const insetH = insetHeightPx.value || 44
+  const pillW = insetW / trackSegmentCount.value
   const pillH = insetH
-  const t = neutralBlend
-
-  const width = lerp(pillW, SELECTOR_SIZE_PX, t)
-  const height = lerp(pillH, SELECTOR_SIZE_PX, t)
+  const segmentProximity =
+    segmentIndex >= 0 ? proximity(x, snapPoints.value[segmentIndex]) : 0
 
   let pillLeft = x * insetW - pillW / 2
   pillLeft = Math.max(0, Math.min(pillLeft, insetW - pillW))
 
-  const circleLeft = x * insetW - width / 2
-  const left = lerp(pillLeft, circleLeft, t)
-  const top = lerp(0, insetH / 2 - height / 2, t)
-
   return {
-    left: `${left}px`,
+    display: 'flex',
+    left: `${pillLeft}px`,
     right: 'auto',
-    width: `${width}px`,
-    height: `${height}px`,
-    maxWidth: `${width}px`,
-    maxHeight: `${height}px`,
-    top: `${top}px`,
+    width: `${pillW}px`,
+    height: `${pillH}px`,
+    maxWidth: `${pillW}px`,
+    maxHeight: `${pillH}px`,
+    top: '0',
     bottom: 'auto',
     marginTop: '0',
+    opacity: props.disabled ? undefined : segmentProximity,
     ...opacityStyle,
   }
 })
@@ -234,7 +229,7 @@ const thumbStyle = computed(() => {
 function zoneFromValue(value) {
   if (value === props.option1Value) return 'left'
   if (value === props.option2Value) return 'right'
-  return 'center'
+  return props.allowNeutral ? 'none' : 'left'
 }
 
 function valueFromZone(zone) {
@@ -244,21 +239,19 @@ function valueFromZone(zone) {
 }
 
 function zoneFromX(x) {
-  if (x < ZONE_BOUNDARIES.left) return 'left'
-  if (x > ZONE_BOUNDARIES.right) return 'right'
-  return 'center'
+  return zoneFromSegmentIndex(segmentIndexFromX(x))
 }
 
 function pointerXAsFraction(event) {
   const layer = insetLayerRef.value ?? trackRef.value
-  if (!layer) return SNAP_X.center
+  if (!layer) return 0
   const rect = layer.getBoundingClientRect()
   if (layer === insetLayerRef.value) {
     insetWidthPx.value = rect.width
     insetHeightPx.value = rect.height
   }
-  const x = (event.clientX - rect.left) / rect.width
-  return Math.min(1, Math.max(0, x))
+  const fraction = (event.clientX - rect.left) / rect.width
+  return Math.min(1, Math.max(0, fraction))
 }
 
 function commitZone(zone, { animate = true } = {}) {
@@ -289,7 +282,7 @@ function snapToZone(zone) {
 
 function beginPointerDrag(event) {
   if (props.disabled || dragging.value) return
-  if (event.target.closest('[data-center-anchor]')) return
+  if (event.target.closest('[data-none-segment]')) return
   event.preventDefault()
   activePointerId = event.pointerId
   dragging.value = true
@@ -300,18 +293,18 @@ function beginPointerDrag(event) {
   }
 }
 
-function onTrackPointerMove(event) {
-  if (!dragging.value || event.pointerId !== activePointerId) return
-  dragX.value = pointerXAsFraction(event)
-}
-
 function finishDrag() {
-  const x = dragX.value ?? SNAP_X[committedZone.value]
+  const x = dragX.value ?? displayX.value ?? 0
   const zone = zoneFromX(x)
   dragging.value = false
   dragX.value = null
   activePointerId = null
   commitZone(zone)
+}
+
+function onTrackPointerMove(event) {
+  if (!dragging.value || event.pointerId !== activePointerId) return
+  dragX.value = pointerXAsFraction(event)
 }
 
 function onTrackPointerDown(event) {
@@ -328,30 +321,33 @@ function onTrackPointerCancel(event) {
   finishDrag()
 }
 
-function onCenterAnchorClick() {
-  snapToZone('center')
+function onNoneSegmentClick() {
+  snapToZone('none')
 }
 
 function onKeydown(event) {
   if (props.disabled) return
 
-  let nextZone = committedZone.value
-  if (event.key === 'ArrowLeft') {
+  if (event.key === 'Home') {
     event.preventDefault()
-    if (committedZone.value === 'right') nextZone = 'center'
-    else if (committedZone.value === 'center') nextZone = 'left'
-  } else if (event.key === 'ArrowRight') {
-    event.preventDefault()
-    if (committedZone.value === 'left') nextZone = 'center'
-    else if (committedZone.value === 'center') nextZone = 'right'
-  } else if (event.key === 'Home') {
-    event.preventDefault()
-    nextZone = 'center'
-  } else {
+    snapToZone('none')
     return
   }
 
-  snapToZone(nextZone)
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+    if (committedZone.value === 'none') snapToZone('right')
+    else if (committedZone.value === 'right') snapToZone('left')
+    else snapToZone('none')
+    return
+  }
+
+  if (event.key === 'ArrowRight') {
+    event.preventDefault()
+    if (committedZone.value === 'none') snapToZone('left')
+    else if (committedZone.value === 'left') snapToZone('right')
+    else snapToZone('none')
+  }
 }
 
 watch(
@@ -361,6 +357,14 @@ watch(
     committedZone.value = zoneFromValue(value)
   },
   { immediate: true },
+)
+
+watch(
+  () => props.allowNeutral,
+  () => {
+    if (dragging.value) return
+    committedZone.value = zoneFromValue(props.modelValue)
+  },
 )
 
 function onReducedMotionChange(event) {
@@ -406,19 +410,13 @@ onBeforeUnmount(() => {
       :aria-valuemin="0"
       :aria-valuemax="2"
       :aria-valuenow="ariaValueNow"
-      :aria-valuetext="
-        committedZone === 'left'
-          ? option1Label
-          : committedZone === 'right'
-            ? option2Label
-            : 'None selected'
-      "
+      :aria-valuetext="ariaValueText"
       :aria-disabled="disabled"
       tabindex="0"
       :data-testid="`${testId}-track`"
       :class="
         cn(
-          'bg-muted relative min-h-11 w-full rounded-full border p-1',
+          'bg-muted relative min-h-11 w-full touch-none rounded-full border p-1',
           'focus-visible:ring-ring/50 outline-none focus-visible:ring-3',
           disabled && 'pointer-events-none opacity-50',
           trackClass,
@@ -430,73 +428,65 @@ onBeforeUnmount(() => {
       @pointercancel="onTrackPointerCancel"
       @keydown="onKeydown"
     >
-      <div class="pointer-events-none absolute inset-0 grid grid-cols-2">
-        <div
-          class="flex items-center justify-center px-2"
-          :data-testid="`${testId}-label-left`"
-        >
-          <span
-            :class="
-              cn(
-                'text-sm font-medium',
-                committedZone === 'left' ? 'text-transparent' : 'text-muted-foreground',
-              )
-            "
-          >
-            {{ option1Label }}
-          </span>
-        </div>
-        <div
-          class="flex items-center justify-center px-2"
-          :data-testid="`${testId}-label-right`"
-        >
-          <span
-            :class="
-              cn(
-                'text-sm font-medium',
-                committedZone === 'right' ? 'text-transparent' : 'text-muted-foreground',
-              )
-            "
-          >
-            {{ option2Label }}
-          </span>
-        </div>
-      </div>
-
       <div
-        class="pointer-events-none absolute top-1 bottom-1 left-1/2 -translate-x-1/2 border-l border-dashed border-border"
+        v-for="divider in trackSegmentCount - 1"
+        :key="`divider-${divider}`"
+        class="pointer-events-none absolute top-1 bottom-1 z-[1] border-l border-dashed border-border"
+        :style="{ left: `${(divider / trackSegmentCount) * 100}%` }"
         aria-hidden="true"
       />
 
       <div
         ref="insetLayerRef"
-        class="absolute inset-1"
+        class="absolute inset-1 z-10"
         :data-testid="`${testId}-inset`"
       >
-        <button
-          type="button"
-          tabindex="-1"
-          data-center-anchor
-          :disabled="disabled"
-          :data-testid="`${testId}-center-anchor`"
-          class="absolute top-1/2 left-1/2 max-h-2.5 max-w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground bg-transparent focus-visible:ring-ring/50 outline-none focus-visible:ring-2"
-          :style="{
-            width: `${SELECTOR_SIZE_PX}px`,
-            height: `${SELECTOR_SIZE_PX}px`,
-          }"
-          aria-label="Clear selection"
-          @click.stop="onCenterAnchorClick"
-        />
-
         <div
+          v-if="showThumb"
           ref="thumbRef"
           data-thumb
           :data-testid="`${testId}-thumb`"
           :data-zone="visualZone"
           :class="thumbClasses"
           :style="thumbStyle"
+        />
+      </div>
+
+      <div class="absolute inset-0 z-20 grid" :style="labelGridStyle">
+        <div
+          class="pointer-events-none flex items-center justify-center px-2"
+          :data-testid="`${testId}-label-left`"
         >
-          <span v-if="thumbLabel" class="truncate px-1">{{ thumbLabel }}</span>
+          <span :class="cn('truncate text-sm font-medium', labelTextClass('left'))">
+            {{ option1Label }}
+          </span>
+        </div>
+        <div
+          class="pointer-events-none flex items-center justify-center px-2"
+          :data-testid="`${testId}-label-right`"
+        >
+          <span :class="cn('truncate text-sm font-medium', labelTextClass('right'))">
+            {{ option2Label }}
+          </span>
+        </div>
+        <div
+          v-if="allowNeutral"
+          class="flex items-center justify-center px-1"
+          :data-testid="`${testId}-label-none`"
+        >
+          <button
+            type="button"
+            tabindex="-1"
+            data-none-segment
+            :disabled="disabled"
+            :data-testid="`${testId}-none-segment`"
+            class="flex min-h-11 min-w-11 items-center justify-center rounded-full focus-visible:ring-ring/50 outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50"
+            :class="dragging && 'pointer-events-none'"
+            aria-label="Clear selection"
+            @click.stop="onNoneSegmentClick"
+          >
+            <X :class="noneIconClass" aria-hidden="true" />
+          </button>
         </div>
       </div>
     </div>

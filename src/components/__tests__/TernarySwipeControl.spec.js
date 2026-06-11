@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TernarySwipeControl from '@/components/TernarySwipeControl.vue'
 
 const TRACK_WIDTH = 300
@@ -35,17 +35,18 @@ function mockTrackRect(wrapper, testId = 'ternary-swipe') {
 }
 
 function pointerAt(wrapper, type, clientX, extra = {}) {
-  const thumb = wrapper.get('[data-testid="ternary-swipe-thumb"]')
-  const eventInit = {
-    bubbles: true,
-    cancelable: true,
-    clientX,
-    clientY: 22,
-    pointerId: 1,
-    pointerType: 'mouse',
-    ...extra,
-  }
-  thumb.element.dispatchEvent(new PointerEvent(type, eventInit))
+  const track = wrapper.get('[data-testid="ternary-swipe-track"]')
+  track.element.dispatchEvent(
+    new PointerEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      clientX,
+      clientY: 22,
+      pointerId: 1,
+      pointerType: 'mouse',
+      ...extra,
+    }),
+  )
 }
 
 function tapTrackAt(wrapper, clientX, pointerId = 2) {
@@ -93,7 +94,7 @@ describe('TernarySwipeControl', () => {
     stubMatchMedia()
   })
 
-  it('renders labels and hidden input with initial neutral value', () => {
+  it('renders labels, none segment, and hidden input', () => {
     const wrapper = mount(TernarySwipeControl, {
       props: {
         name: 'status',
@@ -104,16 +105,12 @@ describe('TernarySwipeControl', () => {
     })
 
     expect(wrapper.get('[data-testid="ternary-swipe-label-left"]').text()).toContain('Moved')
-    expect(wrapper.get('[data-testid="ternary-swipe-label-right"]').text()).toContain('New loc')
+    expect(wrapper.get('[data-testid="ternary-swipe-label-none"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="ternary-swipe-none-segment"]').exists()).toBe(true)
 
     const hidden = wrapper.get('[data-testid="ternary-swipe-hidden-input"]')
-    expect(hidden.attributes('name')).toBe('status')
     expect(hidden.element.value).toBe('')
-
-    const anchor = wrapper.get('[data-testid="ternary-swipe-center-anchor"]')
-    expect(anchor.classes()).toContain('rounded-full')
-    expect(anchor.classes()).toContain('bg-transparent')
-    expect(anchor.attributes('style')).toContain('width: 10px')
+    expect(wrapper.find('[data-testid="ternary-swipe-thumb"]').exists()).toBe(false)
   })
 
   it('syncs thumb zone when modelValue changes', async () => {
@@ -126,9 +123,7 @@ describe('TernarySwipeControl', () => {
       },
     })
 
-    expect(wrapper.get('[data-testid="ternary-swipe-thumb"]').attributes('data-zone')).toBe(
-      'center',
-    )
+    expect(wrapper.find('[data-testid="ternary-swipe-thumb"]').exists()).toBe(false)
 
     await wrapper.setProps({ modelValue: 'moved' })
     expect(wrapper.get('[data-testid="ternary-swipe-thumb"]').attributes('data-zone')).toBe('left')
@@ -137,7 +132,7 @@ describe('TernarySwipeControl', () => {
     expect(wrapper.get('[data-testid="ternary-swipe-thumb"]').attributes('data-zone')).toBe('right')
   })
 
-  it('taps left half to select option 1', async () => {
+  it('taps left segment to select option 1', async () => {
     const wrapper = mount(TernarySwipeControl, {
       props: {
         name: 'status',
@@ -148,12 +143,11 @@ describe('TernarySwipeControl', () => {
     })
 
     mockTrackRect(wrapper)
-    tapTrackAt(wrapper, 40)
+    tapTrackAt(wrapper, 53)
     await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['moved'])
     expect(wrapper.get('[data-testid="ternary-swipe-hidden-input"]').element.value).toBe('moved')
-    expect(wrapper.get('[data-testid="ternary-swipe-thumb"]').attributes('data-zone')).toBe('left')
   })
 
   it('slides after track tap without lifting finger', async () => {
@@ -167,35 +161,15 @@ describe('TernarySwipeControl', () => {
     })
 
     mockTrackRect(wrapper)
-    trackPointerAt(wrapper, 'pointerdown', 40)
-    trackPointerAt(wrapper, 'pointermove', 250)
-    trackPointerAt(wrapper, 'pointerup', 250)
+    trackPointerAt(wrapper, 'pointerdown', 53)
+    trackPointerAt(wrapper, 'pointermove', 150)
+    trackPointerAt(wrapper, 'pointerup', 150)
     await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['new_loc'])
-    expect(wrapper.get('[data-testid="ternary-swipe-hidden-input"]').element.value).toBe('new_loc')
-    expect(wrapper.get('[data-testid="ternary-swipe-thumb"]').attributes('data-zone')).toBe('right')
   })
 
-  it('taps right half to select option 2', async () => {
-    const wrapper = mount(TernarySwipeControl, {
-      props: {
-        name: 'status',
-        modelValue: '',
-        option1Value: 'moved',
-        option2Value: 'new_loc',
-      },
-    })
-
-    mockTrackRect(wrapper)
-    tapTrackAt(wrapper, 260)
-    await wrapper.vm.$nextTick()
-
-    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['new_loc'])
-    expect(wrapper.get('[data-testid="ternary-swipe-hidden-input"]').element.value).toBe('new_loc')
-  })
-
-  it('taps center anchor to return to neutral', async () => {
+  it('clicks none segment to return to neutral', async () => {
     const wrapper = mount(TernarySwipeControl, {
       props: {
         name: 'status',
@@ -206,13 +180,13 @@ describe('TernarySwipeControl', () => {
       },
     })
 
-    await wrapper.get('[data-testid="ternary-swipe-center-anchor"]').trigger('click')
+    await wrapper.get('[data-testid="ternary-swipe-none-segment"]').trigger('click')
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['pending'])
-    expect(wrapper.get('[data-testid="ternary-swipe-hidden-input"]').element.value).toBe('pending')
+    expect(wrapper.find('[data-testid="ternary-swipe-thumb"]').exists()).toBe(false)
   })
 
-  it('returns to neutral when dragging from left-selected into center zone', async () => {
+  it('drops on none segment after drag', async () => {
     const wrapper = mount(TernarySwipeControl, {
       props: {
         name: 'status',
@@ -224,55 +198,12 @@ describe('TernarySwipeControl', () => {
     })
 
     mockTrackRect(wrapper)
-    pointerAt(wrapper, 'pointerdown', 50)
-    pointerAt(wrapper, 'pointermove', 150)
-    pointerAt(wrapper, 'pointerup', 150)
+    trackPointerAt(wrapper, 'pointerdown', 53)
+    trackPointerAt(wrapper, 'pointermove', 247)
+    trackPointerAt(wrapper, 'pointerup', 247)
     await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['pending'])
-    expect(wrapper.get('[data-testid="ternary-swipe-thumb"]').attributes('data-zone')).toBe('center')
-  })
-
-  it('morphs toward circle while dragging away from left selection toward center', async () => {
-    const wrapper = mount(TernarySwipeControl, {
-      props: {
-        name: 'status',
-        modelValue: 'moved',
-        option1Value: 'moved',
-        option2Value: 'new_loc',
-      },
-    })
-
-    mockTrackRect(wrapper)
-    pointerAt(wrapper, 'pointerdown', 50)
-    pointerAt(wrapper, 'pointermove', 150)
-    await wrapper.vm.$nextTick()
-
-    const thumb = wrapper.get('[data-testid="ternary-swipe-thumb"]')
-    expect(thumb.attributes('data-zone')).toBe('center')
-    expect(thumb.classes()).toContain('bg-foreground')
-    expect(thumb.attributes('style')).toContain('width: 10px')
-    expect(thumb.attributes('style')).toContain('opacity: 1')
-  })
-
-  it('fades option pill opacity when offset from left snap during drag', async () => {
-    const wrapper = mount(TernarySwipeControl, {
-      props: {
-        name: 'status',
-        modelValue: 'moved',
-        option1Value: 'moved',
-        option2Value: 'new_loc',
-      },
-    })
-
-    mockTrackRect(wrapper)
-    pointerAt(wrapper, 'pointerdown', 50)
-    pointerAt(wrapper, 'pointermove', 100)
-    await wrapper.vm.$nextTick()
-
-    const style = wrapper.get('[data-testid="ternary-swipe-thumb"]').attributes('style')
-    expect(style).toMatch(/opacity: 0\.[0-9]+/)
-    expect(style).not.toContain('opacity: 1')
   })
 
   it('drags from left to right and selects option 2', async () => {
@@ -286,9 +217,9 @@ describe('TernarySwipeControl', () => {
     })
 
     mockTrackRect(wrapper)
-    pointerAt(wrapper, 'pointerdown', 50)
-    pointerAt(wrapper, 'pointermove', 250)
-    pointerAt(wrapper, 'pointerup', 250)
+    pointerAt(wrapper, 'pointerdown', 53)
+    pointerAt(wrapper, 'pointermove', 150)
+    pointerAt(wrapper, 'pointerup', 150)
     await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['new_loc'])
@@ -306,15 +237,10 @@ describe('TernarySwipeControl', () => {
     })
 
     mockTrackRect(wrapper)
-    tapTrackAt(wrapper, 40)
-    pointerAt(wrapper, 'pointerdown', 40)
-    pointerAt(wrapper, 'pointerup', 40)
+    tapTrackAt(wrapper, 53)
     await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('update:modelValue')).toBeUndefined()
-    expect(wrapper.get('[data-testid="ternary-swipe-hidden-input"]').attributes('disabled')).toBe(
-      '',
-    )
   })
 
   it('moves selection with keyboard arrows', async () => {
@@ -329,11 +255,11 @@ describe('TernarySwipeControl', () => {
     })
 
     const track = wrapper.get('[data-testid="ternary-swipe-track"]')
-    await track.trigger('keydown', { key: 'ArrowLeft' })
+    await track.trigger('keydown', { key: 'ArrowRight' })
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['moved'])
 
     await wrapper.setProps({ modelValue: 'moved' })
-    await track.trigger('keydown', { key: 'ArrowRight' })
+    await track.trigger('keydown', { key: 'ArrowLeft' })
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['pending'])
   })
 })

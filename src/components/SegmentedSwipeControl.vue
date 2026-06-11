@@ -7,12 +7,10 @@ import {
   useTemplateRef,
   watch,
 } from 'vue'
+import { X } from '@lucide/vue'
 import { cn } from '@/lib/utils'
 
-const SELECTOR_SIZE_PX = 10
 const TRANSITION_MS = 220
-const SWIPE_UP_THRESHOLD = 24
-const HORIZONTAL_DRAG_THRESHOLD = 8
 
 const DEFAULT_THUMB_CLASSES = [
   'bg-primary text-primary-foreground text-sm',
@@ -51,12 +49,10 @@ const trackRef = useTemplateRef('trackRef')
 const insetLayerRef = useTemplateRef('insetLayerRef')
 const thumbRef = useTemplateRef('thumbRef')
 
-/** null = neutral; number = option index */
+/** null = none; number = option index */
 const committedIndex = ref(null)
 const dragging = ref(false)
 const dragX = ref(null)
-const dragStartX = ref(0)
-const dragStartY = ref(0)
 const animating = ref(false)
 const prefersReducedMotion = ref(false)
 const insetWidthPx = ref(0)
@@ -67,22 +63,25 @@ let resizeObserver = null
 let transitionTimer = null
 let reducedMotionQuery = null
 
-const segmentCount = computed(() => props.options.length)
+const trackSegmentCount = computed(() =>
+  props.options.length + (props.allowNeutral ? 1 : 0),
+)
 
-const neutralX = computed(() => 1 / segmentCount.value)
+const noneSegmentIndex = computed(() =>
+  props.allowNeutral ? props.options.length : -1,
+)
+
+const segmentWidthPercent = computed(() => 100 / trackSegmentCount.value)
 
 const proximityFalloff = computed(() =>
-  Math.min(0.25, 0.5 / segmentCount.value),
+  Math.min(0.25, 0.5 / trackSegmentCount.value),
 )
-
-const segmentWidthPercent = computed(() => 100 / segmentCount.value)
 
 const snapPoints = computed(() =>
-  props.options.map((_, index) => (index + 0.5) / segmentCount.value),
-)
-
-const neutralReleaseRadius = computed(() =>
-  Math.min(proximityFalloff.value * 0.45, 1 / (4 * segmentCount.value)),
+  Array.from(
+    { length: trackSegmentCount.value },
+    (_, index) => (index + 0.5) / trackSegmentCount.value,
+  ),
 )
 
 const committedValue = computed(() => {
@@ -95,6 +94,8 @@ const ariaValueNow = computed(() => {
   return committedIndex.value + 1
 })
 
+const ariaValueMax = computed(() => props.options.length)
+
 const ariaValueText = computed(() => {
   if (committedIndex.value == null) return 'None selected'
   return props.options[committedIndex.value]?.label ?? 'None selected'
@@ -102,25 +103,29 @@ const ariaValueText = computed(() => {
 
 const displayX = computed(() => {
   if (dragging.value && dragX.value != null) return dragX.value
-  if (committedIndex.value == null) return neutralX.value
+  if (committedIndex.value == null) return null
   return snapPoints.value[committedIndex.value]
 })
 
+const showThumb = computed(
+  () => dragging.value || committedIndex.value != null,
+)
+
 const labelGridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${segmentCount.value}, minmax(0, 1fr))`,
+  gridTemplateColumns: `repeat(${trackSegmentCount.value}, minmax(0, 1fr))`,
 }))
+
+const noneIconClass = computed(() =>
+  cn(
+    'size-4 shrink-0',
+    committedIndex.value != null || dragging.value
+      ? 'text-destructive'
+      : 'text-muted-foreground',
+  ),
+)
 
 function proximity(x, target) {
   return Math.max(0, 1 - Math.abs(x - target) / proximityFalloff.value)
-}
-
-function isReleaseOnNeutralAnchor(x) {
-  if (!props.allowNeutral) return false
-  return Math.abs(x - neutralX.value) <= neutralReleaseRadius.value
-}
-
-function lerp(start, end, amount) {
-  return start + (end - start) * amount
 }
 
 function thumbClassForIndex(index) {
@@ -138,52 +143,36 @@ function updateInsetDimensions() {
   insetHeightPx.value = rect.height
 }
 
-const thumbMorph = computed(() => {
-  const x = displayX.value
+function segmentIndexFromX(x) {
+  return Math.min(
+    trackSegmentCount.value - 1,
+    Math.max(0, Math.floor(x * trackSegmentCount.value)),
+  )
+}
 
-  if (dragging.value) {
-    const horizontalDrag =
-      Math.abs(dragLastX.value - dragStartX.value) >= HORIZONTAL_DRAG_THRESHOLD
-    const aimingAtNeutral = isReleaseOnNeutralAnchor(x)
-    const neutralBlend =
-      props.allowNeutral && (!horizontalDrag || aimingAtNeutral)
-        ? proximity(x, neutralX.value)
-        : 0
-    let dominantOptionIndex = 0
-    let optionProximity = 0
-
-    props.options.forEach((_, index) => {
-      const value = proximity(x, snapPoints.value[index])
-      if (value > optionProximity) {
-        optionProximity = value
-        dominantOptionIndex = index
-      }
-    })
-
-    return { neutralBlend, optionProximity, dominantOptionIndex }
+function indexFromSegment(segmentIndex) {
+  if (!props.allowNeutral || segmentIndex < props.options.length) {
+    return segmentIndex
   }
+  return null
+}
 
-  if (committedIndex.value == null) {
-    return { neutralBlend: 1, optionProximity: 0, dominantOptionIndex: 0 }
-  }
-
-  return {
-    neutralBlend: 0,
-    optionProximity: 1,
-    dominantOptionIndex: committedIndex.value,
-  }
+const activeSegmentIndex = computed(() => {
+  if (!showThumb.value || displayX.value == null) return -1
+  return segmentIndexFromX(displayX.value)
 })
 
 const visualZone = computed(() => {
-  if (thumbMorph.value.neutralBlend >= 0.5) return 'neutral'
-  return `option-${thumbMorph.value.dominantOptionIndex}`
+  if (activeSegmentIndex.value === noneSegmentIndex.value) return 'none'
+  if (activeSegmentIndex.value >= 0) return `option-${activeSegmentIndex.value}`
+  return 'none'
 })
 
 const highlightedLabelIndex = computed(() => {
-  if (thumbMorph.value.neutralBlend > 0.5) return null
+  if (activeSegmentIndex.value === noneSegmentIndex.value) return null
+  if (activeSegmentIndex.value >= 0) return activeSegmentIndex.value
   if (!dragging.value && committedIndex.value != null) return committedIndex.value
-  if (dragging.value) return thumbMorph.value.dominantOptionIndex
-  return committedIndex.value
+  return null
 })
 
 function labelTextClassForIndex(index) {
@@ -200,18 +189,21 @@ function labelTextClassForIndex(index) {
 }
 
 const thumbClasses = computed(() => {
-  const { neutralBlend, optionProximity, dominantOptionIndex } = thumbMorph.value
-  const isCircleDominant = neutralBlend > 0.5
+  const segmentIndex = activeSegmentIndex.value
+  const onNoneSegment =
+    props.allowNeutral && segmentIndex === noneSegmentIndex.value
 
   return cn(
     'absolute z-10 flex items-center justify-center rounded-full font-medium select-none touch-none',
-    isCircleDominant && 'bg-foreground',
-    !isCircleDominant && thumbClassForIndex(dominantOptionIndex),
-    !isCircleDominant && optionProximity > 0.2 && 'border border-foreground',
+    onNoneSegment && 'bg-destructive text-destructive-foreground text-sm',
+    !onNoneSegment &&
+      segmentIndex >= 0 &&
+      thumbClassForIndex(segmentIndex),
+    !onNoneSegment && segmentIndex >= 0 && 'border border-foreground',
     animating.value &&
       !prefersReducedMotion.value &&
       !dragging.value &&
-      'transition-[left,width,height,top,opacity,background-color,color,border-radius] duration-200 ease-out',
+      'transition-[left,width,height,top,opacity,background-color,color] duration-200 ease-out',
     dragging.value && 'cursor-grabbing',
     !dragging.value && !props.disabled && 'cursor-grab',
     props.disabled && 'cursor-not-allowed opacity-50',
@@ -219,84 +211,54 @@ const thumbClasses = computed(() => {
 })
 
 const thumbStyle = computed(() => {
-  const { neutralBlend, optionProximity } = thumbMorph.value
-  let opacity = dragging.value ? (neutralBlend > 0.5 ? 1 : optionProximity) : 1
+  if (!showThumb.value || displayX.value == null) return { display: 'none' }
 
-  if (dragging.value && props.allowNeutral) {
-    const deltaY = dragStartY.value - (dragLastY.value ?? dragStartY.value)
-    const deltaX = Math.abs((dragLastX.value ?? dragStartX.value) - dragStartX.value)
-    if (deltaY > 0 && deltaY > deltaX) {
-      opacity *= Math.max(0.4, 1 - deltaY / SWIPE_UP_THRESHOLD)
-    }
-  }
+  const segmentIndex = activeSegmentIndex.value
+  const opacityStyle = props.disabled ? {} : { opacity: 1 }
 
-  const opacityStyle = props.disabled ? {} : { opacity }
-
-  if (!dragging.value) {
-    if (committedIndex.value != null) {
-      const leftPercent = (committedIndex.value / segmentCount.value) * 100
-      return {
-        left: `${leftPercent}%`,
-        right: 'auto',
-        width: `${segmentWidthPercent.value}%`,
-        top: '0',
-        bottom: '0',
-        height: 'auto',
-        marginTop: '0',
-        maxWidth: 'none',
-        maxHeight: 'none',
-        ...opacityStyle,
-      }
-    }
-
-    const half = SELECTOR_SIZE_PX / 2
+  if (!dragging.value && committedIndex.value != null) {
+    const leftPercent = (committedIndex.value / trackSegmentCount.value) * 100
     return {
-      left: `calc(${displayX.value * 100}% - ${half}px)`,
+      display: 'flex',
+      left: `${leftPercent}%`,
       right: 'auto',
-      width: `${SELECTOR_SIZE_PX}px`,
-      height: `${SELECTOR_SIZE_PX}px`,
-      maxWidth: `${SELECTOR_SIZE_PX}px`,
-      maxHeight: `${SELECTOR_SIZE_PX}px`,
-      top: '50%',
-      bottom: 'auto',
-      marginTop: `-${half}px`,
+      width: `${segmentWidthPercent.value}%`,
+      top: '0',
+      bottom: '0',
+      height: 'auto',
+      marginTop: '0',
+      maxWidth: 'none',
+      maxHeight: 'none',
       ...opacityStyle,
     }
   }
 
   const x = displayX.value
   const insetW = insetWidthPx.value || 1
-  const insetH = insetHeightPx.value || SELECTOR_SIZE_PX
-  const pillW = insetW / segmentCount.value
+  const insetH = insetHeightPx.value || 44
+  const pillW = insetW / trackSegmentCount.value
   const pillH = insetH
-  const t = neutralBlend
-
-  const width = lerp(pillW, SELECTOR_SIZE_PX, t)
-  const height = lerp(pillH, SELECTOR_SIZE_PX, t)
+  const segmentProximity =
+    segmentIndex >= 0 ? proximity(x, snapPoints.value[segmentIndex]) : 0
 
   let pillLeft = x * insetW - pillW / 2
   pillLeft = Math.max(0, Math.min(pillLeft, insetW - pillW))
 
-  const circleLeft = x * insetW - width / 2
-  const left = lerp(pillLeft, circleLeft, t)
-  const top = lerp(0, insetH / 2 - height / 2, t)
-
   return {
-    left: `${left}px`,
+    display: 'flex',
+    left: `${pillLeft}px`,
     right: 'auto',
-    width: `${width}px`,
-    height: `${height}px`,
-    maxWidth: `${width}px`,
-    maxHeight: `${height}px`,
-    top: `${top}px`,
+    width: `${pillW}px`,
+    height: `${pillH}px`,
+    maxWidth: `${pillW}px`,
+    maxHeight: `${pillH}px`,
+    top: '0',
     bottom: 'auto',
     marginTop: '0',
+    opacity: props.disabled ? undefined : segmentProximity,
     ...opacityStyle,
   }
 })
-
-const dragLastX = ref(0)
-const dragLastY = ref(0)
 
 function indexFromValue(value) {
   const index = props.options.findIndex((option) => option.value === value)
@@ -304,40 +266,20 @@ function indexFromValue(value) {
   return props.allowNeutral ? null : 0
 }
 
-function resolveFromX(x, { excludeNeutral = false } = {}) {
-  let best = { kind: 'option', index: 0, score: -1 }
-
-  props.options.forEach((_, index) => {
-    const score = proximity(x, snapPoints.value[index])
-    if (score > best.score) {
-      best = { kind: 'option', index, score }
-    }
-  })
-
-  if (props.allowNeutral && !excludeNeutral) {
-    const neutralScore = proximity(x, neutralX.value)
-    if (neutralScore > best.score) {
-      best = { kind: 'neutral', index: null, score: neutralScore }
-    }
-  }
-
-  return best
-}
-
-function dragHorizontalDistance() {
-  return Math.abs(dragLastX.value - dragStartX.value)
+function resolveFromX(x) {
+  return indexFromSegment(segmentIndexFromX(x))
 }
 
 function pointerXAsFraction(event) {
   const layer = insetLayerRef.value ?? trackRef.value
-  if (!layer) return neutralX.value
+  if (!layer) return 0
   const rect = layer.getBoundingClientRect()
   if (layer === insetLayerRef.value) {
     insetWidthPx.value = rect.width
     insetHeightPx.value = rect.height
   }
-  const x = (event.clientX - rect.left) / rect.width
-  return Math.min(1, Math.max(0, x))
+  const fraction = (event.clientX - rect.left) / rect.width
+  return Math.min(1, Math.max(0, fraction))
 }
 
 function commitIndex(index, { animate = true } = {}) {
@@ -371,23 +313,12 @@ function snapToIndex(index) {
   commitIndex(index)
 }
 
-function isSwipeUp(event) {
-  if (!props.allowNeutral) return false
-  const deltaY = dragStartY.value - event.clientY
-  const deltaX = Math.abs(event.clientX - dragStartX.value)
-  return deltaY >= SWIPE_UP_THRESHOLD && deltaY > deltaX
-}
-
 function beginPointerDrag(event) {
   if (props.disabled || dragging.value) return
-  if (event.target.closest('[data-neutral-anchor]')) return
+  if (event.target.closest('[data-none-segment]')) return
   event.preventDefault()
   activePointerId = event.pointerId
   dragging.value = true
-  dragStartX.value = event.clientX
-  dragStartY.value = event.clientY
-  dragLastX.value = event.clientX
-  dragLastY.value = event.clientY
   dragX.value = pointerXAsFraction(event)
   animating.value = false
   if (typeof trackRef.value?.setPointerCapture === 'function') {
@@ -395,42 +326,18 @@ function beginPointerDrag(event) {
   }
 }
 
-function finishSwipeUp() {
+function finishDrag() {
+  const x = dragX.value ?? displayX.value ?? 0
+  const resolved = resolveFromX(x)
   dragging.value = false
   dragX.value = null
   activePointerId = null
-  commitNeutral()
+  commitIndex(resolved)
 }
 
 function onTrackPointerMove(event) {
   if (!dragging.value || event.pointerId !== activePointerId) return
-  dragLastX.value = event.clientX
-  dragLastY.value = event.clientY
   dragX.value = pointerXAsFraction(event)
-}
-
-function finishDrag(event) {
-  if (event && isSwipeUp(event)) {
-    finishSwipeUp()
-    return
-  }
-
-  const x = dragX.value ?? displayX.value
-  const horizontalDrag = dragHorizontalDistance() >= HORIZONTAL_DRAG_THRESHOLD
-
-  if (isReleaseOnNeutralAnchor(x)) {
-    dragging.value = false
-    dragX.value = null
-    activePointerId = null
-    commitIndex(null)
-    return
-  }
-
-  const resolved = resolveFromX(x, { excludeNeutral: horizontalDrag })
-  dragging.value = false
-  dragX.value = null
-  activePointerId = null
-  commitIndex(resolved.index)
 }
 
 function onTrackPointerDown(event) {
@@ -439,15 +346,15 @@ function onTrackPointerDown(event) {
 
 function onTrackPointerUp(event) {
   if (!dragging.value || event.pointerId !== activePointerId) return
-  finishDrag(event)
+  finishDrag()
 }
 
 function onTrackPointerCancel(event) {
   if (!dragging.value || event.pointerId !== activePointerId) return
-  finishDrag(event)
+  finishDrag()
 }
 
-function onNeutralAnchorClick() {
+function onNoneSegmentClick() {
   commitNeutral()
 }
 
@@ -463,9 +370,11 @@ function onKeydown(event) {
   if (event.key === 'ArrowLeft') {
     event.preventDefault()
     if (committedIndex.value == null) {
-      snapToIndex(segmentCount.value - 1)
+      snapToIndex(props.options.length - 1)
     } else if (committedIndex.value > 0) {
       snapToIndex(committedIndex.value - 1)
+    } else {
+      commitNeutral()
     }
     return
   }
@@ -474,8 +383,10 @@ function onKeydown(event) {
     event.preventDefault()
     if (committedIndex.value == null) {
       snapToIndex(0)
-    } else if (committedIndex.value < segmentCount.value - 1) {
+    } else if (committedIndex.value < props.options.length - 1) {
       snapToIndex(committedIndex.value + 1)
+    } else {
+      commitNeutral()
     }
   }
 }
@@ -539,7 +450,7 @@ onBeforeUnmount(() => {
       ref="trackRef"
       role="slider"
       :aria-valuemin="0"
-      :aria-valuemax="segmentCount"
+      :aria-valuemax="ariaValueMax"
       :aria-valuenow="ariaValueNow"
       :aria-valuetext="ariaValueText"
       :aria-disabled="disabled"
@@ -560,10 +471,10 @@ onBeforeUnmount(() => {
       @keydown="onKeydown"
     >
       <div
-        v-for="divider in segmentCount - 1"
+        v-for="divider in trackSegmentCount - 1"
         :key="`divider-${divider}`"
         class="pointer-events-none absolute top-1 bottom-1 z-[1] border-l border-dashed border-border"
-        :style="{ left: `${(divider / segmentCount) * 100}%` }"
+        :style="{ left: `${(divider / trackSegmentCount) * 100}%` }"
         aria-hidden="true"
       />
 
@@ -572,25 +483,8 @@ onBeforeUnmount(() => {
         class="absolute inset-1 z-10"
         :data-testid="`${testId}-inset`"
       >
-        <button
-          v-if="allowNeutral"
-          type="button"
-          tabindex="-1"
-          data-neutral-anchor
-          :disabled="disabled"
-          :data-testid="`${testId}-neutral-anchor`"
-          class="absolute top-1/2 z-10 max-h-2.5 max-w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground bg-transparent focus-visible:ring-ring/50 outline-none focus-visible:ring-2"
-          :class="dragging && 'pointer-events-none'"
-          :style="{
-            left: `calc(${(1 / segmentCount) * 100}% )`,
-            width: `${SELECTOR_SIZE_PX}px`,
-            height: `${SELECTOR_SIZE_PX}px`,
-          }"
-          aria-label="Clear selection"
-          @click.stop="onNeutralAnchorClick"
-        />
-
         <div
+          v-if="showThumb"
           ref="thumbRef"
           data-thumb
           :data-testid="`${testId}-thumb`"
@@ -601,14 +495,11 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <div
-        class="pointer-events-none absolute inset-0 z-20 grid"
-        :style="labelGridStyle"
-      >
+      <div class="absolute inset-0 z-20 grid" :style="labelGridStyle">
         <div
           v-for="(option, index) in options"
           :key="option.value"
-          class="flex items-center justify-center px-1"
+          class="pointer-events-none flex items-center justify-center px-1"
           :data-testid="`${testId}-label-${index}`"
         >
           <span
@@ -616,6 +507,26 @@ onBeforeUnmount(() => {
           >
             {{ option.label }}
           </span>
+        </div>
+
+        <div
+          v-if="allowNeutral"
+          class="flex items-center justify-center px-1"
+          :data-testid="`${testId}-label-none`"
+        >
+          <button
+            type="button"
+            tabindex="-1"
+            data-none-segment
+            :disabled="disabled"
+            :data-testid="`${testId}-none-segment`"
+            class="flex min-h-11 min-w-11 items-center justify-center rounded-full focus-visible:ring-ring/50 outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50"
+            :class="dragging && 'pointer-events-none'"
+            aria-label="Clear selection"
+            @click.stop="onNoneSegmentClick"
+          >
+            <X :class="noneIconClass" aria-hidden="true" />
+          </button>
         </div>
       </div>
     </div>

@@ -60,8 +60,8 @@ function onFormSubmit(event) {
       <div>
         <h2 class="text-xl font-semibold">Segmented swipe playground</h2>
         <p class="text-sm text-muted-foreground">
-          N-option swipe control with equal segment labels, neutral dot at the first divider, and
-          swipe-up on the thumb to clear selection.
+          N-option swipe control with equal segment labels and a trailing X segment to clear
+          selection.
         </p>
       </div>
 
@@ -69,10 +69,8 @@ function onFormSubmit(event) {
         <CardHeader>
           <CardTitle>Three-option mockup (Moved / New Loc / Trashed)</CardTitle>
           <CardDescription>
-            Drag the thumb across segments, tap a segment, use arrow keys when focused, tap the
-            neutral anchor, or
-            <strong>swipe up on the thumb</strong>
-            to return to None.
+            Drag the thumb across segments, tap a segment, use arrow keys when focused, or tap or
+            drop on the red X to return to None.
           </CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-4">
@@ -114,7 +112,7 @@ function onFormSubmit(event) {
           <CardTitle>No neutral (always one selected)</CardTitle>
           <CardDescription>
             <code class="rounded bg-muted px-1 py-0.5">allow-neutral="false"</code>
-            hides the anchor and disables swipe-up clearing.
+            hides the X segment and keeps one option always selected.
           </CardDescription>
         </CardHeader>
         <CardContent>

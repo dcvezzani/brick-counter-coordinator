@@ -88,7 +88,8 @@ function onFormSubmit(event) {
       <div>
         <h2 class="text-xl font-semibold">Ternary swipe playground</h2>
         <p class="text-sm text-muted-foreground">
-          Temporary dev view for exercising drag, snap, tap, and hidden form input behavior.
+          Two-option swipe control with a trailing X segment — same layout pattern as the segmented
+          control.
         </p>
       </div>
 
@@ -96,7 +97,8 @@ function onFormSubmit(event) {
         <CardHeader>
           <CardTitle>Default labels</CardTitle>
           <CardDescription>
-            Drag the thumb, tap track halves, or use arrow keys when the track is focused.
+            Drag the thumb, tap a segment, use arrow keys when focused, or tap/drop on the X to
+            clear selection.
           </CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-4">
