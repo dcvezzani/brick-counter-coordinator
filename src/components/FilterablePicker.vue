@@ -106,13 +106,13 @@ function openPanel() {
   focusFilterInput()
 }
 
-function closePanel() {
+function closePanel({ fromSelection = false } = {}) {
   if (!open.value) return
   const query = filterQuery.value
   open.value = false
   filterQuery.value = ''
   debouncedQuery.value = ''
-  emit('close', { filterQuery: query })
+  emit('close', { filterQuery: query, fromSelection })
 }
 
 function onTriggerFocus() {
@@ -137,13 +137,13 @@ function onTriggerClick() {
 function selectNone() {
   emit('update:modelValue', null)
   emit('select', null)
-  closePanel()
+  closePanel({ fromSelection: true })
 }
 
 function selectOption(option) {
   emit('update:modelValue', option.value)
   emit('select', option.data ?? option)
-  closePanel()
+  closePanel({ fromSelection: true })
 }
 
 function selectHighlighted() {

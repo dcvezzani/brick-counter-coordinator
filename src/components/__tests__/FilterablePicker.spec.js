@@ -53,6 +53,7 @@ describe('FilterablePicker', () => {
     await filter.trigger('keydown', { key: 'Enter' })
 
     expect(wrapper.emitted('update:modelValue')).toEqual([[11]])
+    expect(wrapper.emitted('close')).toEqual([[{ filterQuery: 'b', fromSelection: true }]])
   })
 
   it('uses a custom filter function when provided', async () => {

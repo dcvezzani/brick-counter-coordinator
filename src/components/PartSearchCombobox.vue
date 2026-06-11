@@ -45,7 +45,8 @@ function onSelect(option) {
   emit('select', part)
 }
 
-function onClose({ filterQuery }) {
+function onClose({ filterQuery, fromSelection }) {
+  if (fromSelection) return
   const raw = filterQuery?.trim() || props.modelValue
   const resolved = resolvePartId(raw)
   if (!resolved) return
