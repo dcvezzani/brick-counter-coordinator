@@ -134,7 +134,7 @@ onMounted(async () => {
       <SwipeNumberInput
         v-model="qty"
         name="qty"
-        :min="1"
+        :min="0"
         test-id="lot-qty"
       />
     </div>
@@ -144,11 +144,13 @@ onMounted(async () => {
       <AlertDescription>{{ duplicateMessage }}</AlertDescription>
     </Alert>
 
-    <div class="flex flex-col gap-2">
-      <Button class="min-h-11" data-testid="save-lot" @click="handleSave(false)">Save</Button>
+    <div class="flex flex-row gap-2">
+      <Button class="min-h-11 min-w-0 flex-1" data-testid="save-lot" @click="handleSave(false)">
+        Save
+      </Button>
       <Button
         variant="outline"
-        class="min-h-11"
+        class="min-h-11 min-w-0 flex-1"
         data-testid="save-and-add-another"
         @click="handleSave(true)"
       >
