@@ -10,6 +10,7 @@ defineProps({
 const route = useRoute()
 
 const links = [
+  { label: 'Home', path: 'home' },
   { label: 'Cups', path: 'cups', icon: 'cups' },
   { label: 'Lot', path: 'lot', icon: 'lot' },
   { label: 'Lots', path: 'lots', icon: 'lots' },
@@ -17,12 +18,14 @@ const links = [
 ]
 
 function linkTo(sessionId, segment) {
+  if (segment === 'home') return '/'
   if (segment === 'lot') return `/session/${sessionId}/lot`
   if (segment === 'lots') return `/session/${sessionId}/lots?mode=organizer`
   return `/session/${sessionId}/${segment}`
 }
 
 function isActive(segment) {
+  if (segment === 'home') return route.path === '/'
   if (segment === 'lot') return route.path.includes('/lot')
   if (segment === 'lots') return route.path.includes('/lots')
   return route.path.includes(`/${segment}`)
@@ -46,6 +49,7 @@ function isActive(segment) {
         <Button
           variant="ghost"
           size="sm"
+          :data-testid="link.path === 'home' ? 'nav-home' : `nav-${link.path}`"
           :class="cn('min-h-11 min-w-16 flex-col gap-0.5 text-xs', isActive(link.path) && 'bg-accent')"
           @click="navigate"
         >
