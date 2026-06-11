@@ -16,11 +16,13 @@ import {
   steppedHandleButtonClass,
 } from '@/lib/numeric-field-ui'
 import {
+  HORIZONTAL_SLOTS,
   HOLD_REPEAT_MS,
   HOLD_REPEAT_RATE,
   applySteppedDelta,
   createSteppedAxisConfig,
   extremeRepeatDelta,
+  horizontalSlotToOffset,
   isExtremeSlot,
   offsetToHorizontalSlot,
   offsetToVerticalSlot,
@@ -28,6 +30,7 @@ import {
   slotLabelAmounts,
   toLogicalHorizontalSlot,
   toLogicalVerticalSlot,
+  verticalSlotToOffset,
 } from '@/lib/stepped-swipe-number-input'
 import { cn } from '@/lib/utils'
 
@@ -63,6 +66,7 @@ const handleRef = useTemplateRef('handleRef')
 const slideTrackRef = useTemplateRef('slideTrackRef')
 
 const dragging = ref(false)
+const keyboardEngaged = ref(false)
 const snapping = ref(false)
 const handleOffsetXPx = ref(0)
 const handleOffsetYPx = ref(0)
@@ -97,6 +101,9 @@ let minusLabelBoundFired = false
 let plusLabelHoldTimerId = null
 let plusLabelHoldPointerId = null
 let plusLabelBoundFired = false
+/** @type {Set<string>} */
+const pressedKeyboardKeys = new Set()
+let windowKeyUpAttached = false
 
 const {
   inputText,
@@ -109,7 +116,9 @@ const {
   onInputBlur,
   onInputInput,
   stepBy,
-} = useNumericField(props, emit, { isLocked: () => dragging.value })
+} = useNumericField(props, emit, {
+  isLocked: () => dragging.value || keyboardEngaged.value,
+})
 
 const displayValueForHidden = computed(() => {
   if (props.modelValue != null) return String(props.modelValue)
@@ -148,7 +157,7 @@ const handleAriaLabel = computed(() => {
   const vInc = props.verticalIncrementDirection
   const hDec = hInc === 'right' ? 'left' : 'right'
   const vDec = vInc === 'up' ? 'down' : 'up'
-  return `Drag ${hInc} or ${vInc} to increase, ${hDec} or ${vDec} to decrease`
+  return `Drag ${hInc} or ${vInc} to increase, ${hDec} or ${vDec} to decrease. Use arrow keys or WASD when focused. Space resets handle position.`
 })
 
 const hasFiniteFloor = computed(
@@ -322,7 +331,7 @@ function cancelHoldRepeat() {
 }
 
 function tickHoldRepeat(timestamp) {
-  if (!dragging.value) {
+  if (!dragging.value && !keyboardEngaged.value) {
     cancelHoldRepeat()
     return
   }
@@ -393,6 +402,224 @@ function onInputKeydown(event) {
     event.preventDefault()
     stepBy(event.shiftKey ? -10 : -1)
   }
+}
+
+function seedDragValueFromInput() {
+  const base =
+    parseNumericValue(inputText.value, { emptyAsZero: true }) ??
+    props.modelValue ??
+    0
+  dragValue = clampValue(base, clampOptions.value)
+  inputText.value = formatDisplayValue(dragValue)
+}
+
+function beginKeyboardControl() {
+  if (keyboardEngaged.value) return
+  cancelSnapAnimation()
+  cancelHoldRepeat()
+  resetHoldBonuses()
+  updateSlideTrackSize()
+  keyboardEngaged.value = true
+  handleOffsetXPx.value = 0
+  handleOffsetYPx.value = 0
+  lastHSlot = 0
+  lastVSlot = 0
+  currentHSlot.value = 0
+  currentVSlot.value = 0
+  seedDragValueFromInput()
+}
+
+function finishKeyboardControl() {
+  if (!keyboardEngaged.value) return
+  clearPressedKeyboardKeys()
+  keyboardEngaged.value = false
+  cancelHoldRepeat()
+  commitValue(dragValue)
+  animateHandleHome()
+}
+
+function detachWindowKeyUpListener() {
+  if (!windowKeyUpAttached) return
+  window.removeEventListener('keyup', onWindowKeyUp)
+  windowKeyUpAttached = false
+}
+
+function attachWindowKeyUpListener() {
+  if (windowKeyUpAttached) return
+  window.addEventListener('keyup', onWindowKeyUp)
+  windowKeyUpAttached = true
+}
+
+function clearPressedKeyboardKeys() {
+  pressedKeyboardKeys.clear()
+  detachWindowKeyUpListener()
+}
+
+function readPhysicalSlots() {
+  return {
+    h: offsetToHorizontalSlot(handleOffsetXPx.value, maxHandleOffsetXPx.value),
+    v: offsetToVerticalSlot(handleOffsetYPx.value, maxHandleOffsetYPx.value),
+  }
+}
+
+function isAtSlotExtremeForNudge(dH, dV) {
+  const { h, v } = readPhysicalSlots()
+  if (dH > 0 && h === HORIZONTAL_SLOTS) return true
+  if (dH < 0 && h === -HORIZONTAL_SLOTS) return true
+  if (dV < 0 && v === -1) return true
+  if (dV > 0 && v === 1) return true
+  return false
+}
+
+function resetKeyboardVisualOrigin() {
+  if (!keyboardEngaged.value) {
+    beginKeyboardControl()
+  }
+  cancelSnapAnimation()
+  cancelHoldRepeat()
+  resetHoldBonuses()
+  handleOffsetXPx.value = 0
+  handleOffsetYPx.value = 0
+  lastHSlot = 0
+  lastVSlot = 0
+  currentHSlot.value = 0
+  currentVSlot.value = 0
+}
+
+function snapKeyboardOneSlotInward(dH, dV) {
+  if (dH !== 0) {
+    const curPhysicalH = readPhysicalSlots().h
+    const nextPhysicalH = curPhysicalH - Math.sign(dH)
+    handleOffsetXPx.value = horizontalSlotToOffset(
+      nextPhysicalH,
+      maxHandleOffsetXPx.value,
+    )
+  }
+  if (dV !== 0) {
+    const curPhysicalV = readPhysicalSlots().v
+    const nextPhysicalV = curPhysicalV - Math.sign(dV)
+    handleOffsetYPx.value = verticalSlotToOffset(
+      /** @type {-1 | 0 | 1} */ (nextPhysicalV),
+      maxHandleOffsetYPx.value,
+    )
+  }
+  onSlotsChanged()
+}
+
+function nudgeHandleByPhysicalSlots(dH, dV) {
+  beginKeyboardControl()
+  const curPhysicalH = offsetToHorizontalSlot(
+    handleOffsetXPx.value,
+    maxHandleOffsetXPx.value,
+  )
+  const curPhysicalV = offsetToVerticalSlot(
+    handleOffsetYPx.value,
+    maxHandleOffsetYPx.value,
+  )
+  const nextPhysicalH = Math.max(
+    -HORIZONTAL_SLOTS,
+    Math.min(HORIZONTAL_SLOTS, curPhysicalH + dH),
+  )
+  const nextPhysicalV = Math.max(-1, Math.min(1, curPhysicalV + dV))
+  handleOffsetXPx.value = horizontalSlotToOffset(
+    nextPhysicalH,
+    maxHandleOffsetXPx.value,
+  )
+  handleOffsetYPx.value = verticalSlotToOffset(
+    /** @type {-1 | 0 | 1} */ (nextPhysicalV),
+    maxHandleOffsetYPx.value,
+  )
+  onSlotsChanged()
+}
+
+/**
+ * @param {string} key
+ * @returns {string}
+ */
+function normalizeKeyboardKey(key) {
+  return key.length === 1 ? key.toLowerCase() : key
+}
+
+/**
+ * @param {string} key
+ * @returns {{ dH: number, dV: number } | null}
+ */
+function resolvePhysicalNudgeFromKey(key) {
+  const normalized = normalizeKeyboardKey(key)
+  switch (normalized) {
+    case 'ArrowRight':
+    case 'd':
+      return { dH: 1, dV: 0 }
+    case 'ArrowLeft':
+    case 'a':
+      return { dH: -1, dV: 0 }
+    case 'ArrowUp':
+    case 'w':
+      return { dH: 0, dV: -1 }
+    case 'ArrowDown':
+    case 's':
+      return { dH: 0, dV: 1 }
+    default:
+      return null
+  }
+}
+
+function onWindowKeyUp(event) {
+  if (props.disabled || dragging.value) return
+  if (event.metaKey || event.ctrlKey || event.altKey) return
+
+  const nudge = resolvePhysicalNudgeFromKey(event.key)
+  if (!nudge) return
+
+  const normalizedKey = normalizeKeyboardKey(event.key)
+  if (!pressedKeyboardKeys.has(normalizedKey)) return
+
+  pressedKeyboardKeys.delete(normalizedKey)
+  if (pressedKeyboardKeys.size === 0) {
+    detachWindowKeyUpListener()
+  }
+
+  if (isAtSlotExtremeForNudge(nudge.dH, nudge.dV)) {
+    snapKeyboardOneSlotInward(nudge.dH, nudge.dV)
+    cancelHoldRepeat()
+    resetHoldBonuses()
+  }
+}
+
+function onHandleKeyup(event) {
+  onWindowKeyUp(event)
+}
+
+function onHandleKeydown(event) {
+  if (props.disabled || dragging.value) return
+  if (event.metaKey || event.ctrlKey || event.altKey) return
+
+  if (event.key === 'Escape') {
+    if (keyboardEngaged.value) {
+      event.preventDefault()
+      finishKeyboardControl()
+    }
+    return
+  }
+
+  if (event.key === ' ' || event.key === 'Spacebar') {
+    event.preventDefault()
+    resetKeyboardVisualOrigin()
+    return
+  }
+
+  const nudge = resolvePhysicalNudgeFromKey(event.key)
+  if (!nudge) return
+
+  if (event.repeat && isAtSlotExtremeForNudge(nudge.dH, nudge.dV)) {
+    event.preventDefault()
+    return
+  }
+
+  event.preventDefault()
+  pressedKeyboardKeys.add(normalizeKeyboardKey(event.key))
+  attachWindowKeyUpListener()
+  nudgeHandleByPhysicalSlots(nudge.dH, nudge.dV)
 }
 
 function detachMinusLabelHoldListeners() {
@@ -569,6 +796,8 @@ function animateHandleHome() {
 function beginHandleDrag(event) {
   if (props.disabled) return
   event.preventDefault()
+  clearPressedKeyboardKeys()
+  finishKeyboardControl()
   cancelSnapAnimation()
   cancelHoldRepeat()
   resetLabelHoldState()
@@ -585,13 +814,7 @@ function beginHandleDrag(event) {
   lastVSlot = 0
   currentHSlot.value = 0
   currentVSlot.value = 0
-
-  const base =
-    parseNumericValue(inputText.value, { emptyAsZero: true }) ??
-    props.modelValue ??
-    0
-  dragValue = clampValue(base, clampOptions.value)
-  inputText.value = formatDisplayValue(dragValue)
+  seedDragValueFromInput()
 
   if (typeof handleRef.value?.setPointerCapture === 'function') {
     handleRef.value.setPointerCapture(event.pointerId)
@@ -675,8 +898,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   detachWindowPointerListeners()
+  detachWindowKeyUpListener()
   releasePointerCaptureIfNeeded(activePointerId)
   cancelHoldRepeat()
+  finishKeyboardControl()
   resetLabelHoldState()
   cancelSnapAnimation()
   resizeObserver?.disconnect()
@@ -757,7 +982,7 @@ onBeforeUnmount(() => {
           <button
             ref="handleRef"
             type="button"
-            tabindex="-1"
+            :tabindex="disabled ? -1 : 0"
             :data-testid="`${testId}-handle`"
             :disabled="disabled"
             role="slider"
@@ -772,6 +997,9 @@ onBeforeUnmount(() => {
             @pointermove="onHandlePointerMove"
             @pointerup="finishHandleDrag"
             @pointercancel="finishHandleDrag"
+            @keydown="onHandleKeydown"
+            @keyup="onHandleKeyup"
+            @blur="finishKeyboardControl"
           >
             <GripVertical class="size-4 shrink-0" aria-hidden="true" />
           </button>

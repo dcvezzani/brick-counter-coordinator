@@ -70,6 +70,27 @@ export function offsetToVerticalSlot(offsetPx, maxOffsetPx) {
 }
 
 /**
+ * @param {number} slot - physical horizontal slot in [-10..10]
+ * @param {number} maxOffsetPx
+ * @returns {number}
+ */
+export function horizontalSlotToOffset(slot, maxOffsetPx) {
+  if (maxOffsetPx <= 0 || slot === 0) return 0
+  const slotWidth = maxOffsetPx / HORIZONTAL_SLOTS
+  return slot * slotWidth
+}
+
+/**
+ * @param {-1 | 0 | 1} slot - physical vertical slot
+ * @param {number} maxOffsetPx
+ * @returns {number}
+ */
+export function verticalSlotToOffset(slot, maxOffsetPx) {
+  if (maxOffsetPx <= 0 || slot === 0) return 0
+  return slot < 0 ? -maxOffsetPx * 0.5 : maxOffsetPx * 0.5
+}
+
+/**
  * @param {number} prevH
  * @param {number} prevV
  * @param {number} nextH

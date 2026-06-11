@@ -4,6 +4,7 @@ import SteppedSwipeNumberInput from '@/components/SteppedSwipeNumberInput.vue'
 import {
   HORIZONTAL_SLOTS,
   createSteppedAxisConfig,
+  horizontalSlotToOffset,
   slotLabelAmounts,
   toLogicalHorizontalSlot,
 } from '@/lib/stepped-swipe-number-input'
@@ -124,6 +125,40 @@ async function tapPlus(wrapper, pointerId = 1, testId = 'stepped-swipe-number') 
   pointerOnPlus(wrapper, 'pointerdown', pointerId, testId)
   pointerOnWindow('pointerup', 190, 22, pointerId)
   await flushPromises()
+}
+
+function focusHandle(wrapper, testId = 'stepped-swipe-number') {
+  wrapper.get(`[data-testid="${testId}-handle"]`).element.focus()
+}
+
+async function keyOnHandle(wrapper, key, testId = 'stepped-swipe-number') {
+  wrapper.get(`[data-testid="${testId}-handle"]`).element.dispatchEvent(
+    new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }),
+  )
+  await flushPromises()
+}
+
+async function keyOnInput(wrapper, key, options = {}, testId = 'stepped-swipe-number') {
+  wrapper.get(`[data-testid="${testId}-input"]`).element.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key,
+      bubbles: true,
+      cancelable: true,
+      shiftKey: options.shiftKey ?? false,
+    }),
+  )
+  await flushPromises()
+}
+
+async function keyUpOnWindow(key) {
+  window.dispatchEvent(
+    new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true }),
+  )
+  await flushPromises()
+}
+
+function maxHandleOffsetForTrackWidth(width) {
+  return width / 2 - 28
 }
 
 describe('SteppedSwipeNumberInput', () => {
@@ -590,5 +625,232 @@ describe('SteppedSwipeNumberInput', () => {
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([4])
     expect(wrapper.get('[data-testid="stepped-swipe-number-input"]').element.value).toBe('4')
+  })
+
+  it('moves handle right with ArrowRight and increments value by slot count', async () => {
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 0 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper)
+    focusHandle(wrapper)
+
+    await keyOnHandle(wrapper, 'ArrowRight')
+    await keyOnHandle(wrapper, 'ArrowRight')
+    await keyOnHandle(wrapper, 'ArrowRight')
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([3])
+    expect(wrapper.get('[data-testid="stepped-swipe-number-plus"]').text()).toBe('+3')
+  })
+
+  it('reduces increment label when handle moves left after right nudges', async () => {
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 0 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper)
+    focusHandle(wrapper)
+
+    await keyOnHandle(wrapper, 'ArrowRight')
+    await keyOnHandle(wrapper, 'ArrowRight')
+    await keyOnHandle(wrapper, 'ArrowRight')
+    expect(wrapper.get('[data-testid="stepped-swipe-number-plus"]').text()).toBe('+3')
+
+    await keyOnHandle(wrapper, 'ArrowLeft')
+    expect(wrapper.get('[data-testid="stepped-swipe-number-plus"]').text()).toBe('+2')
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([2])
+  })
+
+  it('moves handle up with w and applies vertical increment', async () => {
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 5, min: 0 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper)
+    focusHandle(wrapper)
+
+    await keyOnHandle(wrapper, 'w')
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([15])
+    expect(wrapper.get('[data-testid="stepped-swipe-number-plus-ten"]').text()).toBe('+10')
+  })
+
+  it('moves handle right with d like ArrowRight', async () => {
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 0 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper)
+    focusHandle(wrapper)
+
+    await keyOnHandle(wrapper, 'd')
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([1])
+    expect(wrapper.get('[data-testid="stepped-swipe-number-plus"]').text()).toBe('+1')
+  })
+
+  it('Escape snaps handle back to rest after keyboard nudge', async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation(() => ({
+        matches: true,
+        media: '(prefers-reduced-motion: reduce)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 0 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper)
+    focusHandle(wrapper)
+
+    await keyOnHandle(wrapper, 'ArrowRight')
+    await keyOnHandle(wrapper, 'Escape')
+
+    const handle = wrapper.get('[data-testid="stepped-swipe-number-handle"]')
+    expect(handle.attributes('style') ?? '').toMatch(
+      /translate\(calc\(-50% \+ 0px\), calc\(-50% \+ 0px\)\)/,
+    )
+  })
+
+  it('input ArrowUp still increments value when input is focused', async () => {
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 5 },
+    })
+
+    wrapper.get('[data-testid="stepped-swipe-number-input"]').element.focus()
+    await keyOnInput(wrapper, 'ArrowUp')
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([6])
+    expect(wrapper.get('[data-testid="stepped-swipe-number-input"]').element.value).toBe('6')
+  })
+
+  it('Space resets handle position visually without changing value', async () => {
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 0 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper)
+    focusHandle(wrapper)
+
+    await keyOnHandle(wrapper, 'ArrowRight')
+    await keyOnHandle(wrapper, 'ArrowRight')
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([2])
+
+    await keyOnHandle(wrapper, ' ')
+
+    const handle = wrapper.get('[data-testid="stepped-swipe-number-handle"]')
+    expect(handle.attributes('style') ?? '').toMatch(
+      /translate\(calc\(-50% \+ 0px\), calc\(-50% \+ 0px\)\)/,
+    )
+    expect(wrapper.get('[data-testid="stepped-swipe-number-plus"]').text()).toBe('+')
+    expect(wrapper.get('[data-testid="stepped-swipe-number-input"]').element.value).toBe('2')
+  })
+
+  it('keyup away from slot extreme keeps handle displaced', async () => {
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 0 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper)
+    focusHandle(wrapper)
+
+    await keyOnHandle(wrapper, 'ArrowRight')
+    await keyOnHandle(wrapper, 'ArrowRight')
+    await keyUpOnWindow('ArrowRight')
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([2])
+    expect(wrapper.get('[data-testid="stepped-swipe-number-plus"]').text()).toBe('+2')
+    const trackWidth = 200
+    const expectedOffset = horizontalSlotToOffset(2, maxHandleOffsetForTrackWidth(trackWidth))
+    const handle = wrapper.get('[data-testid="stepped-swipe-number-handle"]')
+    expect(handle.attributes('style') ?? '').toContain(`+ ${expectedOffset}px`)
+  })
+
+  it('keyup at horizontal slot extreme snaps one slot inward', async () => {
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 0 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper)
+    focusHandle(wrapper)
+
+    for (let i = 0; i < HORIZONTAL_SLOTS; i += 1) {
+      await keyOnHandle(wrapper, 'ArrowRight')
+    }
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([HORIZONTAL_SLOTS])
+
+    await keyUpOnWindow('ArrowRight')
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([HORIZONTAL_SLOTS - 1])
+    expect(wrapper.get('[data-testid="stepped-swipe-number-plus"]').text()).toBe(
+      `+${HORIZONTAL_SLOTS - 1}`,
+    )
+  })
+
+  it('holds horizontal slot extreme until key is released', async () => {
+    const trackWidth = 200
+    const maxOffset = maxHandleOffsetForTrackWidth(trackWidth)
+    const extremeOffset = horizontalSlotToOffset(HORIZONTAL_SLOTS, maxOffset)
+
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 0 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper, trackWidth)
+    focusHandle(wrapper)
+
+    for (let i = 0; i < HORIZONTAL_SLOTS; i += 1) {
+      await keyOnHandle(wrapper, 'ArrowRight')
+    }
+
+    const handle = wrapper.get('[data-testid="stepped-swipe-number-handle"]')
+    expect(handle.attributes('style') ?? '').toContain(`+ ${extremeOffset}px`)
+
+    await keyUpOnWindow('ArrowRight')
+
+    const inwardOffset = horizontalSlotToOffset(HORIZONTAL_SLOTS - 1, maxOffset)
+    expect(handle.attributes('style') ?? '').toContain(`+ ${inwardOffset}px`)
+  })
+
+  it('keyup at vertical slot extreme snaps one slot inward', async () => {
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 5, min: 0 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper)
+    focusHandle(wrapper)
+
+    await keyOnHandle(wrapper, 'w')
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([15])
+    expect(wrapper.find('[data-testid="stepped-swipe-number-plus-ten"]').exists()).toBe(true)
+
+    await keyUpOnWindow('w')
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([15])
+    expect(wrapper.get('[data-testid="stepped-swipe-number-input"]').element.value).toBe('5')
+    expect(wrapper.find('[data-testid="stepped-swipe-number-plus-ten"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="stepped-swipe-number-plus"]').text()).toBe('+')
+  })
+
+  it('keyup below horizontal slot extreme does not snap when value is capped', async () => {
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 0, max: 5 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper)
+    focusHandle(wrapper)
+
+    for (let i = 0; i < 5; i += 1) {
+      await keyOnHandle(wrapper, 'ArrowRight')
+    }
+    await keyUpOnWindow('ArrowRight')
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([5])
+    expect(wrapper.get('[data-testid="stepped-swipe-number-plus"]').text()).toBe('+5')
   })
 })

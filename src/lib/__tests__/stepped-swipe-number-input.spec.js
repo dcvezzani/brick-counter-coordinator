@@ -4,6 +4,7 @@ import {
   applySteppedDelta,
   createSteppedAxisConfig,
   extremeRepeatDelta,
+  horizontalSlotToOffset,
   isExtremeSlot,
   offsetToHorizontalSlot,
   offsetToVerticalSlot,
@@ -11,6 +12,7 @@ import {
   slotLabelAmounts,
   toLogicalHorizontalSlot,
   toLogicalVerticalSlot,
+  verticalSlotToOffset,
 } from '@/lib/stepped-swipe-number-input'
 
 const clampAtZero = { min: 0, allowNegative: false }
@@ -28,6 +30,22 @@ describe('stepped-swipe-number-input helpers', () => {
     expect(offsetToVerticalSlot(0, max)).toBe(0)
     expect(offsetToVerticalSlot(-20, max)).toBe(-1)
     expect(offsetToVerticalSlot(20, max)).toBe(1)
+  })
+
+  it('horizontalSlotToOffset round-trips with offsetToHorizontalSlot', () => {
+    const max = 100
+    for (const slot of [-10, -5, -1, 0, 1, 5, 10]) {
+      const offset = horizontalSlotToOffset(slot, max)
+      expect(offsetToHorizontalSlot(offset, max)).toBe(slot)
+    }
+  })
+
+  it('verticalSlotToOffset round-trips with offsetToVerticalSlot', () => {
+    const max = 40
+    for (const slot of [-1, 0, 1]) {
+      const offset = verticalSlotToOffset(slot, max)
+      expect(offsetToVerticalSlot(offset, max)).toBe(slot)
+    }
   })
 
   it('slotDelta counts horizontal slot crossings', () => {
