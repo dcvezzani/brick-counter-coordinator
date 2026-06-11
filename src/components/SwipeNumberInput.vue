@@ -5,15 +5,20 @@ import {
   onMounted,
   ref,
   useTemplateRef,
-  watch,
 } from 'vue'
 import { GripVertical } from '@lucide/vue'
+import { useNumericField } from '@/composables/useNumericField'
+import {
+  numericHandleButtonClass,
+  numericInputFieldClass,
+  numericInputWrapperClass,
+  numericStepButtonClass,
+} from '@/lib/numeric-field-ui'
 import { cn } from '@/lib/utils'
+import { clampValue, parseNumericValue } from '@/lib/numeric-field'
 import {
   accumulateDragSteps,
   applySignedSteps,
-  clampValue,
-  parseNumericValue,
   signedDisplacementFromCenter,
 } from '@/lib/swipe-number-input'
 
@@ -42,8 +47,6 @@ const inputRef = useTemplateRef('inputRef')
 const handleRef = useTemplateRef('handleRef')
 const slideTrackRef = useTemplateRef('slideTrackRef')
 
-const inputText = ref('')
-const inputFocused = ref(false)
 const dragging = ref(false)
 const snapping = ref(false)
 /** Offset from center of slide track; negative = toward +, positive = toward −. */
@@ -66,27 +69,22 @@ let minusHoldTimerId = null
 let minusHoldPointerId = null
 let minusHoldClearFired = false
 
-const effectiveMin = computed(() => {
-  if (props.min != null) return props.min
-  return props.allowNegative ? Number.NEGATIVE_INFINITY : 0
-})
-
-const clampOptions = computed(() => ({
-  min: effectiveMin.value,
-  max: props.max,
-  allowNegative: props.allowNegative,
-}))
+const {
+  inputText,
+  effectiveMin,
+  clampOptions,
+  numericValue,
+  formatDisplayValue,
+  commitValue,
+  onInputFocus,
+  onInputBlur,
+  onInputInput,
+  stepBy,
+} = useNumericField(props, emit, { isLocked: () => dragging.value })
 
 const slideControlPosition = computed(() =>
   props.handlePosition === 'left' ? 'left' : 'right',
 )
-
-const numericValue = computed(() => {
-  const parsed = parseNumericValue(inputText.value, { emptyAsZero: false })
-  if (parsed != null) return clampValue(parsed, clampOptions.value)
-  if (props.modelValue != null) return clampValue(props.modelValue, clampOptions.value)
-  return 0
-})
 
 const displayValueForHidden = computed(() => {
   if (props.modelValue != null) return String(props.modelValue)
@@ -105,31 +103,13 @@ const handleAriaNow = computed(() =>
   props.modelValue != null ? props.modelValue : numericValue.value,
 )
 
-const inputWrapperClass = cn(
-  'flex min-h-11 shrink-0 basis-[38%] items-center self-stretch px-3',
-)
-
-const inputFieldClass = cn(
-  'placeholder:text-muted-foreground w-full border-0 bg-transparent p-0 text-base shadow-none outline-none md:text-sm',
-  'focus-visible:ring-0 focus-visible:outline-none',
-  'disabled:cursor-not-allowed',
-)
-
-const handleButtonClass = cn(
-  'bg-background text-muted-foreground border-border absolute top-1/2 left-1/2 z-20 flex h-8 w-10 -translate-y-1/2 items-center justify-center rounded-full border shadow-xs select-none',
-  'focus-visible:ring-ring/50 outline-none focus-visible:ring-3',
-)
-
+const inputWrapperClass = numericInputWrapperClass
+const inputFieldClass = numericInputFieldClass
+const handleButtonClass = numericHandleButtonClass
 const stepButtonClass = cn(
-  'text-muted-foreground hover:text-foreground absolute top-1/2 z-10 flex h-11 min-w-11 -translate-y-1/2 cursor-pointer items-center justify-center px-2 text-sm font-medium select-none',
-  'focus-visible:ring-ring/50 rounded-sm outline-none focus-visible:ring-3',
-  'disabled:cursor-not-allowed disabled:opacity-50',
+  numericStepButtonClass,
+  'top-1/2 h-11 min-w-11 -translate-y-1/2 px-2 text-sm',
 )
-
-function formatDisplayValue(value) {
-  if (value == null) return ''
-  return String(value)
-}
 
 function updateSlideTrackWidth() {
   const track = slideTrackRef.value
@@ -142,53 +122,8 @@ function clampHandleOffset(offset) {
   return Math.max(-max, Math.min(offset, max))
 }
 
-function syncInputFromModel() {
-  if (inputFocused.value || dragging.value) return
-  inputText.value = formatDisplayValue(props.modelValue)
-}
-
-function commitValue(nextValue, { emitChange = true } = {}) {
-  const clamped = clampValue(nextValue, clampOptions.value)
-  if (clamped !== props.modelValue) {
-    emit('update:modelValue', clamped)
-    if (emitChange) emit('change', clamped)
-  } else if (emitChange) {
-    emit('change', clamped)
-  }
-  if (!inputFocused.value) {
-    inputText.value = formatDisplayValue(clamped)
-  }
-  return clamped
-}
-
-function onInputFocus() {
-  inputFocused.value = true
-  if (props.modelValue != null) {
-    inputText.value = formatDisplayValue(props.modelValue)
-  }
-}
-
-function onInputBlur() {
-  inputFocused.value = false
-  const parsed = parseNumericValue(inputText.value, { emptyAsZero: true })
-  const clamped = clampValue(parsed ?? 0, clampOptions.value)
-  inputText.value = formatDisplayValue(clamped)
-  commitValue(clamped)
-}
-
-function onInputInput(event) {
-  inputText.value = event.target.value
-}
-
 function stepCurrentValue(delta) {
-  if (props.disabled || dragging.value) return
-  const base =
-    parseNumericValue(inputText.value, { emptyAsZero: true }) ??
-    props.modelValue ??
-    0
-  const next = clampValue(base + delta, clampOptions.value)
-  inputText.value = formatDisplayValue(next)
-  commitValue(next)
+  stepBy(delta)
 }
 
 function resetNumericValueToZero() {
@@ -419,14 +354,6 @@ function onReducedMotionChange(event) {
   prefersReducedMotion.value = event.matches
 }
 
-watch(
-  () => props.modelValue,
-  () => {
-    syncInputFromModel()
-  },
-  { immediate: true },
-)
-
 onMounted(() => {
   reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
   prefersReducedMotion.value = reducedMotionQuery.matches
@@ -533,7 +460,7 @@ onBeforeUnmount(() => {
           :value="inputText"
           type="text"
           inputmode="numeric"
-          pattern="[0-9-]*"
+          pattern="-?[0-9]*"
           :disabled="disabled"
           :data-testid="`${testId}-input`"
           :class="inputFieldClass"

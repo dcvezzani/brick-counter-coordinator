@@ -124,6 +124,15 @@ function createNew() {
         >
           Dev: Swipe number playground
         </Button>
+        <Button
+          v-if="isDev"
+          variant="ghost"
+          class="min-h-11"
+          data-testid="dev-stepped-swipe-number"
+          @click="router.push('/dev/stepped-swipe-number')"
+        >
+          Dev: Stepped swipe number playground
+        </Button>
       </div>
     </div>
 

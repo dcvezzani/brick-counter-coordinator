@@ -9,6 +9,7 @@ import ReconciliationView from '@/views/ReconciliationView.vue'
 import TernarySwipeDemoView from '@/views/dev/TernarySwipeDemoView.vue'
 import SegmentedSwipeDemoView from '@/views/dev/SegmentedSwipeDemoView.vue'
 import SwipeNumberInputDemoView from '@/views/dev/SwipeNumberInputDemoView.vue'
+import SteppedSwipeNumberInputDemoView from '@/views/dev/SteppedSwipeNumberInputDemoView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -59,6 +60,11 @@ const router = createRouter({
       path: '/dev/swipe-number',
       name: 'dev-swipe-number',
       component: SwipeNumberInputDemoView,
+    },
+    {
+      path: '/dev/stepped-swipe-number',
+      name: 'dev-stepped-swipe-number',
+      component: SteppedSwipeNumberInputDemoView,
     },
   ],
 })

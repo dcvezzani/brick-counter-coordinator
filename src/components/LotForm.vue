@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import ColorPicker from '@/components/ColorPicker.vue'
 import PartSearchCombobox from '@/components/PartSearchCombobox.vue'
-import SwipeNumberInput from '@/components/SwipeNumberInput.vue'
+import SteppedSwipeNumberInput from '@/components/SteppedSwipeNumberInput.vue'
 import { useSession } from '@/composables/useSession'
 import {
   persistLotConditionChoice,
@@ -145,7 +145,7 @@ onMounted(async () => {
 
     <div class="flex flex-col gap-2">
       <Label>Count</Label>
-      <SwipeNumberInput
+      <SteppedSwipeNumberInput
         v-model="qty"
         name="qty"
         :min="0"
