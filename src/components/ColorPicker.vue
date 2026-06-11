@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { cn } from '@/lib/utils'
 import { colorSwatch } from '@/lib/bricklink-colors'
 import FilterablePicker from '@/components/FilterablePicker.vue'
+import { defaultContainsFilter } from '@/lib/filterable-picker'
 
 const props = defineProps({
   colors: { type: Array, default: () => [] },
@@ -24,6 +25,10 @@ const colorOptions = computed(() =>
 
 const isDisabled = computed(() => props.disabled || props.colors.length === 0)
 
+function filterColorOptions(query, options) {
+  return defaultContainsFilter(options, query)
+}
+
 function onUpdate(value) {
   emit('update:modelValue', value)
 }
@@ -40,6 +45,7 @@ defineExpose({ focus })
     ref="pickerRef"
     :model-value="modelValue"
     :options="colorOptions"
+    :filter-options="filterColorOptions"
     :disabled="isDisabled"
     allow-none
     placeholder="Select color"

@@ -5,6 +5,7 @@ import ColorPicker from '@/components/ColorPicker.vue'
 const COLORS = [
   { id: 11, name: 'Black', hex: '#05131d' },
   { id: 41, name: 'Aqua', hex: '#0084ff' },
+  { id: 5, name: 'Brick Yellow', hex: '#f2cd37' },
   { id: 86, name: 'Light Bluish Gray', hex: '#9ba19d' },
 ]
 
@@ -40,19 +41,34 @@ describe('ColorPicker', () => {
     expect(wrapper.find('[data-testid="color-picker-panel"]').exists()).toBe(false)
   })
 
-  it('filters colors by prefix after debounce and highlights the first match', async () => {
+  it('filters colors by substring after debounce and highlights the first match', async () => {
     const wrapper = mount(ColorPicker, {
       props: { colors: COLORS, modelValue: null },
     })
 
     await wrapper.get('[data-testid="color-picker-trigger"]').trigger('click')
     const filter = wrapper.get('[data-testid="color-picker-filter"]')
-    await filter.setValue('a')
+    await filter.setValue('aq')
     vi.advanceTimersByTime(150)
     await wrapper.vm.$nextTick()
 
     expect(wrapper.findAll('[data-testid^="color-picker-option-"]')).toHaveLength(1)
     expect(wrapper.get('[data-testid="color-picker-option-41"]').classes()).toContain('bg-accent')
+  })
+
+  it('matches color names that contain the query, not only prefix', async () => {
+    const wrapper = mount(ColorPicker, {
+      props: { colors: COLORS, modelValue: null },
+    })
+
+    await wrapper.get('[data-testid="color-picker-trigger"]').trigger('click')
+    const filter = wrapper.get('[data-testid="color-picker-filter"]')
+    await filter.setValue('yel')
+    vi.advanceTimersByTime(150)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="color-picker-option-5"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="color-picker-option-5"]').classes()).toContain('bg-accent')
   })
 
   it('selects the highlighted color on Enter', async () => {
