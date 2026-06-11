@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import ColorPicker from '@/components/ColorPicker.vue'
 import PartSearchCombobox from '@/components/PartSearchCombobox.vue'
 import { useSession } from '@/composables/useSession'
+import {
+  persistLotConditionChoice,
+  resolveDefaultLotCondition,
+} from '@/lib/lot-entry-defaults'
 
 const props = defineProps({
   sessionId: { type: String, required: true },
@@ -16,7 +20,10 @@ const props = defineProps({
 })
 
 const router = useRouter()
-const { getLot, saveLot, getColorsForPart, resolvePartId } = useSession()
+const { getSession, getLot, saveLot, getColorsForPart, resolvePartId } = useSession()
+
+const partSearchRef = useTemplateRef('partSearchRef')
+const colorPickerRef = useTemplateRef('colorPickerRef')
 
 const partId = ref('')
 const colorId = ref(null)
@@ -24,6 +31,10 @@ const condition = ref('U')
 const qty = ref(1)
 const duplicateMessage = ref(null)
 const colors = computed(() => getColorsForPart(partId.value))
+
+function applyDefaultCondition() {
+  condition.value = resolveDefaultLotCondition(props.sessionId, getSession(props.sessionId))
+}
 
 watch(
   () => props.lotId,
@@ -50,7 +61,7 @@ function resetForAnother() {
   const keepPart = partId.value
   partId.value = keepPart
   colorId.value = null
-  condition.value = 'U'
+  applyDefaultCondition()
   qty.value = 1
   duplicateMessage.value = null
 }
@@ -70,33 +81,49 @@ async function handleSave(addAnother = false) {
     return
   }
 
+  persistLotConditionChoice(
+    props.sessionId,
+    getSession(props.sessionId),
+    condition.value,
+  )
+
   if (addAnother) {
     resetForAnother()
+    await nextTick()
+    colorPickerRef.value?.focus()
     return
   }
 
   router.push(`/session/${props.sessionId}/cups`)
 }
+
+onMounted(async () => {
+  if (!props.lotId) {
+    applyDefaultCondition()
+    await nextTick()
+    partSearchRef.value?.focus()
+  }
+})
 </script>
 
 <template>
   <div class="flex flex-col gap-4" data-testid="lot-form">
-    <PartSearchCombobox v-model="partId" />
+    <PartSearchCombobox ref="partSearchRef" v-model="partId" />
 
     <div class="flex flex-col gap-2">
       <Label>Color</Label>
-      <ColorPicker v-model="colorId" :colors="colors" />
+      <ColorPicker ref="colorPickerRef" v-model="colorId" :colors="colors" />
     </div>
 
     <div class="flex flex-col gap-2">
       <Label>Condition</Label>
       <RadioGroup v-model="condition" class="flex gap-4">
         <div class="flex items-center gap-2">
-          <RadioGroupItem id="cond-n" value="N" />
+          <RadioGroupItem id="cond-n" value="N" data-testid="cond-n" />
           <Label for="cond-n">New</Label>
         </div>
         <div class="flex items-center gap-2">
-          <RadioGroupItem id="cond-u" value="U" />
+          <RadioGroupItem id="cond-u" value="U" data-testid="cond-u" />
           <Label for="cond-u">Used</Label>
         </div>
       </RadioGroup>

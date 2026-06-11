@@ -101,4 +101,16 @@ describe('FilterablePicker', () => {
     expect(wrapper.find('[data-testid="picker-min-chars"]').exists()).toBe(false)
     expect(wrapper.findAll('[data-testid^="picker-option-"]')).toHaveLength(1)
   })
+
+  it('focuses the trigger via focusTrigger', async () => {
+    const wrapper = mount(FilterablePicker, {
+      props: { modelValue: null, options: OPTIONS, testId: 'picker' },
+      attachTo: document.body,
+    })
+
+    wrapper.vm.focusTrigger()
+    await wrapper.vm.$nextTick()
+
+    expect(document.activeElement?.dataset.testid).toBe('picker-trigger')
+  })
 })

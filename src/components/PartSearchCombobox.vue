@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Label } from '@/components/ui/label'
 import FilterablePicker from '@/components/FilterablePicker.vue'
 import { useSession } from '@/composables/useSession'
@@ -10,6 +10,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'select'])
 
+const pickerRef = ref(null)
 const { searchParts, resolvePartId, lookupPart } = useSession()
 
 const partOptions = computed(() =>
@@ -52,6 +53,12 @@ function onClose({ filterQuery }) {
   const part = lookupPart(resolved)
   if (part) emit('select', part)
 }
+
+function focus() {
+  pickerRef.value?.focusTrigger()
+}
+
+defineExpose({ focus })
 </script>
 
 <template>
@@ -67,6 +74,7 @@ function onClose({ filterQuery }) {
       </span>
     </Label>
     <FilterablePicker
+      ref="pickerRef"
       :model-value="modelValue || null"
       :options="partOptions"
       :filter-options="filterPartOptions"

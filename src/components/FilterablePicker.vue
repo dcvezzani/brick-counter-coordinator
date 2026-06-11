@@ -35,6 +35,7 @@ const open = ref(false)
 const filterQuery = ref('')
 const debouncedQuery = ref('')
 const rootRef = ref(null)
+const triggerRef = ref(null)
 
 let debounceTimer = null
 
@@ -146,6 +147,12 @@ function onRootFocusOut(event) {
 function isSelected(option) {
   return props.modelValue === option.value
 }
+
+function focusTrigger() {
+  triggerRef.value?.focus()
+}
+
+defineExpose({ focusTrigger })
 </script>
 
 <template>
@@ -156,6 +163,7 @@ function isSelected(option) {
     @focusout="onRootFocusOut"
   >
     <button
+      ref="triggerRef"
       type="button"
       :data-testid="`${testId}-trigger`"
       :disabled="isDisabled"

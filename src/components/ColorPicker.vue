@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { cn } from '@/lib/utils'
 import { colorSwatch } from '@/lib/bricklink-colors'
 import FilterablePicker from '@/components/FilterablePicker.vue'
@@ -11,6 +11,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue'])
+
+const pickerRef = ref(null)
 
 const colorOptions = computed(() =>
   props.colors.map((color) => ({
@@ -25,10 +27,17 @@ const isDisabled = computed(() => props.disabled || props.colors.length === 0)
 function onUpdate(value) {
   emit('update:modelValue', value)
 }
+
+function focus() {
+  pickerRef.value?.focusTrigger()
+}
+
+defineExpose({ focus })
 </script>
 
 <template>
   <FilterablePicker
+    ref="pickerRef"
     :model-value="modelValue"
     :options="colorOptions"
     :disabled="isDisabled"
