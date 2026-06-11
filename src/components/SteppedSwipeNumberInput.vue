@@ -580,7 +580,11 @@ function onWindowKeyUp(event) {
   }
 
   if (isAtSlotExtremeForNudge(nudge.dH, nudge.dV)) {
-    snapKeyboardOneSlotInward(nudge.dH, nudge.dV)
+    if (nudge.dV !== 0) {
+      resetKeyboardVisualOrigin()
+    } else {
+      snapKeyboardOneSlotInward(nudge.dH, nudge.dV)
+    }
     cancelHoldRepeat()
     resetHoldBonuses()
   }

@@ -817,7 +817,7 @@ describe('SteppedSwipeNumberInput', () => {
     expect(handle.attributes('style') ?? '').toContain(`+ ${inwardOffset}px`)
   })
 
-  it('keyup at vertical slot extreme snaps one slot inward', async () => {
+  it('keyup at vertical increment extreme snaps handle home and keeps value', async () => {
     const wrapper = mount(SteppedSwipeNumberInput, {
       props: { name: 'qty', modelValue: 5, min: 0 },
       attachTo: document.body,
@@ -827,14 +827,38 @@ describe('SteppedSwipeNumberInput', () => {
 
     await keyOnHandle(wrapper, 'w')
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([15])
-    expect(wrapper.find('[data-testid="stepped-swipe-number-plus-ten"]').exists()).toBe(true)
 
     await keyUpOnWindow('w')
 
-    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([15])
-    expect(wrapper.get('[data-testid="stepped-swipe-number-input"]').element.value).toBe('5')
+    expect(wrapper.get('[data-testid="stepped-swipe-number-input"]').element.value).toBe('15')
     expect(wrapper.find('[data-testid="stepped-swipe-number-plus-ten"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="stepped-swipe-number-plus"]').text()).toBe('+')
+    const handle = wrapper.get('[data-testid="stepped-swipe-number-handle"]')
+    expect(handle.attributes('style') ?? '').toMatch(
+      /translate\(calc\(-50% \+ 0px\), calc\(-50% \+ 0px\)\)/,
+    )
+  })
+
+  it('keyup at vertical decrement extreme snaps handle home and keeps clamped value', async () => {
+    const wrapper = mount(SteppedSwipeNumberInput, {
+      props: { name: 'qty', modelValue: 5, min: 0 },
+      attachTo: document.body,
+    })
+    mockSlideTrackSize(wrapper)
+    focusHandle(wrapper)
+
+    await keyOnHandle(wrapper, 's')
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([0])
+
+    await keyUpOnWindow('s')
+
+    expect(wrapper.get('[data-testid="stepped-swipe-number-input"]').element.value).toBe('0')
+    expect(wrapper.find('[data-testid="stepped-swipe-number-minus-ten"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="stepped-swipe-number-minus"]').text()).toBe('−')
+    const handle = wrapper.get('[data-testid="stepped-swipe-number-handle"]')
+    expect(handle.attributes('style') ?? '').toMatch(
+      /translate\(calc\(-50% \+ 0px\), calc\(-50% \+ 0px\)\)/,
+    )
   })
 
   it('keyup below horizontal slot extreme does not snap when value is capped', async () => {
