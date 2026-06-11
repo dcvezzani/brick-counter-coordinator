@@ -265,6 +265,7 @@ Triggered by `POST /sessions` (async or inline — inline OK for MVP). On failur
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/sessions/:id/lots` | Query: `cupId`, `workerId`, `mode` |
+| `GET` | `/sessions/:id/lots/:lotId` | Optional — single lot for edit pre-fill; MVP may use list cache instead |
 | `POST` | `/sessions/:id/lots` | Create/update lot; returns duplicate info if exists |
 | `GET` | `/sessions/:id/cups` | All cups with lot counts |
 | `POST` | `/sessions/:id/cups` | Create cup (optional MVP auto-cup per save) |
@@ -278,6 +279,10 @@ Triggered by `POST /sessions` (async or inline — inline OK for MVP). On failur
   "existing": { "createdBy": "Alex", "qty": 8 }
 }
 ```
+
+**Duplicate merge (Unit 0 fixture):** Client may re-POST with `mergeDuplicate: true` to add entered qty to the existing lot. Live API contract for merge is TBD — confirm dialog may instead use idempotent upsert or a dedicated merge flag in Unit 2.
+
+**Session condition:** `partOutOptions.condition` is `new` or `used` only. Lot form saves matching `N` or `U`; workers do not pick condition per lot. Partial-bag two-sweep uses two sessions.
 
 ### Bricklink helpers (Unit 2+)
 
@@ -364,7 +369,7 @@ Connect: `ws://host/ws?sessionId=&workerId=`
 |-----------|---------|
 | `LotListTable` | Shared list UI for List lots modes + Part-out import rows |
 | `PartOutImportTable` | Fetched lines with exclude/restore, bulk select, included/excluded tabs |
-| `LotForm` | Part search, color swatches, condition, count, Save / Save and Add Another |
+| `LotForm` | Part search, color swatches, read-only session condition, count, Save / Save and Add Another |
 | `ColorPicker` | Port UX from extension `catalog-known-colors` + `bricklink-colors.json` |
 | `PartSearchCombobox` | Debounced search → `/bricklink/inventory-search` |
 | `SessionNav` | Links to all views |

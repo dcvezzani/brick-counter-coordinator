@@ -55,7 +55,7 @@ Session lead specifies the LEGO set to part-out and Bricklink part-out options, 
 | Input placeholder | 70404-1 |
 | Default set number | `70404-1` |
 | **Pricing basis** (radio) | Stock guide · Last 6 months sales |
-| **Condition mix** (radio) | New · Used · Mixed |
+| **Condition** (radio) | New · Used |
 | **Existing lots** (radio) | Consolidate with existing · Overwrite existing |
 | Submit button | Create session & fetch part-out |
 
@@ -64,7 +64,7 @@ Session lead specifies the LEGO set to part-out and Bricklink part-out options, 
 | UI field | Values | Purpose |
 |----------|--------|---------|
 | Pricing basis | `stock`, `last6` | Bricklink part-out price source |
-| Condition mix | `new`, `used`, `mixed` | Expected condition for the session; drives lot form defaults |
+| Condition | `new`, `used` | Session-wide lot condition (all lots in this session are New or Used); drives read-only label on Lot form. Partial-bag two-sweep work uses **two separate sessions** (one New, one Used), not a Mixed option here. |
 | Existing lots | consolidate / overwrite | Bricklink inventory merge behavior on export |
 
 ## Messages & feedback
@@ -107,7 +107,7 @@ Session name is derived from set number (e.g. `{setNumber} part-out`).
 - [ ] Lead can choose pricing basis, condition mix, and existing-lot behavior
 - [ ] Submit creates a session and navigates to Part-out import
 - [ ] Fetched part-out lines are available on the import view (fixture or live)
-- [ ] Condition mix is persisted on the session and affects lot form defaults (New / Used / Mixed)
+- [ ] Condition (`new` or `used`) is persisted on the session and drives read-only lot form label
 - [ ] Live: fetch failure shows actionable error without losing the session record
 - [ ] SessionNav is **not** shown (no `sessionId` until after create)
 
@@ -115,13 +115,14 @@ Session name is derived from set number (e.g. `{setNumber} part-out`).
 
 ### Implemented (Unit 0)
 
-- Full form with all three option groups
+- Full form with pricing, condition (includes legacy Mixed radio — to remove), and existing-lots option groups
 - Simulated create → fixture demo part-out lines cloned into new session
 - Phase set to `importing`; confirm on import advances to `counting`
 - Default set `70404-1`
 
 ### Gaps (Units 1–4)
 
+- **Mixed** condition option still in storyboard UI — remove; sessions are New or Used only (two-sweep = two sessions)
 - No live `POST /api/v1/sessions` or Bricklink fetch
 - No set-number validation or fetch error UI
 - No refetch path from this view

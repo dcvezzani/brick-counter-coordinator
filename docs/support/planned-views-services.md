@@ -115,7 +115,7 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 **Trigger:** Worker types in the part search combobox (debounced).
 
-**Flow:** Client calls `GET /api/v1/bricklink/inventory-search?q=3001` to resolve part numbers and optional store lot metadata. After the worker selects color and condition and taps **Save**, client calls `POST /api/v1/sessions/:id/lots` with part id, color id, condition, qty, and optional `cupId`.
+**Flow:** Client calls `GET /api/v1/bricklink/inventory-search?q=3001` to resolve part numbers and optional store lot metadata. After the worker selects color and taps **Save**, client calls `POST /api/v1/sessions/:id/lots` with part id, color id, session condition (`N` or `U`), qty, and optional `cupId`. Part and color are required.
 
 **Deliverables:** Saved `lot` object with consolidated qty. If the unique key `(sessionId, partId, colorId, condition)` already exists, response includes `duplicate: true` and `existing: { createdBy, qty }` so the UI can show who counted it first. WebSocket broadcasts `lot.updated` to other clients for near-real-time totals.
 

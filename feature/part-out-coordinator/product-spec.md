@@ -59,11 +59,11 @@ These tie directly to the **scorecard** in `/ship`. Each should be **testable** 
 | # | Criterion | How we'll verify |
 |---|-----------|------------------|
 | 1 | **Parallel counting** — Two workers can join the same part-out session and submit counts for different lots without overwriting each other. | Simulated session with two devices; both submissions appear in consolidated totals. |
-| 2 | **Duplicate-lot awareness** — When worker B enters a lot that worker A already recorded, B sees who created it and the current total for that lot before or immediately after submit. | Enter same part/color/condition from two devices; second worker sees existing-lot message with creator and quantity. |
-| 3 | **Mobile-first entry** — A worker can complete one lot entry (part, color, condition, count) on a phone-sized viewport **without scrolling the main form**. | Manual check on phone or narrow viewport; all primary controls visible. |
+| 2 | **Duplicate-lot awareness** — When worker B enters a lot that worker A already recorded, B sees who created it and the current total for that lot on submit (proactive inline hint optional in Unit 2+). | Enter same part/color/condition from two devices; second worker sees existing-lot confirm dialog with creator and quantity. |
+| 3 | **Mobile-first entry** — A worker can complete one lot entry (part, color, session condition label, count) on a phone-sized viewport **without scrolling the main form**. | Manual check on phone or narrow viewport (390px); all primary controls visible. |
 | 4 | **Session lifecycle** — Lead can create a session from a Bricklink part-out for a set (server fetch + import curation); workers pick a **display name at join**, select the session, and all counts roll up. | End-to-end walkthrough: create → curate import → join with name → submit → view session totals. |
 | 5 | **Part search** — Worker can search/select a part to populate the part identifier field (search behavior matches business need for finding parts by number or name). | Search for a known part; selection fills the part field. |
-| 6 | **Save and Add Another** — Form offers **Save** and **Save and Add Another**; the latter saves the current lot and opens a fresh form with the **same part id pre-filled** (one lot per form). | Submit via Save and Add Another; new form shows previous part id; color/condition/count cleared or ready for entry. |
+| 6 | **Save and Add Another** — Form offers **Save** and **Save and Add Another**; the latter saves the current lot and opens a fresh form with the **same part id pre-filled** (one lot per form). | Submit via Save and Add Another; new form shows previous part id; color cleared; qty reset to 1; session condition unchanged. |
 | 7 | **List cups navigation** — **List cups** shows all cups in the session; tapping a cup opens **Lot form**, or **List lots** filtered to that cup when it has **multiple lots**. | Cup with one lot opens Lot form directly; cup with multiple lots shows cup-filtered List lots then Lot form. |
 | 8 | **Reconciliation** — System compares session counts to the imported Bricklink part-out list, showing matches and mismatches, with a filter for **mismatches only**. | Known part-out + session data; report classifies rows correctly. |
 | 9 | **Discrepancy resolution** — Workers can resolve mismatches until reconciled totals reflect agreed final quantities. | Resolve at least one mismatch; reconciled view updates. |
@@ -91,7 +91,7 @@ Canonical screen inventory from [application-views.md](../../docs/support/applic
 | **Home** | Session entry | Worker enters **display name**; chooses **create a new session** or **enter an existing session**. |
 | **New session** | Session creation | Specify the **set** to part-out and Bricklink options; submit — server **fetches** the official part-out list. |
 | **Part-out import** | Curate counting scope | Shows **all** fetched part-out lines (part, color, condition, qty, Remarks). Lead **confirms** to start counting (typical: full list, no changes). For partial-bag sets, lead may **exclude** out-of-scope lines per sweep; excluded lines can be **restored** before confirm. |
-| **Lot form** | Counting entry | A **lot** = part id + color + condition. Enter or find part number, select color and condition, enter count; **Save** or **Save and Add Another**. |
+| **Lot form** | Counting entry | A **lot** = part id + color + condition. Enter or find part number, select color, enter count; session condition shown read-only; **Save** or **Save and Add Another**. Part and color required. |
 | **List cups** | Cup navigation | Select a cup. If the cup has **multiple lots**, open **List lots** filtered to that cup only; otherwise open **Lot form** for the single lot. |
 | **List lots** | Organizer pick list (per worker) | Shows this worker's share of lots (evenly divided, ordered by part id). Mark lot **moved to storage** or **needs new storage location**; **add another lot**; **open lot for editing**; **open associated cup** (cup-filtered List lots); **send list to printer**; **mark entire list complete** when every line is resolved. |
 | **Part-out reconciliation** | Reconcile & export | Compare session counts to **included** part-out lines (from import curation); show discrepancies as a **List lots**-style list; **Reconciled** generates XML and sends to Bricklink **bulk update validation**. |
@@ -141,7 +141,7 @@ Success criteria **#15** → Unit 0; **#1–#7, #14, #16** → Units 0–2 ( **#
    - **Loose brick purchase** — all parts are **used**; no new bricks expected; one session, confirm all lines.
    - **Partial-bag set** (some bags opened, some sealed) — **two sweeps**: first session excludes lines still in sealed bags and counts **used** parts found outside bags; a **second session** excludes the opposite subset and counts **new** parts from sealed bags. Lead excludes out-of-scope lines per sweep before confirm.
 
-4. **Record a lot (Lot form)** — Worker enters part (via search/picker), color, condition (new or used), and count. Form fits on one mobile screen without scrolling. Worker taps **Save** or **Save and Add Another** (latter pre-fills part id on a fresh form).
+4. **Record a lot (Lot form)** — Worker enters part (via search/picker), color, and count. Session condition (New or Used) is shown read-only from session setup. Form fits on one mobile screen without scrolling. Worker taps **Save** or **Save and Add Another** (latter pre-fills part id; clears color; resets qty to 1).
 
 5. **Discover an existing lot** — If the part/color/condition already exists in the session, worker sees who created it, current quantity, and that other physical cups may exist for the same lot.
 
@@ -176,7 +176,7 @@ Success criteria **#15** → Unit 0; **#1–#7, #14, #16** → Units 0–2 ( **#
 - Part-out **session** creation from a **Bricklink part-out** for a given set (set number and Bricklink part-out options); **server-side fetch** of the official list ([ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md)).
 - **Part-out import** curation — lead reviews fetched list and confirms before counting; excludes out-of-scope lines only when needed (**two-sweep** for partial-bag sets; single sweep for brand-new or loose purchases).
 - Worker **display name at join** on **Home** (no account system required for MVP).
-- Worker **self-service entry** on **Lot form**: part identifier, color, condition, quantity — **one lot per form**.
+- Worker **self-service entry** on **Lot form**: part identifier, color, quantity — session condition read-only — **one lot per form**; part and color required.
 - Form actions: **Save** and **Save and Add Another** (pre-fill part id on the latter).
 - **Part search / picker** (search API/integration — mechanism deferred to `/design`; Dave has reference behavior in existing tooling).
 - **Color picker** UX aligned with Dave's existing LEGO extension patterns (Design reuses or ports behavior).
