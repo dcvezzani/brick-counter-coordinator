@@ -1,5 +1,7 @@
 # IDE error fix log
 
+Maintained by the [vue-js-ide-hygiene](../../.agents/skills/vue-js-ide-hygiene/SKILL.md) skill (`npm run check:ide` / `npm run verify:ide`).
+
 Scan date: 2026-06-11
 
 Goal: eliminate Cursor/VS Code diagnostics on all `*.vue` and `*.js` files (`checkJs` + Prettier + Vue SFC imports).

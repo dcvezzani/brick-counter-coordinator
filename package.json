@@ -17,7 +17,12 @@
     "preview": "vite preview",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
-    "format": "prettier --write --experimental-cli src/"
+    "check:types": "tsc --noEmit -p jsconfig.json",
+    "check:format": "prettier --check \"src/**/*.vue\" \"src/**/*.js\" \"e2e/**/*.js\" vitest.config.js vite.config.js playwright.config.js",
+    "fix:format": ".agents/skills/vue-js-ide-hygiene/scripts/format-vue-js.sh",
+    "check:ide": ".agents/skills/vue-js-ide-hygiene/scripts/verify-ide-clean.sh --skip-tests",
+    "verify:ide": ".agents/skills/vue-js-ide-hygiene/scripts/verify-ide-clean.sh",
+    "format": "npm run fix:format"
   },
   "dependencies": {
     "@lucide/vue": "^1.17.0",

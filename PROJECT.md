@@ -39,7 +39,7 @@ A **part-out counting coordinator** for a LEGO resale/sorting business. When bre
 
 **Tech stack:** [docs/tech-stack.md](docs/tech-stack.md) — **Vue 3 + Vite + shadcn-vue + Tailwind v4 + Lucide + Vue Router** (client **JavaScript**, `components.json` → `typescript: false`). **Storyboard first** (Unit 0): navigable UI with fixture data, no backend. **Coordinator server** (Node, WebSockets) — contracts in `/design`. Mobile HTML5 primary.
 
-**UI tooling:** shadcn-vue CLI · MCP in [`.cursor/mcp.json`](.cursor/mcp.json) · skill [`.agents/skills/shadcn-vue`](.agents/skills/shadcn-vue/SKILL.md)
+**UI tooling:** shadcn-vue CLI · MCP in [`.cursor/mcp.json`](.cursor/mcp.json) · skills [`.agents/skills/shadcn-vue`](.agents/skills/shadcn-vue/SKILL.md) · [`.agents/skills/vue-js-ide-hygiene`](.agents/skills/vue-js-ide-hygiene/SKILL.md)
 
 ## Design reference — bricklink-chrome-extension
 

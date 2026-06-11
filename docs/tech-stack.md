@@ -29,7 +29,7 @@ src/
   style.css          # Tailwind + theme tokens
 ```
 
-Config: [`components.json`](../components.json) · [`jsconfig.json`](../jsconfig.json) · MCP: [`.cursor/mcp.json`](../.cursor/mcp.json) · Skill: [`.agents/skills/shadcn-vue`](../.agents/skills/shadcn-vue/SKILL.md)
+Config: [`components.json`](../components.json) · [`jsconfig.json`](../jsconfig.json) · MCP: [`.cursor/mcp.json`](../.cursor/mcp.json) · Skills: [shadcn-vue](../.agents/skills/shadcn-vue/SKILL.md) · [vue-js-ide-hygiene](../.agents/skills/vue-js-ide-hygiene/SKILL.md)
 
 ## shadcn-vue workflow
 
