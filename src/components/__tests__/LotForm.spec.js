@@ -8,8 +8,15 @@ import {
 } from '@/lib/lot-entry-defaults'
 
 vi.mock('@/composables/useSession')
+const routerPush = vi.fn()
+const routerReplace = vi.fn()
+
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({
+    push: routerPush,
+    replace: routerReplace,
+    currentRoute: { value: { path: '/session/test-session/lot' } },
+  }),
 }))
 
 const SESSION_ID = 'test-session'
@@ -86,6 +93,8 @@ function stubMatchMedia() {
 describe('LotForm', () => {
   beforeEach(() => {
     sessionStorage.clear()
+    routerPush.mockClear()
+    routerReplace.mockClear()
     stubMatchMedia()
     vi.useFakeTimers()
   })
@@ -129,6 +138,36 @@ describe('LotForm', () => {
       attachTo: document.body,
     })
     await flushPromises()
+    expect(wrapper.find('[data-testid="part-search-panel"]').exists()).toBe(true)
+    expect(document.activeElement?.dataset.testid).toBe('part-search-filter')
+  })
+
+  it('clears the form and focuses part search after Save', async () => {
+    setupSession('mixed')
+    const wrapper = mount(LotForm, {
+      props: { sessionId: SESSION_ID, lotId: null },
+      attachTo: document.body,
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="part-search-trigger"]').trigger('click')
+    const filter = wrapper.get('[data-testid="part-search-filter"]')
+    await filter.setValue('30')
+    vi.advanceTimersByTime(150)
+    await flushPromises()
+    await filter.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="color-picker-trigger"]').trigger('click')
+    await wrapper.get('[data-testid="color-picker-option-11"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="save-lot"]').trigger('click')
+    await flushPromises()
+
+    expect(routerPush).not.toHaveBeenCalled()
+    expect(routerReplace).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="part-search-trigger"]').text()).toContain('Search parts')
     expect(wrapper.find('[data-testid="part-search-panel"]').exists()).toBe(true)
     expect(document.activeElement?.dataset.testid).toBe('part-search-filter')
   })

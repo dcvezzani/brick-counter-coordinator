@@ -67,6 +67,14 @@ function resetForAnother() {
   duplicateMessage.value = null
 }
 
+function resetForNew() {
+  partId.value = ''
+  colorId.value = null
+  applyDefaultCondition()
+  qty.value = 1
+  duplicateMessage.value = null
+}
+
 async function handleSave(addAnother = false) {
   duplicateMessage.value = null
   const result = saveLot(props.sessionId, {
@@ -95,7 +103,12 @@ async function handleSave(addAnother = false) {
     return
   }
 
-  router.push(`/session/${props.sessionId}/cups`)
+  if (props.lotId) {
+    await router.replace(`/session/${props.sessionId}/lot`)
+  }
+  resetForNew()
+  await nextTick()
+  partSearchRef.value?.focus()
 }
 
 onMounted(async () => {
