@@ -77,6 +77,10 @@ const clampOptions = computed(() => ({
   allowNegative: props.allowNegative,
 }))
 
+const slideControlPosition = computed(() =>
+  props.handlePosition === 'left' ? 'left' : 'right',
+)
+
 const numericValue = computed(() => {
   const parsed = parseNumericValue(inputText.value, { emptyAsZero: false })
   if (parsed != null) return clampValue(parsed, clampOptions.value)
@@ -272,7 +276,7 @@ function tickDragFrame(timestamp) {
 
   const logicalDisplacement = signedDisplacementFromCenter(
     handleOffsetPx.value,
-    props.handlePosition,
+    slideControlPosition.value,
   )
   const { accumulator, steps } = accumulateDragSteps(
     logicalDisplacement,

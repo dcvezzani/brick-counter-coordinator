@@ -3,11 +3,11 @@ import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import ColorPicker from '@/components/ColorPicker.vue'
 import PartSearchCombobox from '@/components/PartSearchCombobox.vue'
+import SwipeNumberInput from '@/components/SwipeNumberInput.vue'
 import { useSession } from '@/composables/useSession'
 import {
   persistLotConditionChoice,
@@ -130,8 +130,13 @@ onMounted(async () => {
     </div>
 
     <div class="flex flex-col gap-2">
-      <Label for="qty">Count</Label>
-      <Input id="qty" v-model.number="qty" type="number" min="1" class="min-h-11" data-testid="lot-qty" />
+      <Label>Count</Label>
+      <SwipeNumberInput
+        v-model="qty"
+        name="qty"
+        :min="1"
+        test-id="lot-qty"
+      />
     </div>
 
     <Alert v-if="duplicateMessage" variant="destructive" data-testid="duplicate-alert">

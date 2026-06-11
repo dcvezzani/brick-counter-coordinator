@@ -70,9 +70,23 @@ describe('lot-entry-defaults', () => {
   })
 })
 
+function stubMatchMedia() {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+}
+
 describe('LotForm', () => {
   beforeEach(() => {
     sessionStorage.clear()
+    stubMatchMedia()
     vi.useFakeTimers()
   })
 

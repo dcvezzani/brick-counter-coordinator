@@ -20,7 +20,9 @@ const lotId = computed(() => route.params.lotId ?? null)
 
 <style scoped>
 .lot-form-view {
+  box-sizing: border-box;
   max-height: 100dvh;
-  overflow: hidden;
+  padding: 0.5em;
+  overflow-y: auto;
 }
 </style>
