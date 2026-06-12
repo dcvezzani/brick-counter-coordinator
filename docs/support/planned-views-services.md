@@ -62,7 +62,7 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 ### Example usage
 
-**Trigger:** Worker searches/selects set via **SetSearchCombobox** (FilterablePicker + **fixture catalog in Unit 0**; live catalog Unit 1+), chooses condition (New or Used; no default), and may use **Back to Home** to return to `/`. Display name comes from Home via `sessionStorage`; direct `/session/new` without a name redirects to Home.
+**Trigger:** Worker searches/selects set via **SetSearchCombobox** (FilterablePicker + **fixture catalog Unit 0**; **static bundled JSON Unit 1+** via `GET /api/v1/bricklink/sets?q=`), chooses condition (New or Used; no default), and may use **Back to Home** to return to `/`. Display name comes from Home via `sessionStorage`; direct `/session/new` without a name redirects to Home.
 
 **Flow:** Client calls `POST /api/v1/sessions` with `setNumber`, `partOutOptions.condition` (`new` \| `used`), and `displayName`. Server normalizes set number, maps to Bricklink form (fixed pricing/merge constants + `itemNo` / `itemCondition`), retries fetch up to 3 times on network failure, creates session (phase `importing`), and persists `part_out_lines` on success.
 

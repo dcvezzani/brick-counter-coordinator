@@ -264,6 +264,7 @@ Resolved in [qa-001.md](../../docs/support/qa-001.md):
 | 2026-06-12 | **Reconciliation MVP scope (Dave):** Promote Unit 4 gaps to requirements — tabs, Edit, live API, Mark complete, phase toasts, Reconcile nav from counting onward, no Cond column, refactor legacy List lots mode. |
 | 2026-06-12 | **Process roles (Dave):** Counter, session lead, and organizer are **documentation-only** — no role-based auth in code; whoever uses a tool unofficially takes that role. `lead_worker_id` is audit metadata. See [process-roles.md](../../docs/process-roles.md). |
 | 2026-06-12 | **MVP nav & phase (Dave):** SessionNav **Lots** always when bar shown; **Compare with Part-Out List** (`counting` → `reconciling`); any joined worker for `POST …/phase`; lot qty min 1; SetSearchCombobox in Unit 0. See [session-nav-by-view.md](../../docs/session-nav-by-view.md). |
+| 2026-06-12 | **List lots & New session (Dave):** Organizer guard copy per phase (**Reconcile** / **export**); split once; delete own organizer lines; cup `cupId` redirect after `GET …/cups`; Unit 1+ set catalog = static bundled JSON. See [list-lots.md](../../docs/view-specs/list-lots.md), [new-session.md](../../docs/view-specs/new-session.md). |
 | 2026-06-12 | **MVP gaps locked (Dave):** Duplicate merge `confirmMerge: true`; **Split list** once per session; organizer **Delete** own lines only; Lot form **New cup**; fixture defers to view specs ([README — Fixture vs target](../../docs/view-specs/README.md#fixture-vs-target-unit-0)). |
 
 ## Related documents

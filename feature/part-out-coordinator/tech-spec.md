@@ -322,7 +322,15 @@ Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session i
 
 **Session condition:** `partOutOptions.condition` is `new` or `used` only. Lot form saves matching `N` or `U`; workers do not pick condition per lot. Partial-bag two-sweep uses two sessions.
 
-### Bricklink helpers (Unit 2+)
+### Bricklink helpers
+
+**Set catalog (Unit 1 — New session):** Static bundled JSON (`config/set-catalog.json` or equivalent). **Not** live BrickLink set search.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/bricklink/sets` | Query `q=` — filter bundled set list for **SetSearchCombobox** ([new-session.md](../../docs/view-specs/new-session.md)); same shape as Unit 0 fixture |
+
+**Part search & colors (Unit 2+):**
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -358,6 +366,10 @@ Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session i
 | `POST` | `/sessions/:id/pick-lists/split` | Even split among **current** joined workers — **once per session**; `409` or ignored if `pickListSplit` already true |
 | `PATCH` | `/sessions/:id/pick-lists/:itemId` | Update line status |
 | `POST` | `/sessions/:id/pick-lists/complete` | Mark worker list complete |
+
+**List lots (client):** Cup mode — missing `cupId` → immediate redirect `/cups`; invalid `cupId` → redirect after `GET …/cups` confirms id absent ([list-lots.md](../../docs/view-specs/list-lots.md#empty-states)). Organizer mode before `organizing` → phase guard copy only.
+
+**Delete lot:** `DELETE …/lots/:lotId` — organizer mode **403** if lot not on current worker's pick list; cup mode allowed for any lot in that cup.
 
 ### WebSocket
 

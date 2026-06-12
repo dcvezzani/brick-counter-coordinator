@@ -59,7 +59,8 @@ Discrepancy reconciliation lives on [**Part-out reconciliation**](./part-out-rec
 | **Declare ready to import** | Visible in `organizing`; **disabled** until every joined worker has marked their list complete; advances session to `updating_inventory` via `POST …/sessions/:id/phase` |
 | Storage location column | **Required** in organizer mode — show part-out **Remarks** / storage location per line (Product Spec scenario 10; Unit 3) |
 | Page heading | Mode-specific: **Lots in cup** (cup) or **Organizer pick list** (organizer); no duplicate inner table title |
-| Cup mode without `cupId` | Invalid — **redirect to List cups** on mount (MVP); do not list all session lots |
+| **Organizer empty state (before / after organizing)** | Phase-specific helper only — no split/status actions. See [Empty states — organizer guard](#empty-states). |
+| Cup mode without `cupId` | **Missing `cupId`:** immediate redirect to `/session/:sessionId/cups`. **Invalid `cupId`:** after `GET …/cups`, if id not in response, redirect to `/cups` (avoids flash on typos while loading). Never list all session lots. |
 
 ## Modes
 
@@ -146,11 +147,30 @@ No separate table `<h2>` — page heading is the only title.
 
 ### Empty states
 
+#### Organizer guard (`mode=organizer`, `phase` ≠ `organizing`)
+
+Page heading stays **Organizer pick list**. Show helper only — **no** table, **no** Split / status / Declare buttons. Worker uses SessionNav **Reconcile** (or **Export** flow) per phase.
+
+| `phase` | Helper copy (`data-testid="organizer-phase-guard"`) |
+|---------|-----------------------------------------------------|
+| `counting` | Organizer pick lists start after you compare counts with the part-out list. Open **Reconcile** when counting is done. |
+| `reconciling` | Pick lists open after reconciliation is complete. Finish on **Reconcile**, then declare ready to organize. |
+| `updating_inventory` | Organizing is complete. Open **Reconcile** to **export** your Bricklink update. |
+
+#### Organizer workflow (`phase === 'organizing'`)
+
 | Situation | Behavior |
 |-----------|----------|
-| Organizer mode, pick list not split | **Split list** button visible; table empty or shows all lots unassigned until split runs |
-| Organizer mode, worker has zero assigned lines after split | Empty table with copy such as "No lots assigned to you" |
-| Cup mode, invalid or missing `cupId` | Redirect to **List cups** on mount |
+| Pick list not split | **Split list** button visible; table empty until split runs |
+| Worker has zero assigned lines after split | Empty table — **No lots assigned to you** (`data-testid="organizer-empty-assigned"`) |
+
+#### Cup mode
+
+| Situation | Behavior |
+|-----------|----------|
+| `cupId` query **absent** | Immediate `replace` to `/session/:sessionId/cups` |
+| `cupId` present but **not** in `GET …/cups` | After cups load, `replace` to `/session/:sessionId/cups` |
+| Valid `cupId` | Cup-filtered lot table |
 
 ## Messages & feedback
 
@@ -158,6 +178,7 @@ No separate table `<h2>` — page heading is the only title.
 |---------|------|---------|
 | Delete lot? / description | Dialog | Delete → confirm |
 | Status badge | Badge per row | Organizer mode |
+| Organizer pick lists start after… / Pick lists open after… / Organizing is complete… | Helper text | Organizer guard by phase — see [Empty states](#empty-states) |
 | No lots assigned to you | Empty hint | Organizer mode; worker has zero lines after split |
 
 No toast on status change or list complete.
@@ -190,6 +211,7 @@ No toast on status change or list complete.
 
 | Field / entity | Source (live) | Notes |
 |----------------|---------------|-------|
+| Cups (cup mode validation) | `GET /api/v1/sessions/:id/cups` | Confirm `cupId` exists before listing lots; redirect `/cups` if missing or absent |
 | Lots (cup mode) | `GET /api/v1/sessions/:id/lots?cupId=` | Filtered to cup; `cupId` required |
 | Pick list (organizer) | `GET /api/v1/sessions/:id/lots?mode=organizer&workerId=` | Worker's assigned lots + status + location |
 | Session | `GET /api/v1/sessions/:id` | `pickListSplit` flag, phase |
@@ -210,7 +232,10 @@ WebSocket: `pick_list.updated` refreshes organizer rows ([tech spec](../../featu
 ### Cup mode
 
 - [ ] Shows only lots in the selected cup (`cupId` required)
-- [ ] Invalid/missing `cupId` does not list all session lots
+- [ ] Invalid/missing `cupId` redirects to **List cups** (missing: immediate; invalid: after `GET …/cups`); does not list all session lots
+- [ ] Organizer guard copy shown in `counting`, `reconciling`, and `updating_inventory` with phase-specific **Reconcile** / **export** guidance
+- [ ] **Split list** runs once per session; button hidden after `pickListSplit`
+- [ ] Organizer **Delete** only on current worker's assigned lines; cup mode **Delete** any lot in cup
 - [ ] Page heading reads **Lots in cup**
 - [ ] Edit opens Lot form for that lot
 - [ ] Delete removes lot after confirmation
@@ -276,6 +301,8 @@ WebSocket: `pick_list.updated` refreshes organizer rows ([tech spec](../../featu
 | `lot-moved` | Moved row action (planned) |
 | `lot-new-loc` | New loc row action (planned) |
 | `lot-open-cup` | Open cup row action (planned) |
+| `organizer-phase-guard` | Phase guard helper (organizer mode, not yet `organizing`) |
+| `organizer-empty-assigned` | No lots assigned empty state |
 
 ## Spec–diagram review (2026-06-12)
 
@@ -293,4 +320,12 @@ WebSocket: `pick_list.updated` refreshes organizer rows ([tech spec](../../featu
 
 - None at this time.
 
-**Resolved (Dave 2026-06-12):** **Split list** once per session (no re-run). Organizer **Delete** = own assigned lines only. Missing `cupId` → redirect **List cups**. **SessionNav Lots** always visible when nav shown.
+**Resolved (Dave 2026-06-12):**
+
+| Topic | Decision |
+|-------|----------|
+| Organizer guard copy | Phase-specific (B): **Reconcile** in `counting` / `reconciling`; **export** in `updating_inventory` — [Empty states](#empty-states) |
+| **Split list** | Once per session (A); no re-run |
+| Organizer **Delete** | Own assigned lines only; cup mode any lot in cup (A) |
+| Missing / invalid `cupId` | Redirect `/cups` (A); validate invalid id after `GET …/cups` |
+| **SessionNav Lots** | Always visible when nav shown |

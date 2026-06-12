@@ -11,7 +11,7 @@
 
 ### new session
 - create a new session (display name entered on Home first)
-  - search/select set number (SetSearchCombobox) and condition (New or Used)
+  - search/select set number (**SetSearchCombobox** — fixture catalog Unit 0; static bundled JSON Unit 1+) and condition (New or Used)
   - submit — server fetches official Bricklink part-out list (fixed pricing/merge defaults)
 
 ### part out import
@@ -38,7 +38,8 @@
 - select a cup: zero lots → lot form with cup pinned; one lot → lot form edit; multiple lots → cup-filtered list lots
 
 ### list lots
-- **cup mode:** pick a lot from a multi-lot cup (see list cups)
+- **Lots** nav always visible after session join; before `organizing`, phase-specific guard copy (use **Reconcile** / **export**)
+- **cup mode:** pick a lot from a multi-lot cup (see list cups); missing/invalid `cupId` → redirect list cups
 - **organizer mode:** pick list after **Split list** (once per session)
 - lists lots assigned to the current worker; ordered by part id
 - storage location (from part-out Remarks) shown per line in organizer mode

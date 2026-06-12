@@ -1,6 +1,6 @@
 # SessionNav by view
 
-**Status:** Locked — Dave 2026-06-12 (MVP reference for spec consistency)  
+**Status:** Locked — Dave 2026-06-12 (MVP reference; organizer guard copy in [list-lots.md](./view-specs/list-lots.md#empty-states))  
 **Audience:** Dave, implementers, spec authors
 
 Canonical bottom bar: [`SessionNav`](../src/components/SessionNav.vue) inside [`AppShell`](../src/components/AppShell.vue). Container `data-testid="session-nav"`.
@@ -97,9 +97,15 @@ Same nav buttons in both modes:
 
 † Cup mode: **Cups** active. ‡ Organizer mode: **Lots** active. **Cups** hidden in `updating_inventory`.
 
-**Organizer mode before `organizing`:** Helper empty state (e.g. pick lists available after reconciliation). No split/status actions.
+**Organizer mode when `phase` ≠ `organizing`:** Phase-specific guard copy only ([list-lots.md](./view-specs/list-lots.md#empty-states)):
 
-**Invalid/missing `cupId`:** Redirect **List cups** (nav unchanged).
+| `phase` | Helper (points worker to SessionNav) |
+|---------|--------------------------------------|
+| `counting` | …Open **Reconcile** when counting is done. |
+| `reconciling` | …Finish on **Reconcile**, then declare ready to organize. |
+| `updating_inventory` | …Open **Reconcile** to **export** your Bricklink update. |
+
+**Cup mode — missing / invalid `cupId`:** Missing → immediate redirect `/cups`. Invalid → redirect after `GET …/cups` confirms id absent.
 
 ### 7. Part-out reconciliation
 

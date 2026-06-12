@@ -90,7 +90,7 @@ Session lead specifies the LEGO **set number** and **condition** (New or Used), 
 | Display name missing (route guard) | Redirect to `/` before New session renders — user never sees the form without a name from Home |
 | Display name missing (on submit) | Destructive alert: Enter your display name first — use **Back to Home** (edge case: name cleared after arrival) |
 | Label | Set number |
-| Set search picker | [`SetSearchCombobox`](../../src/components/SetSearchCombobox.vue) — wraps [`FilterablePicker`](../../src/components/FilterablePicker.vue); searchable **fixture set catalog** in Unit 0 (live catalog/API in Unit 1+); placeholder e.g. `70404-1`; default selection `70404-1` (editable). |
+| Set search picker | [`SetSearchCombobox`](../../src/components/SetSearchCombobox.vue) — wraps [`FilterablePicker`](../../src/components/FilterablePicker.vue). **Unit 0:** fixture catalog in repo. **Unit 1+:** same UI; data from **static set catalog** (`config/set-catalog.json` or `GET /api/v1/bricklink/sets?q=` — server filters bundled JSON). Not live BrickLink set search. Placeholder e.g. `70404-1`; default `70404-1`. |
 | **Condition** (radio) | New · Used — **no default selected** |
 | Submit button | Create session & fetch part-out — disabled while request in flight or set number fails client pattern validation |
 
@@ -335,7 +335,7 @@ Server-side on create: normalize `setNumber`, derive `itemNo` (base before first
 ### Unit 1+ (live)
 
 - [ ] **Back to Home** control navigates to `/`
-- [ ] SetSearchCombobox backed by live set catalog/API (replaces fixture catalog)
+- [ ] SetSearchCombobox backed by **static bundled set catalog** (same entries as Unit 0 fixture, served via config or `GET …/bricklink/sets`)
 - [ ] Client pattern validation blocks invalid format before submit; inline alert shown
 - [ ] Invalid set (422): fixed client wrapper copy; optional server message as secondary detail
 - [ ] BrickLink `itemNo` is base before first `-` (e.g. `70404-2` → `70404`)
@@ -427,17 +427,17 @@ Reviewed 2026-06-12 against [session-phases-state.mmd](../diagrams/session-phase
 
 | # | Topic | Notes |
 |---|-------|-------|
-| A1 | Set catalog source for SetSearchCombobox | **Unit 0:** fixture catalog in repo. **Unit 1+:** live API/catalog (Tech Spec). |
+| A1 | Set catalog source for SetSearchCombobox | **Unit 0:** fixture catalog. **Unit 1+:** static bundled JSON (Option A) — not live BrickLink search. |
 | A2 | Normalize timing | Append `-1` on blur **or** submit — both valid; UX if user blurs `70404` then changes mind before submit is unspecified. |
 | A3 | Unit 0 storyboard | Fixture simulates successful create with lines; no 422 or network-error paths in storyboard — acceptable for Unit 0. |
 
 ## Open questions
 
-1. **SetSearchCombobox live data source (Unit 1+)** — Which API or catalog backs set search after Unit 0 fixture catalog?
+- None at this time.
 
 **Resolved (Dave 2026-06-12):**
 
-| SetSearchCombobox | **Unit 0** — fixture set catalog in storyboard; **Unit 1+** — live source TBD |
+| SetSearchCombobox | **Unit 0** — fixture catalog. **Unit 1+** — static bundled set catalog (`config/set-catalog.json` or `GET /api/v1/bricklink/sets?q=`) |
 
 | Topic | Decision |
 |-------|----------|
