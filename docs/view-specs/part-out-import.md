@@ -1,7 +1,7 @@
 # Part-out import
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-12 (Dave product decisions — actors, confirm UX, thumbnails)
+**Last updated:** 2026-06-12 (Dave product decisions — actors, confirm UX, thumbnails; create-time fetch error Loading then Error)
 
 ---
 
@@ -63,6 +63,7 @@ While `phase === 'importing'`, this view is the **only** session-scoped screen �
 | **Helper text during fetch error** | Keep *“Curate the fetched part-out list before counting begins.”* visible above empty error table + **Refetch** (alongside loading spinner rules). |
 | **Thumbnail (mobile)** | **100×100 px**, **1:1** aspect ratio; `object-fit: contain` so the part image scales inside the cell without cropping; max-width/height on narrow viewports so row height stays reasonable. |
 | **Remarks filter/search** | **Out of scope for MVP** — no filter or search on Remarks column. |
+| **Create-time fetch error entry** | When user arrives from [New session](./new-session.md) with `partOutFetchStatus=error` and zero lines: **Loading then Error** — run `GET …/part-out/lines` on mount (spinner); if still empty/failed, show **Error** (empty table + Refetch). **No** auto-refetch on mount. |
 
 ### Where actions navigate
 
@@ -94,6 +95,16 @@ Read-only strip below the page heading (`data-testid="session-import-context"`):
 | Set number | `GET /api/v1/sessions/:id` → `setNumber` | e.g. `70404-1` |
 | Condition | `partOutOptions.condition` | **New** or **Used** (human label) |
 | Fetch status | `part_out_fetch_status` | Drives [Loading & fetch states](#loading--fetch-states); no separate badge required for MVP |
+
+### Create-time fetch error entry
+
+When navigation follows [New session create with network failure](./new-session.md#submit-outcomes-unit-1) (`partOutFetchStatus=error`, zero persisted lines):
+
+1. **Loading** — Same as any mount: spinner + “Loading part-out…” while `GET …/part-out/lines` runs.
+2. **Error** — If response is empty or indicates fetch failure, show empty table + **Refetch** (no automatic `POST …/refetch` on mount).
+3. User taps **Refetch** to retry (server retry rules apply per [Refetch](#loading--fetch-states) below).
+
+This path is **not** ErrorState immediately and **not** auto-refetch-on-mount.
 
 ### Loading & fetch states
 
@@ -250,6 +261,7 @@ Footer **Exclude** maps to `POST …/part-out/lines/bulk-exclude` in live mode. 
 - [ ] Tab counts update when lines move between Included and Excluded
 - [ ] SessionNav **hidden** while `phase === 'importing'`; visible after confirm
 - [ ] Spinner shown during initial load and network retry (≤3 attempts)
+- [ ] Create-time fetch error ([new-session](./new-session.md)): **Loading then Error** on mount — spinner during `GET …/lines`, then empty table + Refetch if still failed; **no** auto-refetch on mount
 - [ ] **Any joined worker** may exclude, restore, and confirm
 - [ ] Thumbnails **100×100 px**, 1:1 aspect ratio, `object-fit: contain`
 - [ ] Helper text *“Curate the fetched part-out list…”* visible during Error state (empty table + Refetch)

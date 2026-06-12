@@ -1,5 +1,6 @@
 %% Part-out import — loading & fetch states (client UI)
-%% Source: docs/view-specs/part-out-import.md#loading--fetch-states
+%% Sources: docs/view-specs/part-out-import.md#loading--fetch-states,
+%%          docs/view-specs/new-session.md#submit-outcomes-unit-1 (create-time fetch error → import)
 
 stateDiagram-v2
     direction TB
@@ -13,8 +14,10 @@ stateDiagram-v2
     Ready --> Ready: "manual refetch success (preserves exclusions)"
 
     note right of Loading
-        Spinner shown.
-        Exclude and Confirm disabled.
+        Spinner shown. Exclude and Confirm disabled.
+        Entry from New session create with
+        partOutFetchStatus=error also starts at Loading
+        (GET lines then Error if empty — no auto-refetch)
     end note
 
     note right of Ready

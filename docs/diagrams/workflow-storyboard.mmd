@@ -42,7 +42,8 @@ flowchart TB
     HOME -->|"Enter existing session<br>(join by phase)"| LOTS_ORG
     HOME -->|"Enter existing session<br>(join by phase)"| STORE_UPDATE
 
-    NEW -->|"POST /sessions<br>fetch part-out"| IMPORT
+    NEW -->|"POST /sessions<br>fetch ok or network error (201)"| IMPORT
+    NEW -->|"Invalid set (422)<br>no session created"| NEW
 
     IMPORT -->|"Curate exclude and restore<br>included lines"| IMPORT
     IMPORT -->|"Confirm and begin counting"| LOT
