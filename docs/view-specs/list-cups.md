@@ -1,7 +1,7 @@
 # List cups
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-12
+**Last updated:** 2026-06-12 (spec–diagram review)
 
 ---
 
@@ -27,6 +27,15 @@
 - [Storyboard walkthrough § 5. List cups](../support/storyboard.md#5-list-cups)
 - [Lot form — Cup association](./lot-form.md#cup-association)
 - [Shared chrome](./README.md#shared-chrome)
+
+## Diagrams
+
+| Diagram | Role |
+|---------|------|
+| [cup-tap-routing.mmd](../diagrams/cup-tap-routing.mmd) | **Primary** — cup card tap and Add new lot routing |
+| [view-navigation.mmd](../diagrams/view-navigation.mmd) | SessionNav **Cups**, empty-cups redirect, cup → lot/lots edges |
+| [session-phases-state.mmd](../diagrams/session-phases-state.mmd) | Phase visibility for SessionNav **Cups** |
+| [workflow-storyboard.mmd](../diagrams/workflow-storyboard.mmd) | Storyboard walkthrough § 5 |
 
 ## Purpose
 
@@ -189,6 +198,18 @@ Routing uses `lotCount` for branch choice and `soleLotId` for the 1-lot navigati
 | `cup-{cupId}` | Cup card (dynamic) |
 | `add-lot` | Add new lot button |
 
+## Spec–diagram review (2026-06-12)
+
+| Spec section | Diagram | Finding | Severity |
+|--------------|---------|---------|----------|
+| [Cup routing rules](#cup-routing-rules-product) | `cup-tap-routing.mmd` | 0 / 1 / 2+ branches and Add new lot → `/lot` without `cupId` match locked decisions and [Entry & exit](#entry--exit). | Pass |
+| [Empty states](#empty-states) — no cups in session | `view-navigation.mmd` CUPS node | Label notes "empty cups redirects to /lot"; edge not drawn separately from tap routing. Spec behavior is clear; diagram is abbreviated. | Advisory |
+| [Phase access](#overview) | `view-navigation.mmd` NAV_CUPS, `session-phases-state.mmd` | **Cups** limited to `counting`, `reconciling`, `organizing`; hidden in `updating_inventory` per session-phases note. Aligns with spec. | Pass |
+| [Phase access](#overview) | `workflow-storyboard.mmd` counting_phase subgraph | CUPS node label says "also reconciling and organizing" though subgraph title is `counting`. Intentional compression — not a product conflict. | Advisory |
+| [Cup tap — 1 lot](#locked-decisions) `soleLotId` | `cup-tap-routing.mmd` | Diagram uses `soleLotId` label on 1-lot branch; matches [Data requirements](#data-requirements). | Pass |
+| [Entry & exit](#entry--exit) back from cup-mode List lots | `view-navigation.mmd` | `LOTS_CUP → CUPS` via "Back or SessionNav Cups" matches spec table. | Pass |
+
 ## Open questions
 
 - User-editable cup labels post-MVP.
+- **Dave:** Should `view-navigation.mmd` add an explicit mount-time edge for empty `GET …/cups` → `/lot` redirect (distinct from tapping a 0-lot cup)?
