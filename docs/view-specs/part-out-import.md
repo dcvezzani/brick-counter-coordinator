@@ -1,7 +1,7 @@
 # Part-out import
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-11
+**Last updated:** 2026-06-12 (spec–diagram review)
 
 ---
 
@@ -28,6 +28,15 @@
 - [New session — fetch failure (network)](./new-session.md#submit-outcomes-unit-1) — navigate here with `partOutFetchStatus=error`
 - [Shared chrome — SessionNav during importing](./README.md#sessionnav-bottom-bar)
 - [Home — Toast notifications](./home.md#toast-notifications)
+
+## Diagrams
+
+| Diagram | Role |
+|---------|------|
+| [part-out-import-fetch-state.mmd](../diagrams/part-out-import-fetch-state.mmd) | Loading, retry, error/refetch, and Ready curation gates |
+| [session-phases-state.mmd](../diagrams/session-phases-state.mmd) | `importing` → `counting` via confirm; SessionNav hidden |
+| [view-navigation.mmd](../diagrams/view-navigation.mmd) | New session / join → import; Confirm → Lot form; nav hidden during import |
+| [workflow-storyboard.mmd](../diagrams/workflow-storyboard.mmd) | Storyboard § 3; curation loop and confirm → Lot form |
 
 ## Purpose
 
@@ -79,16 +88,7 @@ Read-only strip below the page heading (`data-testid="session-import-context"`):
 
 On mount (and on manual refetch), load part-out lines from `GET /api/v1/sessions/:id/part-out/lines`. Show a spinner (`data-testid="import-loading-spinner"`) during load and during automatic network retries (up to **3 attempts**, aligned with [new-session.md](./new-session.md)).
 
-```mermaid
-stateDiagram-v2
-  [*] --> Loading: view_mount
-  Loading --> Ready: lines_loaded
-  Loading --> Retrying: network_error
-  Retrying --> Ready: retry_success
-  Retrying --> ErrorToast: retries_exhausted
-  ErrorToast --> Retrying: user_refetch
-  Ready --> Ready: refetch_success
-```
+Canonical state machine: [part-out-import-fetch-state.mmd](../diagrams/part-out-import-fetch-state.mmd) (`ErrorState` = empty table + **Refetch**, not toast-only).
 
 | State | UI | Exclude + Confirm |
 |-------|-----|-------------------|
@@ -96,7 +96,7 @@ stateDiagram-v2
 | **Retrying** (network, ≤3 attempts) | Spinner + retry hint | **Disabled** |
 | **Ready** (≥1 line in payload) | Table populated | Exclude per checkbox rules; Confirm enabled only if **included count ≥ 1** |
 | **Error** (non-network or retries exhausted) | Empty table + **Refetch** button (`data-testid="refetch-part-out"`) | **Disabled** until refetch succeeds |
-| **All excluded** (lines exist, included count 0) | Tabs populated; Included tab empty | Confirm **disabled**; toast on confirm attempt |
+| **All excluded** (lines exist, included count 0) | Tabs populated; Included tab empty | Confirm **disabled** (see [Open questions](#open-questions) — toast vs disabled-only) |
 
 **Refetch:** No confirmation dialog before refetch. Server retries Bricklink POST up to 3× on network errors. On success, **existing exclusions are preserved** (merge by stable line identity — server line id or partId + colorId + condition + remarks). Non-network failures after retries → toast with server message.
 
@@ -168,7 +168,7 @@ Follow [home.md — Toast notifications](./home.md#toast-notifications): top-rig
 
 | Toast | Trigger |
 |-------|---------|
-| At least one part-out line must be included before counting begins. | **Confirm** tapped when included count is 0 |
+| At least one part-out line must be included before counting begins. | **Confirm** tapped when included count is 0 — **only if** Confirm is enabled-with-validation; if Confirm stays disabled at 0 included, omit this toast (see [Open questions](#open-questions)) |
 | {error message} | Non-network fetch/refetch failure after retries exhausted |
 | Part-out list restored. | After successful **Restore all** (optional; may omit in MVP) |
 
@@ -236,7 +236,7 @@ Footer **Exclude** maps to `POST …/part-out/lines/bulk-exclude` in live mode. 
 - [ ] Tab counts update when lines move between Included and Excluded
 - [ ] SessionNav **hidden** while `phase === 'importing'`; visible after confirm
 - [ ] Spinner shown during initial load and network retry (≤3 attempts)
-- [ ] **Confirm** disabled when no lines loaded or included count is 0; toast when confirm attempted with zero included
+- [ ] **Confirm** disabled when no lines loaded or included count is 0; zero-included feedback per locked decision in [Open questions](#open-questions) (disabled-only vs toast-on-tap)
 - [ ] **Refetch** available on fetch error; no pre-refetch dialog; exclusions preserved after successful refetch
 - [ ] **Confirm & begin counting** advances session to counting phase and opens **Lot form**
 - [ ] Excluded lines omitted from reconciliation comparison (included lines only)
@@ -286,7 +286,27 @@ Footer **Exclude** maps to `POST …/part-out/lines/bulk-exclude` in live mode. 
 
 `bulk-exclude` (table header) is **deprecated** — spec targets `exclude-import` in the view footer.
 
+## Spec–diagram review (2026-06-12)
+
+| Spec section | Diagram | Finding | Severity |
+|--------------|---------|---------|----------|
+| [Entry & exit](#entry--exit) — create / join → import | `view-navigation.mmd`, `workflow-storyboard.mmd` | `NEW → IMPORT`; Home join `importing` → `/import`; matches [home.md — Post-join routing](./home.md#post-join-routing). | Pass |
+| [Entry & exit](#entry--exit) — Confirm → Lot form | `view-navigation.mmd`, `workflow-storyboard.mmd`, `session-phases-state.mmd` | Confirm advances to Lot form; `importing → counting` via `POST …/part-out/confirm`. | Pass |
+| SessionNav during import | `view-navigation.mmd`, `session-phases-state.mmd`, [README](./README.md#sessionnav-bottom-bar) | Nav hidden while `phase === 'importing'`; import is only session-scoped screen. | Pass |
+| [Loading & fetch states](#loading--fetch-states) | [part-out-import-fetch-state.mmd](../diagrams/part-out-import-fetch-state.mmd) | Loading / Retrying / ErrorState / Ready match spec table; canonical `.mmd` uses `ErrorState` (empty table + Refetch), not toast-only. Inline duplicate removed from this spec. | Pass (after sync) |
+| **All excluded** curation | `part-out-import-fetch-state.mmd` note on Ready | Included count 0 disables Confirm within **Ready** — not a separate fetch state. Aligns with spec table. | Pass |
+| [Curation workflow](#curation-workflow) | `workflow-storyboard.mmd` | Self-loop on IMPORT for exclude/restore; Confirm → LOT. | Pass |
+| [Primary actor(s)](#overview) | [Product Spec — Scenario 3](../../feature/part-out-coordinator/product-spec.md#key-scenarios), [planned-views-services § 3](../support/planned-views-services.md#3-part-out-import) | View spec: **any joined worker**. Product spec and planned-views-services: **lead** reviews / confirms / excludes. [home.md](./home.md#post-join-routing) allows join during `importing`. | **Blocking** — Dave must lock actor |
+| Confirm disabled vs zero-included toast | This spec — [Layout](#layout--controls), [Messages](#messages--feedback) | Confirm **disabled** when included count is 0, but toast table still lists tap-on-zero-included. Mutually exclusive UX patterns. | **Blocking** — pick one |
+| [Data requirements — Write](#write) bulk exclude | [planned-views-services § 3](../support/planned-views-services.md#3-part-out-import) | Planned doc still describes per-row `PATCH { excluded: true }`; this spec targets footer `POST …/bulk-exclude` + checkboxes. Follow-up pass on planned-views-services. | Advisory |
+| Import phase SessionNav | `workflow-storyboard.mmd` | Import node did not note nav hidden; added in diagram pass. | Advisory (fixed) |
+| Helper text during error | This spec — [Messages](#messages--feedback) | “Curate the fetched part-out list…” marked always when not loading; unclear during **Error** empty-table state. | Advisory |
+
 ## Open questions
 
+- **Dave — Who may curate and confirm?** This spec says **any joined worker**; [Product Spec Scenario 3](../../feature/part-out-coordinator/product-spec.md#key-scenarios) and [Application views](../../feature/part-out-coordinator/product-spec.md#application-views) say **lead**. Workers can join during `importing` ([home.md — Post-join routing](./home.md#post-join-routing)). Lock: lead-only vs any joined worker for exclude/restore/confirm?
+- **Dave — Concurrent curation:** If multiple workers are on import simultaneously, should exclude/restore mutations sync in real time (WebSocket) or last-write-wins / lead-only edits?
+- **Dave — Confirm at zero included:** Keep **disabled** Confirm only (no toast), or enable Confirm and show toast “At least one part-out line must be included…” on tap?
+- **Dave — Helper copy during fetch error:** Show “Curate the fetched part-out list…” above empty error table, or replace with error-specific copy until refetch succeeds?
 - Thumbnail size / aspect ratio on mobile?
 - Remarks-driven filtering or search (out of scope for MVP)?
