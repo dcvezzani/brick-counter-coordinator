@@ -17,7 +17,7 @@ flowchart TB
 
     subgraph counting_phase["Phase: counting"]
         LOT["Lot form<br>/session/{id}/lot/{lotId}"]
-        CUPS["List cups<br>/session/{id}/cups"]
+        CUPS["List cups<br>/session/{id}/cups<br>also reconciling and organizing"]
         LOTS_CUP["List lots cup mode<br>?mode=cup&cupId="]
     end
 
@@ -52,11 +52,17 @@ flowchart TB
     LOT <-->|"SessionNav"| RECON
     LOT <-->|"SessionNav"| HOME
 
+    RECON <-->|"SessionNav Cups"| CUPS
+    LOTS_ORG <-->|"SessionNav Cups"| CUPS
+
     CUPS -->|"0 lots cupId pinned"| LOT
-    CUPS -->|"1 lot"| LOT
+    CUPS -->|"1 lot soleLotId"| LOT
     CUPS -->|"2+ lots"| LOTS_CUP
-    CUPS -->|"Add new lot"| LOT
+    CUPS -->|"Add new lot no cupId"| LOT
+    CUPS -->|"empty cups list"| LOT
+
     LOTS_CUP -->|"Edit lot"| LOT
+    LOTS_CUP -->|"Back or SessionNav Cups"| CUPS
 
     LOT -->|"Lead advances phase<br>counting to reconciling"| RECON
     RECON -->|"Edit row"| LOT

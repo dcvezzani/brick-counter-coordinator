@@ -134,21 +134,21 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 | Service | Endpoints / mechanism |
 |---------|----------------------|
-| Cups | `GET /api/v1/sessions/:id/cups` |
-| Lots | Indirect — cup payload includes lot counts per cup |
-| WebSocket | `lot.updated` refreshes counts while view is open |
+| Cups | `GET /api/v1/sessions/:id/cups` — `id`, `label`, `lotCount`, `soleLotId` (when `lotCount === 1`) |
+| Lots | Indirect — `soleLotId` on cups payload for 1-lot tap routing (no secondary lots fetch) |
+| WebSocket | `lot.updated` refreshes `lotCount` and `soleLotId` while view is open |
 | Fixture session (Unit 0) | Static cup/lot graph for branching demo |
 
 ### Example usage
 
-**Trigger:** Worker opens **List cups** from session navigation during the `counting` phase.
+**Trigger:** Worker opens **List cups** from session navigation when phase is `counting`, `reconciling`, or `organizing` (SessionNav **Cups** hidden in `importing`, `updating_inventory`, `closed`).
 
-**Flow:** Client calls `GET /api/v1/sessions/:id/cups` and renders each cup with its lot count.
+**Flow:** Client calls `GET /api/v1/sessions/:id/cups`. If the response is an empty array, redirect immediately to `/session/:sessionId/lot` (new lot). Otherwise render each cup with label and lot count.
 
 **Deliverables:** Cup list with labels and lot counts. **Add new lot** → `/session/:sessionId/lot` (no pinned cup). Tapping a cup branches on `lotCount`:
 
 - **Zero lots** → `/session/:sessionId/lot?cupId=:cupId` (cup pinned)
-- **One lot in cup** → `/session/:sessionId/lot/:lotId`
+- **One lot in cup** → `/session/:sessionId/lot/:soleLotId` (from cups payload)
 - **Multiple lots** → `/session/:sessionId/lots?mode=cup&cupId=:cupId`
 
 ---

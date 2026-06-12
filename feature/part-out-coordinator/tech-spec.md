@@ -131,8 +131,8 @@ brick-counter-coordinator/
 |-------|----------|----------|
 | `importing` | Lead | Part-out import (curate fetched list) |
 | `counting` | Counters, lead | Lot form, List cups (Home is global entry, not phase-scoped) |
-| `reconciling` | Lead, workers resolve | Part-out reconciliation — Edit, Resolve, Declare ready to organize |
-| `organizing` | Organizers | List lots (organizer mode) — split, mark lines, Declare ready to import |
+| `reconciling` | Lead, workers resolve | Part-out reconciliation — Edit, Resolve, Declare ready to organize; List cups (browse) |
+| `organizing` | Organizers | List lots (organizer mode) — split, mark lines, Declare ready to import; List cups (browse) |
 | `updating_inventory` | Lead / any worker | Part-out reconciliation — Reconciled export XML |
 | `closed` | — | Read-only or redirect Home |
 
@@ -289,7 +289,7 @@ Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session i
 | `GET` | `/sessions/:id/lots` | Query: `cupId`, `workerId`, `mode` |
 | `GET` | `/sessions/:id/lots/:lotId` | Optional — single lot for edit pre-fill; MVP may use list cache instead |
 | `POST` | `/sessions/:id/lots` | Create/update lot; returns duplicate info if exists |
-| `GET` | `/sessions/:id/cups` | All cups with lot counts |
+| `GET` | `/sessions/:id/cups` | All cups — each: `id`, `label`, `lotCount`, `soleLotId` (present when `lotCount === 1`) |
 | `POST` | `/sessions/:id/cups` | Create cup (optional MVP auto-cup per save) |
 
 **Create lot response** when duplicate:

@@ -1,13 +1,14 @@
 %% View navigation and post-join routing
 %% Sources: docs/view-specs/README.md, home.md, list-cups.md
+%% Cup tap detail: cup-tap-routing.mmd
 
 flowchart LR
     HOME["Home<br>/"]
 
-    subgraph sessionNav["SessionNav visible when sessionId present<br>hidden during importing"]
+    subgraph sessionNav["SessionNav when sessionId present<br>hidden during importing"]
         direction TB
         NAV_HOME["Home to /"]
-        NAV_CUPS["Cups to /cups"]
+        NAV_CUPS["Cups to /cups<br>counting reconciling organizing only"]
         NAV_LOT["Lot to /lot"]
         NAV_LOTS["Lots to /lots?mode=organizer"]
         NAV_RECON["Reconcile to /reconciliation"]
@@ -15,33 +16,36 @@ flowchart LR
 
     NEW["New session<br>/session/new"]
     IMPORT["Part-out import<br>/import"]
-    LOT["Lot form<br>/lot/{lotId}"]
-    CUPS["List cups<br>/cups"]
-    LOTS_CUP["List lots<br>cup mode"]
-    LOTS_ORG["List lots<br>organizer mode"]
-    RECON["Part-out<br>reconciliation"]
+    LOT_NEW["Lot form new<br>/lot or /lot?cupId="]
+    LOT_EDIT["Lot form edit<br>/lot/:lotId"]
+    CUPS["List cups<br>/cups<br>empty cups redirects to /lot"]
+    LOTS_CUP["List lots cup mode<br>?mode=cup&cupId="]
+    LOTS_ORG["List lots organizer mode"]
+    RECON["Part-out reconciliation"]
 
     HOME --> NEW
     NEW --> IMPORT
 
     HOME -->|"join importing"| IMPORT
-    HOME -->|"join counting"| LOT
+    HOME -->|"join counting"| LOT_NEW
     HOME -->|"join reconciling"| RECON
     HOME -->|"join organizing"| LOTS_ORG
     HOME -->|"join updating_inventory"| RECON
 
-    IMPORT -->|"Confirm"| LOT
+    IMPORT -->|"Confirm"| LOT_NEW
 
     NAV_HOME --> HOME
     NAV_CUPS --> CUPS
-    NAV_LOT --> LOT
+    NAV_LOT --> LOT_NEW
     NAV_LOTS --> LOTS_ORG
     NAV_RECON --> RECON
 
-    CUPS -->|"lotCount 0"| LOT
-    CUPS -->|"lotCount 1"| LOT
+    CUPS -->|"Add new lot no cupId"| LOT_NEW
+    CUPS -->|"lotCount 0 cupId pinned"| LOT_NEW
+    CUPS -->|"lotCount 1 soleLotId"| LOT_EDIT
     CUPS -->|"lotCount 2 or more"| LOTS_CUP
-    LOTS_CUP --> LOT
-    LOTS_ORG --> LOT
+    LOTS_CUP -->|"Edit row"| LOT_EDIT
+    LOTS_CUP -->|"Back or SessionNav Cups"| CUPS
+    LOTS_ORG --> LOT_EDIT
     LOTS_ORG --> LOTS_CUP
-    RECON --> LOT
+    RECON --> LOT_EDIT

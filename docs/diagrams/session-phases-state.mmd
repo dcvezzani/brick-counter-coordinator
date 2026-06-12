@@ -1,6 +1,6 @@
 %% Session phase state machine
 %% Sources: docs/view-specs/home.md, part-out-import.md, part-out-reconciliation.md,
-%%          list-lots.md, feature/part-out-coordinator/product-spec.md
+%%          list-cups.md, list-lots.md, feature/part-out-coordinator/product-spec.md
 %%
 %% XML export and Bricklink mass update occur in updating_inventory, after organizing.
 
@@ -25,6 +25,7 @@ stateDiagram-v2
         Default landing Lot form.
         SessionNav visible.
         Workers record lots and browse cups.
+        List cups via SessionNav Cups.
     end note
 
     note right of reconciling
@@ -33,6 +34,7 @@ stateDiagram-v2
         Edit lots and Resolve discrepancies.
         Declare ready to organize when all cleared.
         Post-join route /reconciliation
+        List cups still browsable via SessionNav Cups.
     end note
 
     note right of organizing
@@ -42,6 +44,7 @@ stateDiagram-v2
         Mark organizer lists complete.
         Declare ready to import when all lists complete.
         Post-join route /lots?mode=organizer
+        List cups still browsable via SessionNav Cups.
     end note
 
     note right of updating_inventory
@@ -49,4 +52,5 @@ stateDiagram-v2
         Bricklink mass update call.
         Confirm store inventory updated.
         Post-join route /reconciliation
+        SessionNav Cups hidden.
     end note

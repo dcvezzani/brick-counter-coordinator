@@ -56,13 +56,13 @@ All session views (everything except **Home** and **New session**) render inside
 
 Visible when the route includes `sessionId`, **except** during **Part-out import** while `phase === 'importing'` — bottom nav is **hidden** until the worker confirms import and the session advances to `counting`. See [part-out-import.md](./part-out-import.md#entry--exit).
 
-| Label | Route | `data-testid` |
-|-------|-------|---------------|
-| Home | `/` | `nav-home` |
-| Cups | `/session/:sessionId/cups` | `nav-cups` |
-| Lot | `/session/:sessionId/lot` | `nav-lot` |
-| Lots | `/session/:sessionId/lots?mode=organizer` | `nav-lots` |
-| Reconcile | `/session/:sessionId/reconciliation` | `nav-reconciliation` |
+| Label | Route | `data-testid` | Phase visibility |
+|-------|-------|---------------|------------------|
+| Home | `/` | `nav-home` | Always (when nav shown) |
+| Cups | `/session/:sessionId/cups` | `nav-cups` | `counting`, `reconciling`, `organizing` only — see [list-cups.md](./list-cups.md#locked-decisions) |
+| Lot | `/session/:sessionId/lot` | `nav-lot` | When nav shown |
+| Lots | `/session/:sessionId/lots?mode=organizer` | `nav-lots` | When nav shown |
+| Reconcile | `/session/:sessionId/reconciliation` | `nav-reconciliation` | When nav shown |
 
 Nav container: `data-testid="session-nav"`.
 

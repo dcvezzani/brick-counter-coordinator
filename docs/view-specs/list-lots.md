@@ -64,6 +64,7 @@ Discrepancy reconciliation lives on [**Part-out reconciliation**](./part-out-rec
 |------|---------------|
 | List cups → multi-lot cup | `?mode=cup&cupId={cupId}` |
 | SessionNav **Lots** | `?mode=organizer` |
+| Organizer mode → **Open cup** | `?mode=cup&cupId={cupId}` |
 
 SessionNav **Lots** is visible whenever the route includes `sessionId` (see [Shared chrome](./README.md#sessionnav-bottom-bar)). Organizer workflow runs in the `organizing` phase **after** [Part-out reconciliation](./part-out-reconciliation.md) discrepancies are resolved and the lead advances phase.
 
@@ -71,6 +72,7 @@ SessionNav **Lots** is visible whenever the route includes `sessionId` (see [Sha
 
 | Action | Destination |
 |--------|-------------|
+| Cup mode → browser back / SessionNav **Cups** | `/session/:sessionId/cups` |
 | **Edit** (table) | `/session/:sessionId/lot/:lotId` |
 | **Open cup** (organizer) | `/session/:sessionId/lots?mode=cup&cupId={cupId}` for that lot's cup |
 | Delete confirm | Stays on list (lot removed) |

@@ -10,7 +10,7 @@ flowchart TD
     ADD -->|No| COUNT{"lotCount<br>on cup"}
 
     COUNT -->|0| LOT_PIN["Lot form<br>/session/:id/lot?cupId={cupId}<br>(cup pinned for save)"]
-    COUNT -->|1| LOT_EDIT["Lot form<br>/session/:id/lot/:lotId<br>(edit sole lot)"]
-    COUNT -->|≥ 2| LOTS_CUP["List lots (cup mode)<br>?mode=cup&cupId={cupId}"]
+    COUNT -->|"1 use soleLotId"| LOT_EDIT["Lot form<br>/session/:id/lot/{soleLotId}<br>(edit sole lot)"]
+    COUNT -->|≥ 2| LOTS_CUP["List lots cup mode<br>?mode=cup&cupId={cupId}"]
 
     LOTS_CUP -->|"Edit row"| LOT_EDIT2["Lot form<br>/session/:id/lot/:lotId"]
