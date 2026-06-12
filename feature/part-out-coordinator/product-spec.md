@@ -94,7 +94,7 @@ Canonical screen inventory from [application-views.md](../../docs/support/applic
 | **Lot form** | Counting entry | A **lot** = part id + color + condition. Enter or find part number, select color, enter count; session condition shown read-only; **Save** or **Save and Add Another**. Part and color required. |
 | **List cups** | Cup navigation | Browse session cups. **Add new lot** opens **Lot form** (part-number cup auto-select on save). Tap cup: **0 lots** → new **Lot form** (cup pinned); **1 lot** → edit lot; **multiple lots** → cup-filtered **List lots**. Counting default landing is **Lot form**, not List cups. |
 | **List lots** | Organizer pick list (per worker) or cup lot picker | **Organizer:** this worker's share of lots (evenly divided, ordered by part id, **Location** from Remarks). Mark lot **moved to storage** or **needs new storage location**; **open lot for editing**; **open associated cup** (cup-filtered List lots); **send list to printer**; **mark entire list complete** when every line is resolved. **Cup mode:** pick a lot from a multi-lot cup (see **List cups**). New lots via SessionNav **Lot** or **List cups** — not on this view. |
-| **Part-out reconciliation** | Reconcile & export | Compare session counts to **included** part-out lines (**thumbnail** + part id + description rows); any joined worker may **Edit** + **Resolve** (sign-off) in `reconciling`; **Declare ready to organize** when cleared; **Reconciled — export XML** in `updating_inventory` → Bricklink **bulk update validation**; **Mark session complete** → `closed`. SessionNav **Reconcile** visible only in `reconciling` and `updating_inventory` (hidden during `counting` and `organizing`). |
+| **Part-out reconciliation** | Reconcile & export | Compare session counts to **included** part-out lines (**thumbnail** + part id + description, Color, Expected, Counted, Delta — no Cond column); **Discrepancies** / **All lines** tabs; any joined worker **Edit** + **Resolve** in `reconciling`; celebratory alert when included lines match; **Declare ready to organize** when every row resolved; SessionNav **Reconcile** from `counting` through `updating_inventory`; **Return to reconciling** from organizing without organizer rollback; export in `updating_inventory`; **Mark session complete** → `closed`; phase-change **toasts** on all session views. |
 
 ### View naming note
 
@@ -164,7 +164,7 @@ Lead advances `counting` → `reconciling` via API. **Declare ready to organize*
    - **One lot** in the cup → opens **Lot form** for that lot.
    - **Multiple lots** in the cup → opens **List lots** filtered to that cup; worker picks a lot, then **Lot form**.
 
-7. **Reconcile (Part-out reconciliation)** — Lead advances to `reconciling`; any joined worker opens **Part-out reconciliation**. **Included** part-out lines are compared to session counts; **unexpected counts** (lots not on included list) appear with expected 0. **Discrepancies** tab lists all `!resolved` rows; celebratory message when included lines all match. Workers **Edit** and **Resolve** every line explicitly before **Declare ready to organize**.
+7. **Reconcile (Part-out reconciliation)** — SessionNav **Reconcile** available from `counting` through `updating_inventory`. In `reconciling`: **Discrepancies** / **All lines** tabs, **Edit**, explicit **Resolve** on every line, celebratory alert when included lines match. **Declare ready to organize** when all rows resolved. During `organizing`: **Return to reconciling** without losing organizer progress.
 
 8. **Declare ready to organize** — When every row is resolved, lead or worker presses **Declare ready to organize** → `organizing`.
 
@@ -259,7 +259,7 @@ Resolved in [qa-001.md](../../docs/support/qa-001.md):
 | 2026-06-12 | **Part-out import UX (Dave):** **Any joined worker** may curate/confirm; Confirm **disabled** at zero included (no toast); concurrent curation **last-write-wins**; keep curate helper during fetch error; thumbnails **100×100 px** 1:1 ([part-out-import.md](../../docs/view-specs/part-out-import.md)). |
 | 2026-06-12 | **List lots view spec:** Two modes on route (`cup`, `organizer`); reconciliation is Part-out reconciliation only. **Add lot** via SessionNav **Lot** / **List cups**, not on List lots. **Split list** any worker (lead typically). **Mark complete** gated until all lines resolved. **Location** column required in organizer mode. |
 | 2026-06-12 | **Session lifecycle (Model C):** `reconciling` → **Declare ready to organize** → `organizing` → **Declare ready to import** → `updating_inventory` → **Reconciled — export XML** (phase unchanged) → manual Bricklink handoff → **Mark session complete** → `closed`. See [home.md](../../docs/view-specs/home.md), [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md). |
-| 2026-06-12 | **Reconciliation finalize (Dave):** Unexpected counts shown (`qtyExpected = 0`); explicit **Resolve** on every line; celebratory match message; export warnings inline alert; `closed` redirects Home; `organizing` → `reconciling` without organizer rollback. |
+| 2026-06-12 | **Reconciliation MVP scope (Dave):** Promote Unit 4 gaps to requirements — tabs, Edit, live API, Mark complete, phase toasts, Reconcile nav from counting onward, no Cond column, refactor legacy List lots mode. |
 
 ## Related documents
 

@@ -62,9 +62,19 @@ Visible when the route includes `sessionId`, **except** during **Part-out import
 | Cups | `/session/:sessionId/cups` | `nav-cups` | `counting`, `reconciling`, `organizing` only — see [list-cups.md](./list-cups.md#locked-decisions) |
 | Lot | `/session/:sessionId/lot` | `nav-lot` | When nav shown |
 | Lots | `/session/:sessionId/lots?mode=organizer` | `nav-lots` | When nav shown |
-| Reconcile | `/session/:sessionId/reconciliation` | `nav-reconciliation` | `reconciling` and `updating_inventory` only — hidden during `importing`, `counting`, and `organizing` — see [part-out-reconciliation.md](./part-out-reconciliation.md#locked-decisions) |
+| Reconcile | `/session/:sessionId/reconciliation` | `nav-reconciliation` | `counting`, `reconciling`, `organizing`, `updating_inventory` — hidden during `importing` and `closed` — see [part-out-reconciliation.md](./part-out-reconciliation.md#locked-decisions) |
 
 Nav container: `data-testid="session-nav"`.
+
+### Toast notifications
+
+AppShell hosts toasts on **every session view** (and Home when applicable). Follow [home.md — Toast notifications](./home.md#toast-notifications): top-right viewport, readable copy, configurable TTL, auto-fade dismiss.
+
+| Event | Toast (example copy) |
+|-------|----------------------|
+| `session.phase` WebSocket | e.g. Session moved to reconciling / organizing / updating inventory |
+
+Phase-change toasts apply to all joined workers on any page — not only the view that triggered the advance.
 
 ## Template
 

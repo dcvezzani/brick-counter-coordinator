@@ -207,7 +207,7 @@ Shared across modes: navigation to **Lot form**, **Open cup** (organizer → cup
 
 ### Example usage
 
-**Trigger:** Any joined worker opens **Part-out reconciliation** when session phase is `reconciling` or `updating_inventory`. SessionNav **Reconcile** hidden during `importing`, `counting`, and `organizing` (reconciliation must complete before organizing via **Declare ready to organize**).
+**Trigger:** Any joined worker opens **Part-out reconciliation** when session phase is `counting`, `reconciling`, `organizing`, or `updating_inventory`. SessionNav **Reconcile** hidden during `importing` and `closed`.
 
 **Flow:** Client calls `GET /api/v1/sessions/:id/reconciliation` to load rows comparing summed session lot totals to **included** part-out lines plus **unexpected-count** rows (`qtyExpected = 0` for lots not on included list). Open row = `!resolved`.
 

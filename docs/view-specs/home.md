@@ -135,7 +135,9 @@ Unit 1+: connect `useWebSocket` after successful join (before navigation). Displ
 
 ## Toast notifications
 
-When the user needs to be notified (non-blocking status or outcome feedback on Home):
+AppShell hosts toasts on **every session view** (see [README — Toast notifications](./README.md#toast-notifications)). Home uses the same host when applicable.
+
+When the user needs to be notified (non-blocking status or outcome feedback):
 
 | Requirement | Behavior |
 |-------------|----------|
@@ -147,7 +149,7 @@ When the user needs to be notified (non-blocking status or outcome feedback on H
 
 | Pattern | Use for |
 |---------|---------|
-| **Toast** | Transient notifications the user should notice but does not need to dismiss manually |
+| **Toast** | Transient notifications the user should notice but does not need to dismiss manually — including **`session.phase`** changes on any session view |
 | **Destructive alert (page)** | Blocking validation before an action can proceed (e.g. empty display name) |
 | **Destructive alert / empty state (dialog)** | Errors or empty state while the open sessions dialog is open and the user must act |
 

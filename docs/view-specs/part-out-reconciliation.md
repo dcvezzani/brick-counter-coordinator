@@ -1,7 +1,7 @@
 # Part-out reconciliation
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-12 (Dave product decisions — full reconciliation open-question pass)
+**Last updated:** 2026-06-12 (Dave MVP gap promotion + nav/toast/column decisions)
 
 ---
 
@@ -57,10 +57,14 @@ Compare session counted totals against **included** part-out lines (post-import 
 | **Return to reconciling from organizing** | If a count error surfaces during organizing, lead may advance phase **`organizing` → `reconciling`** via `POST …/sessions/:id/phase` — **no rollback** of organizer pick-list progress; **Moved** / **New loc** checks remain when session returns to `organizing` |
 | **Lot fixes** | Workers correct counts via **Edit** → **Lot form** separately from Resolve |
 | **Table scope** | **Tabs:** **Discrepancies** (rows with `!resolved`, default) and **All lines** (full comparison: included part-out lines **plus** unexpected-count rows). When every row is resolved, Discrepancies tab shows success/empty state; **All lines** tab always available |
-| **Table row UX** | Match [part-out-import.md](./part-out-import.md): **Thumbnail**, **Part** (id + description), Color, Cond, Expected, Counted, Delta, Actions — thumbnails **100×100 px**, 1:1, `object-fit: contain` |
+| **Table row UX** | Match [part-out-import.md](./part-out-import.md): **Thumbnail**, **Part** (id + description), Color, Expected, Counted, **Delta**, Actions — thumbnails **100×100 px**, 1:1, `object-fit: contain`. **No Cond column** — session is New **or** Used (condition is session-scoped, not per row) |
+| **Delta column** | On both tabs; **Delta = 0** styled muted/neutral |
+| **Edit (unexpected count)** | Row with no session lot yet: **Edit** opens **new Lot form** pre-filled with part, color, and session condition |
+| **Resolve after lot edit** | If `lot.updated` changes `qtyCounted`/`delta` on a row that was `resolved === true`, server clears `resolved` (row reopens) |
+| **SessionNav Reconcile** | Visible from `counting` through `updating_inventory` — hidden only in `importing` and `closed` (see [Shared chrome](./README.md#sessionnav-bottom-bar)) |
+| **Phase change toasts** | `session.phase` WebSocket event shows a toast on **every session view** (AppShell-level host); see [README — Toast notifications](./README.md#toast-notifications) |
 | **Who can act** | **Any joined worker** may **Edit**, **Resolve**, **Reconciled — export XML**, and **Mark session complete** (session lead typically orchestrates) |
-| **SessionNav Reconcile** | **Hidden** during `counting`, `importing`, and `organizing`; visible only in `reconciling` and `updating_inventory` (see [Shared chrome](./README.md#sessionnav-bottom-bar)) |
-| **Dedicated route** | Reconciliation is **not** a `mode` on [List lots](./list-lots.md) — shared `LotListTable` component only |
+| **Dedicated route** | Reconciliation is **not** a `mode` on [List lots](./list-lots.md). Unit 4 `/build`: remove legacy `mode=reconciliation` from List lots and refactor `LotListTable` so reconciliation runs only on this route |
 | **Validation URL** | MVP fixed: `https://www.bricklink.com/invXML.asp#update` |
 | **Page heading** | **Part-out reconciliation** only — no duplicate inner table `<h2>` (tab label carries context) |
 | **`resolved` (reconciliation row)** | Explicit worker sign-off. Open row = `!resolved`. Matching included lines (`delta === 0`) still require **Resolve** before **Declare ready to organize**. No separate `qtyAgreed` for MVP |
@@ -71,10 +75,10 @@ Compare session counted totals against **included** part-out lines (post-import 
 
 | Phase | Intended use of this view |
 |-------|---------------------------|
-| `counting` | SessionNav **Reconcile** **hidden** — reconcile work starts after lead advances to `reconciling` |
-| `reconciling` | Resolve discrepancies (Edit + Resolve); **Declare ready to organize** when all cleared |
-| `organizing` | SessionNav **Reconcile** **hidden** — reconciliation completed via **Declare ready to organize** gate; primary work on [List lots](./list-lots.md) organizer mode |
-| `updating_inventory` | **Reconciled — export XML** then **Mark session complete** — download + Bricklink validation handoff; phase stays `updating_inventory` until **Mark session complete** |
+| `counting` | Live diff preview via SessionNav **Reconcile**; **Edit**/**Resolve**/**Declare ready to organize** disabled until `reconciling` |
+| `reconciling` | Full reconcile workflow: **Edit**, **Resolve**, celebratory alert when included lines match; **Declare ready to organize** when every row resolved |
+| `organizing` | Return via SessionNav **Reconcile**; **Return to reconciling** advances phase without organizer rollback; primary work remains [List lots](./list-lots.md) organizer mode |
+| `updating_inventory` | **Reconciled — export XML** then **Mark session complete** |
 | `closed` | Session routes redirect to [Home](./home.md) |
 
 **Phase transitions (live):**
@@ -89,7 +93,7 @@ Compare session counted totals against **included** part-out lines (post-import 
 
 Post-join routing: [home.md](./home.md#post-join-routing) (`reconciling` and `updating_inventory` → this view).
 
-SessionNav **Reconcile** is phase-gated: hidden during `importing`, `counting`, and `organizing`; visible only in `reconciling` and `updating_inventory` (see [Shared chrome](./README.md#sessionnav-bottom-bar)). Unit 0 fixture may show nav regardless — target behavior is phase-gated.
+SessionNav **Reconcile** is visible from `counting` through `updating_inventory` (hidden in `importing` and `closed`). Phase-specific buttons on this view remain gated as in [Layout & controls](#layout--controls). **`session.phase` changes** toast all joined workers on every session view (AppShell).
 
 ## Entry & exit
 
@@ -105,7 +109,7 @@ SessionNav **Reconcile** is phase-gated: hidden during `importing`, `counting`, 
 
 | Action | Destination |
 |--------|-------------|
-| **Edit** (row) | `/session/:sessionId/lot/:lotId` for matching session lot (or Lot form to add/adjust count) |
+| **Edit** (row) | `/session/:sessionId/lot/:lotId` when lot exists; **new Lot form** (`/session/:sessionId/lot`) pre-filled with part, color, session condition when unexpected-count row has no lot |
 | **Reconciled — export XML** | Stays on view; opens export dialog |
 | Download / validation link | File download or new tab to Bricklink |
 
@@ -118,14 +122,15 @@ SessionNav **Reconcile** is phase-gated: hidden during `importing`, `counting`, 
 | Tab | **Discrepancies** — default; rows where `!resolved` |
 | Tab | **All lines** — every included part-out line plus unexpected-count rows |
 | Discrepancy alert | {n} discrepancy / {n} discrepancies found — when Discrepancies tab has open (`!resolved`) rows |
-| Match celebratory alert | e.g. Your counts match the official part-out list! — when every **included** part-out line has `delta === 0` but one or more rows still need **Resolve** |
+| Match celebratory alert | e.g. Your counts match the official part-out list! — **`reconciling` phase only**; every **included** part-out line has `delta === 0` (lot totals match official list); shown on **Discrepancies** tab while any row still `!resolved` |
 | Discrepancies empty state | e.g. All lines resolved — when every row `resolved === true` |
 | Export warnings alert | Inline alert listing `warnings` from last export (e.g. skipped rows without `bricklink_lot_id`) |
-| Table columns | Thumbnail, Part (id + description), Color, Cond, Expected, Counted, Delta, Actions |
-| Row actions | **Edit**, **Resolve** (when `!resolved`) |
+| Table columns | Thumbnail, Part (id + description), Color, Expected, Counted, Delta, Actions |
+| Row actions | **Edit**, **Resolve** (when `!resolved`; disabled outside `reconciling` except **Return to reconciling** path during `organizing`) |
 | Primary button (`reconciling`) | **Declare ready to organize** — disabled while any row `!resolved` |
-| Primary button (`updating_inventory`) | **Reconciled — export XML** · **Mark session complete** (secondary until export succeeded this session; then primary closeout) |
-| Primary button (`counting`, `closed`) | **None** — no **Declare ready to organize**, **Reconciled — export XML**, or **Mark session complete** outside their phases |
+| Primary button (`organizing`) | **Return to reconciling** — `POST …/sessions/:id/phase` → `reconciling`; organizer pick-list progress preserved |
+| Primary button (`updating_inventory`) | **Reconciled — export XML** · **Mark session complete** (disabled until at least one export this session) |
+| Primary button (`counting`, `closed`) | **None** — no phase-advance or export buttons outside their phases |
 | SessionNav **Cups** | Hidden in `updating_inventory` and `closed` (see [list-cups.md](./list-cups.md#overview)); visible in `counting`, `reconciling`, `organizing` |
 
 No separate table `<h2>` — tab labels and page heading provide context.
@@ -162,7 +167,8 @@ No separate table `<h2>` — tab labels and page heading provide context.
 | Compare session counts to included part-out lines. | Helper text | Always |
 | {n} discrepancy found | Alert (singular) | One open (`!resolved`) row on Discrepancies tab |
 | {n} discrepancies found | Alert (plural) | Multiple open rows |
-| Your counts match the official part-out list! | Success/celebratory alert | All included part-out lines have `delta === 0`; at least one row still `!resolved` |
+| Your counts match the official part-out list! | Success/celebratory alert | `phase === 'reconciling'`; all included part-out lines `delta === 0`; at least one row still `!resolved` — **Discrepancies** tab |
+| Session phase changed | Toast | `session.phase` WebSocket on any session view — e.g. “Session moved to reconciling” |
 | All lines resolved | Empty/success | Discrepancies tab; every row `resolved === true` |
 | Export warning(s) | Inline alert | After export when response includes `warnings` |
 | Bulk update XML ready | Dialog title | After **Reconciled — export XML** |
@@ -176,10 +182,10 @@ No separate table `<h2>` — tab labels and page heading provide context.
 |--------|---------------|---------|
 | Review Discrepancies tab | — | Rows where `!resolved` |
 | Review All lines tab | — | Included part-out lines plus unexpected-count rows |
-| Edit row | Row has associated session lot (or worker adds lot via Lot form) | Navigate to Lot form to adjust counts |
-| Resolve row | `!resolved` | Sets `resolved: true`; row leaves Discrepancies tab |
+| Edit row | `phase === 'reconciling'` | Lot form — existing lot or new pre-filled (unexpected count) |
+| Resolve row | `phase === 'reconciling'`; `!resolved` | Sets `resolved: true`; mismatch without Edit = accept counted as-is |
 | Declare ready to organize | `phase === 'reconciling'`; every row `resolved === true` | `POST …/sessions/:id/phase` → `organizing` |
-| Return to reconciling | `phase === 'organizing'`; count error discovered | `POST …/sessions/:id/phase` → `reconciling`; organizer progress preserved |
+| Return to reconciling | `phase === 'organizing'` | `POST …/sessions/:id/phase` → `reconciling`; organizer progress preserved |
 | Reconciled — export XML | `phase === 'updating_inventory'` | `POST …/reconciliation/export-xml` — XML + `validationUrl`; opens export dialog; **phase unchanged** |
 | Mark session complete | `phase === 'updating_inventory'`; export succeeded at least once this session | `POST …/sessions/:id/phase` → `closed` |
 | Download XML | Export dialog open | Downloads `{setNumber}-bulk-update.xml` |
@@ -191,7 +197,8 @@ No separate table `<h2>` — tab labels and page heading provide context.
 - **Unexpected counts:** session lots whose part/color/condition are **not** on the included list appear as rows with `qtyExpected = 0`; worker **Resolve**s each
 - Row key: `partId` + `colorId` + `condition`
 - `qtyExpected` from part-out line (or `0` for unexpected-count rows); `qtyCounted` = sum of matching session lots; `delta` = counted − expected
-- Open row = `!resolved` — explicit **Resolve** required on every line (including `delta === 0`) before **Declare ready to organize**
+- Open row = `!resolved` — explicit **Resolve** on every line before **Declare ready to organize**; Resolve without Edit on mismatch = accept `qtyCounted`
+- If `lot.updated` changes `delta` on a resolved row, server clears `resolved` (row reopens)
 - Workers fix physical counts on **Lot form**; **Resolve** = sign-off that the row is agreed
 - Export produces bulk-update XML compatible with Bricklink validation tool
 
@@ -227,55 +234,50 @@ See [bricklink-mass-update-export.md](../bricklink-mass-update-export.md).
 | Mark session complete | `POST /api/v1/sessions/:id/phase` | `updating_inventory` → `closed` (requires prior export this session — server-enforced) |
 | Advance phase | `POST /api/v1/sessions/:id/phase` | `counting` → `reconciling`; `reconciling` → `organizing`; `organizing` → `updating_inventory`; `organizing` → `reconciling` (return without organizer rollback) |
 
-WebSocket: `lot.updated` refreshes `qtyCounted` on open rows; `session.phase` updates nav.
+WebSocket: `lot.updated` refreshes `qtyCounted`/`delta` on open rows (clears `resolved` when delta changes); `session.phase` updates nav and triggers AppShell toast.
 
 ## Acceptance criteria
 
-- [ ] Included part-out lines compared to session lot totals (part + color + condition)
-- [ ] **Discrepancies** tab shows `!resolved` rows; **All lines** includes unexpected-count rows (`qtyExpected = 0`)
-- [ ] Celebratory alert when all included lines match (`delta === 0`) but rows still need **Resolve**
-- [ ] **Resolve** available when `!resolved` (including matching rows); **Declare ready to organize** disabled until every row resolved
-- [ ] Unexpected-count rows (lots not on included list) shown and require **Resolve**
-- [ ] Export `warnings` shown as inline alert on view
-- [ ] **`closed`** session routes redirect to Home
-- [ ] **`organizing` → `reconciling`** preserves organizer pick-list progress (Moved / New loc checks)
-- [ ] **Edit** opens Lot form for count corrections
-- [ ] Alert shows open row count when Discrepancies tab has `!resolved` rows
-- [ ] SessionNav **Reconcile** hidden during `counting`, `importing`, and `organizing`; visible only in `reconciling` and `updating_inventory`
-- [ ] Rows show **thumbnail** + part id + description (parity with part-out import)
-- [ ] Thumbnails **100×100 px**, 1:1, `object-fit: contain`
-- [ ] **Reconciled — export XML** available only in `updating_inventory`; does **not** change phase
-- [ ] Export generates downloadable XML with `bricklink_lot_id` as `<LOTID>` where present
-- [ ] Export dialog links to Bricklink bulk update validation page
-- [ ] **Mark session complete** advances session to `closed` after export (manual Bricklink steps outside app)
-- [ ] Any joined worker can **Resolve** any open row (sign-off)
-- [ ] Excluded part-out import lines omitted; unexpected session lots (not on included list) included with `qtyExpected = 0`
-- [ ] Upload to Bricklink remains manual (no in-app submit)
-- [ ] Reconciliation not reachable via `mode` on List lots route
+### MVP requirements (Unit 4)
 
-## Storyboard status
+- [ ] **Discrepancies** and **All lines** tabs (not single-table hybrid)
+- [ ] **Discrepancies** tab: `!resolved` rows; **All lines**: included lines + unexpected counts (`qtyExpected = 0`)
+- [ ] Rows: **thumbnail** + part id + description, Color, Expected, Counted, **Delta** (no Cond column); Delta = 0 muted
+- [ ] **Edit** → Lot form (existing lot or new pre-filled for unexpected count)
+- [ ] **Resolve** when `!resolved` in `reconciling`; explicit sign-off on every line before **Declare ready to organize**
+- [ ] Celebratory alert in `reconciling` when all included lines match (`delta === 0`) but rows still need Resolve
+- [ ] **`lot.updated`** refreshes counts; clears `resolved` when `delta` changes
+- [ ] Live APIs: `GET …/reconciliation`, `POST …/resolve`, `POST …/export-xml`
+- [ ] **Mark session complete** separate from export; disabled until export succeeded
+- [ ] Export **warnings** inline alert; **`closed`** routes redirect Home
+- [ ] SessionNav **Reconcile** visible `counting` → `updating_inventory` (hidden `importing`, `closed`)
+- [ ] **Return to reconciling** from `organizing` without organizer rollback
+- [ ] **`session.phase`** WebSocket → toast on every session view (AppShell)
+- [ ] No inner table `<h2>Discrepancies`; page heading + tabs only
+- [ ] List lots route rejects/refactors legacy `mode=reconciliation`; reconciliation only on dedicated route
+- [ ] Any joined worker may Edit, Resolve, export, Mark complete
+- [ ] Upload to Bricklink manual (no in-app submit)
 
-### Implemented (Unit 0)
+## Storyboard status (Unit 0 fixture)
 
-- Discrepancy table via shared `LotListTable` (single-table hybrid filter — no tabs yet)
-- Per-row Resolve
-- Fixture XML generation and download
-- Validation URL: `https://www.bricklink.com/invXML.asp#update`
-- **Declare ready to organize** when all discrepancies resolved (fixture)
-- **Reconciled — export XML** in `updating_inventory` only; fixture may advance phase on export — target separates **Mark session complete**
+Fixture implements a subset for stakeholder walkthrough. **Target behavior is acceptance criteria above.**
 
-### Gaps (Units 1–4)
+### Implemented in fixture today
 
-- Part thumbnails and part id + description on rows
-- **Mark session complete** button separate from export
-- No **Discrepancies** / **All lines** tabs
-- Fixture **Resolve** overwrites `qtyCounted` / `delta` without lot edits — not live behavior
-- No live reconciliation API or XML shape validation against Bricklink
-- No diff refresh when lots change (`lot.updated`)
-- No lead **advance phase** UI (`counting` → `reconciling`)
-- **Cond** / **Delta** columns not shown
-- Inner table title **Discrepancies** duplicates page heading pattern
-- Legacy `mode=reconciliation` on [ListLotsView.vue](../../src/views/ListLotsView.vue) — remove
+- Single-table hybrid (filter + matched toggle) — **replace with tabs in Unit 4**
+- Per-row Resolve (fixture mutates counts — **not live sign-off semantics**)
+- Fixture XML download; validation URL
+- **Declare ready to organize** (fixture gate uses `delta === 0 || resolved` — **must align to all rows resolved**)
+
+### Fixture divergences (Unit 4 `/build` must fix)
+
+- Auto-`resolved` when `delta === 0`; no explicit Resolve on matching rows
+- No thumbnails / part description columns; no Delta column styling
+- No **Mark session complete**; export may advance phase
+- No unexpected-count rows; Edit hidden in reconciliation mode
+- No live reconciliation API; no `lot.updated` refresh; no phase-change toasts
+- SessionNav phase gating not enforced
+- Legacy `LotListTable` reconciliation wiring; inner table `<h2>` duplicate
 
 ### `data-testid` inventory
 
@@ -293,19 +295,20 @@ WebSocket: `lot.updated` refreshes `qtyCounted` on open rows; `session.phase` up
 | `export-validation-link` | Open Bricklink validation page (planned) |
 | `export-warnings-alert` | Export warnings inline alert (planned) |
 | `reconciliation-match-celebration` | Celebratory alert when included lines all match (planned) |
+| `return-to-reconciling` | Return to reconciling button (planned) |
 
 ## Spec–diagram review (2026-06-12)
 
 | Spec section | Diagram | Finding | Severity |
 |--------------|---------|---------|----------|
 | [Phase transitions](#session-phase--navigation) `updating_inventory` → `closed` | `session-phases-state.mmd`, `store-inventory-update.mmd` | **Dave 2026-06-12:** Close on **Mark session complete**, not on export-xml; export + Bricklink remain manual outside app. Diagrams updated. | **Resolved** |
-| [SessionNav Reconcile during `counting`](#locked-decisions) | `view-navigation.mmd`, `reconciliation-workflow.mmd` | **Hidden** until `reconciling`. | **Resolved** — Dave 2026-06-12 |
+| [SessionNav Reconcile](#locked-decisions) | `view-navigation.mmd`, `reconciliation-workflow.mmd` | **Dave 2026-06-12:** Visible `counting` → `updating_inventory`; hidden `importing`, `closed`. | **Resolved** |
+| [Session phase table](#session-phase--navigation) `organizing` | `workflow-storyboard.mmd`, `view-navigation.mmd` | Reconcile nav available; **Return to reconciling** on view; organizer progress preserved. | **Resolved** — Dave 2026-06-12 |
+| [Session phase table](#session-phase--navigation) `counting` | `reconciliation-workflow.mmd` | Preview via Reconcile nav; Edit/Resolve gated until `reconciling`. | **Resolved** — Dave 2026-06-12 |
 | [Locked decisions](#locked-decisions) Resolve = sign-off | `reconciliation-workflow.mmd` | **Dave 2026-06-12:** Resolve when `!resolved` (explicit sign-off on every line, including `delta === 0`); open row = `!resolved`. Diagram updated. | **Resolved** |
 | [Layout](#layout--controls) Discrepancies / All lines tabs | `reconciliation-workflow.mmd` | Tabs, Edit → Lot form, Resolve → POST resolve, **Declare ready to organize** when cleared — align. | Pass |
 | [Entry & exit](#entry--exit) Edit row | `view-navigation.mmd`, `workflow-storyboard.mmd` | `RECON → LOT_EDIT` and storyboard `RECON → Edit row → LOT` match. | Pass |
 | Post-join routing | `view-navigation.mmd`, `session-phases-state.mmd` | Home join `reconciling` / `updating_inventory` → `/reconciliation` matches [home.md](./home.md#post-join-routing). | Pass |
-| [Session phase table](#session-phase--navigation) `organizing` | `workflow-storyboard.mmd`, `view-navigation.mmd` | SessionNav **Reconcile** hidden during `organizing`; reconciliation completes before organizing via **Declare ready to organize**. Storyboard subgraph and nav diagram align. | **Resolved** — Dave 2026-06-12 |
-| [Session phase table](#session-phase--navigation) `counting` preview | `reconciliation-workflow.mmd` | Reconcile nav hidden during `counting`. | **Resolved** — Dave 2026-06-12 |
 | End-to-end flow | `workflow-storyboard.mmd` | `RECON → Declare ready to organize → LOTS_ORG`, `LOTS_ORG → Declare ready to import → STORE_UPDATE`, and **Mark session complete** → `closed` (export does not close) match Model C lifecycle. | Pass |
 | SessionNav **Cups** in `updating_inventory` | `session-phases-state.mmd` | Note "SessionNav Cups hidden" aligns with [list-cups.md](./list-cups.md); reconciliation spec now cross-links. | Pass |
 | Export dialog handoff | `store-inventory-update.mmd` | Was modeled as in-app mass-update confirmation; spec is download + open validation URL, then manual Bricklink steps. **Diagram updated.** | **Blocking** (resolved in diagram) |
@@ -317,7 +320,8 @@ WebSocket: `lot.updated` refreshes `qtyCounted` on open rows; `session.phase` up
 **All resolved (Dave 2026-06-12).** See [Locked decisions](#locked-decisions) for the full decision log, including:
 
 - Manual **Mark session complete** (not auto-close on export)
-- SessionNav **Reconcile** hidden in `counting`, `importing`, and `organizing`
+- SessionNav **Reconcile** visible `counting` → `updating_inventory`; phase-change **toasts** on all session views
+- MVP gap items promoted to [Acceptance criteria](#acceptance-criteria) (tabs, Edit, live API, Mark complete, etc.)
 - Table UX matches import; any joined worker; **`resolved` only** (no `qtyAgreed`)
 - **Unexpected counts** shown as discrepancy rows (`qtyExpected = 0`); worker **Resolve**s each
 - **Explicit Resolve** on every line before **Declare ready to organize**; celebratory alert when included lines all match
