@@ -1,7 +1,7 @@
 # List lots
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-12
+**Last updated:** 2026-06-12 (spec–diagram review)
 
 ---
 
@@ -28,6 +28,15 @@
 - [List cups](./list-cups.md) — cup-mode entry
 - [Part-out reconciliation](./part-out-reconciliation.md) — discrepancy list (shared `LotListTable` component; not a mode on this route)
 - [Shared chrome](./README.md#shared-chrome)
+
+## Diagrams
+
+| Diagram | Role |
+|---------|------|
+| [view-navigation.mmd](../diagrams/view-navigation.mmd) | Cup vs organizer mode routing, back-nav to List cups, **Open cup** |
+| [cup-tap-routing.mmd](../diagrams/cup-tap-routing.mmd) | Entry when List cups `lotCount ≥ 2` |
+| [workflow-storyboard.mmd](../diagrams/workflow-storyboard.mmd) | Storyboard § 6; organizer → **Declare ready to import** |
+| [reconciliation-workflow.mmd](../diagrams/reconciliation-workflow.mmd) | Confirms discrepancy list is **not** a `mode` on this route |
 
 ## Purpose
 
@@ -263,7 +272,21 @@ WebSocket: `pick_list.updated` refreshes organizer rows ([tech spec](../../featu
 | `lot-new-loc` | New loc row action (planned) |
 | `lot-open-cup` | Open cup row action (planned) |
 
+## Spec–diagram review (2026-06-12)
+
+| Spec section | Diagram | Finding | Severity |
+|--------------|---------|---------|----------|
+| [Modes](#modes) cup entry | `cup-tap-routing.mmd` → `view-navigation.mmd` | `lotCount ≥ 2` → `?mode=cup&cupId=` and Edit → Lot form match [Entry & exit](#entry--exit). | Pass |
+| [Purpose](#purpose) — no reconciliation mode | `reconciliation-workflow.mmd` | Reconciliation is a separate route; no `mode=reconciliation` on List lots. Aligns. | Pass |
+| Cup mode back navigation | `view-navigation.mmd` | `LOTS_CUP → CUPS` matches spec back / SessionNav **Cups** row. | Pass |
+| Organizer **Open cup** | `view-navigation.mmd`, `workflow-storyboard.mmd` | `LOTS_ORG → LOTS_CUP` edge present; matches [Where actions navigate](#where-actions-navigate). | Pass |
+| **Declare ready to import** | `workflow-storyboard.mmd` | `LOTS_ORG → STORE_UPDATE` in `updating_inventory` phase matches spec outcome (XML export on reconciliation view). | Pass |
+| [Cup mode without cupId](#locked-decisions) | All diagrams | Invalid/missing `cupId` redirect to List cups is **not** diagrammed. Spec requires redirect or empty state — gap in diagrams only. | Advisory |
+| SessionNav **Lots** phase gating | `view-navigation.mmd` NAV_LOTS, [Shared chrome](./README.md#sessionnav-bottom-bar) | Diagram and README show **Lots** whenever SessionNav is visible (`counting` onward). Spec organizer workflow is `organizing` phase only ([Entry & exit](#entry--exit)). Tapping **Lots** during `counting` or `reconciling` is undefined in this spec. | **Blocking** |
+
 ## Open questions
 
 - Can workers re-run **Split list** after workers have started (or after partial progress)?
 - May an organizer **Delete** lots that are on another worker's pick list, or only their own assigned lines?
+- **Dave (blocking):** Should SessionNav **Lots** be hidden or disabled outside `organizing` (and optionally `updating_inventory`), or may workers open organizer mode early with an empty/guarded state?
+- **Dave:** When `mode=cup` is missing `cupId`, prefer hard redirect to List cups vs inline empty state with guidance?
