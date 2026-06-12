@@ -1,7 +1,7 @@
 # Lot form
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-12
+**Last updated:** 2026-06-12 (spec–diagram review)
 
 ---
 
@@ -26,6 +26,15 @@
 - [Storyboard walkthrough § 4. Lot form](../support/storyboard.md#4-lot-form)
 - [Tech Spec — Lots & Bricklink helpers](../../feature/part-out-coordinator/tech-spec.md)
 - [Shared chrome](./README.md#shared-chrome)
+
+## Diagrams
+
+| Diagram | Role |
+|---------|------|
+| [cup-tap-routing.mmd](../diagrams/cup-tap-routing.mmd) | List cups tap paths → Lot form (`cupId`, edit, new) |
+| [view-navigation.mmd](../diagrams/view-navigation.mmd) | Counting landing, SessionNav **Lot**, import Confirm → Lot form |
+| [workflow-storyboard.mmd](../diagrams/workflow-storyboard.mmd) | Storyboard § 4; SessionNav hub around Lot form |
+| [session-phases-state.mmd](../diagrams/session-phases-state.mmd) | Default counting landing = Lot form |
 
 ## Purpose
 
@@ -283,6 +292,18 @@ Unique key: `(sessionId, partId, colorId, condition)`.
 | `save-lot` | Save button |
 | `save-and-add-another` | Save and Add Another button |
 
+## Spec–diagram review (2026-06-12)
+
+| Spec section | Diagram | Finding | Severity |
+|--------------|---------|---------|----------|
+| [How users arrive](#how-users-arrive) — List cups paths | `cup-tap-routing.mmd` | 0-lot `?cupId=`, 1-lot `soleLotId` edit, Add new lot without `cupId` match spec table. | Pass |
+| [How users arrive](#how-users-arrive) — counting landing | `view-navigation.mmd`, `session-phases-state.mmd` | Import Confirm and Home join `counting` → `LOT_NEW`; session-phases note "Default landing Lot form". | Pass |
+| [Cup association](#cup-association) save rules | All navigation diagrams | Part-number auto-select and **Create new cup** override are save-time behavior — correctly absent from navigation diagrams. | Pass |
+| [Where actions navigate](#where-actions-navigate) post-save | Navigation diagrams | Stay on `/lot`, `replace` on edit, Save and Add Another reset — form behavior; not shown on nav diagrams (expected). | Pass |
+| Route shape new vs edit | `workflow-storyboard.mmd` LOT node | Diagram shows `/lot/{lotId}` only; new-lot `/lot` without id is implied by `LOT_NEW` in `view-navigation.mmd`. Minor notation split across files. | Advisory |
+| List lots → Edit | `cup-tap-routing.mmd`, `view-navigation.mmd` | Edit row → `/lot/:lotId` matches [How users arrive](#how-users-arrive). | Pass |
+| Reconciling phase edit | `reconciliation-workflow.mmd` | Edit from discrepancy row → Lot form; consistent with lot form as shared edit surface. | Pass |
+
 ## Open questions
 
 - Should qty 0 be allowed on save?
@@ -290,3 +311,4 @@ Unique key: `(sessionId, partId, colorId, condition)`.
 - Show existing lot qty inline before save (proactive duplicate hint)?
 - Live edit pre-fill: list cache vs dedicated `GET /api/v1/sessions/:id/lots/:lotId`?
 - Remove color picker **None** option when required-color validation ships?
+- **Dave:** Should navigation diagrams add a Lot-form annotation for **Create new cup** (save override), or keep that documented only in this spec?
