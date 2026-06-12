@@ -60,11 +60,11 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 ### Example usage
 
-**Trigger:** Session lead fills in set number (e.g. `70404-1` or `70404` — auto-appends `-1`) and condition (New or Used; no default). Display name comes from Home via `sessionStorage`. Submit is blocked without display name or condition.
+**Trigger:** Session lead searches/selects set via **SetSearchCombobox** (FilterablePicker; client pattern validation), chooses condition (New or Used; no default), and may use **Back to Home** to return to `/`. Display name comes from Home via `sessionStorage`; direct `/session/new` without a name redirects to Home.
 
 **Flow:** Client calls `POST /api/v1/sessions` with `setNumber`, `partOutOptions.condition` (`new` \| `used`), and `displayName`. Server normalizes set number, maps to Bricklink form (fixed pricing/merge constants + `itemNo` / `itemCondition`), retries fetch up to 3 times on network failure, creates session (phase `importing`), and persists `part_out_lines` on success.
 
-**Deliverables:** New `sessionId`, initial phase `importing`, and `part_out_fetch_status` (`ok` or `error`). On **HTTP 201** (fetch ok or error after retries) → **Part-out import** (`/session/:sessionId/import`). Invalid set → **HTTP 422**, no session, stay on New session. Network failure after retries → session in `importing` with error; import view handles refetch ([new-session.md](../view-specs/new-session.md), [part-out-import.md — Loading & fetch states](../view-specs/part-out-import.md#loading--fetch-states)).
+**Deliverables:** New `sessionId`, initial phase `importing`, and `part_out_fetch_status` (`ok` or `error`). On **HTTP 201** (fetch ok or error after retries) → **Part-out import** (`/session/:sessionId/import`). Invalid set → **HTTP 422**, fixed client wrapper on New session, no session row. Network failure after retries → session in `importing` with error; import view **Loading then Error** ([new-session.md](../view-specs/new-session.md), [part-out-import.md — Create-time fetch error entry](../view-specs/part-out-import.md#create-time-fetch-error-entry)).
 
 ---
 
