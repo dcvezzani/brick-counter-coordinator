@@ -1,0 +1,25 @@
+%% Part-out reconciliation — worker actions within reconciling phase
+%% Source: docs/view-specs/part-out-reconciliation.md
+%% Export XML happens later in updating_inventory (see store-inventory-update.mmd).
+
+flowchart TD
+    enter(["Open Part-out reconciliation<br>phase reconciling"])
+
+    enter --> tabs{"Active tab"}
+
+    tabs --> disc["Discrepancies tab<br>delta not 0 and not resolved"]
+    tabs --> all["All lines tab<br>full included-line comparison"]
+
+    disc --> row{"Row action"}
+    all --> row
+
+    row -->|Edit| lot["Lot form<br>adjust session counts"]
+    row -->|Resolve| sign["POST .../reconciliation/resolve<br>sign-off when aligned or resolved"]
+
+    lot --> disc
+    sign --> disc
+
+    disc --> check{"All discrepancies<br>cleared?"}
+    check -->|No| disc
+    check -->|Yes| ready["Declare ready to organize<br>POST .../sessions/{id}/phase"]
+    ready --> phaseOrg["Session phase to organizing"]

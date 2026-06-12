@@ -1,0 +1,47 @@
+%% View navigation and post-join routing
+%% Sources: docs/view-specs/README.md, home.md, list-cups.md
+
+flowchart LR
+    HOME["Home<br>/"]
+
+    subgraph sessionNav["SessionNav visible when sessionId present<br>hidden during importing"]
+        direction TB
+        NAV_HOME["Home to /"]
+        NAV_CUPS["Cups to /cups"]
+        NAV_LOT["Lot to /lot"]
+        NAV_LOTS["Lots to /lots?mode=organizer"]
+        NAV_RECON["Reconcile to /reconciliation"]
+    end
+
+    NEW["New session<br>/session/new"]
+    IMPORT["Part-out import<br>/import"]
+    LOT["Lot form<br>/lot/{lotId}"]
+    CUPS["List cups<br>/cups"]
+    LOTS_CUP["List lots<br>cup mode"]
+    LOTS_ORG["List lots<br>organizer mode"]
+    RECON["Part-out<br>reconciliation"]
+
+    HOME --> NEW
+    NEW --> IMPORT
+
+    HOME -->|"join importing"| IMPORT
+    HOME -->|"join counting"| LOT
+    HOME -->|"join reconciling"| RECON
+    HOME -->|"join organizing"| LOTS_ORG
+    HOME -->|"join updating_inventory"| RECON
+
+    IMPORT -->|"Confirm"| LOT
+
+    NAV_HOME --> HOME
+    NAV_CUPS --> CUPS
+    NAV_LOT --> LOT
+    NAV_LOTS --> LOTS_ORG
+    NAV_RECON --> RECON
+
+    CUPS -->|"lotCount 0"| LOT
+    CUPS -->|"lotCount 1"| LOT
+    CUPS -->|"lotCount 2 or more"| LOTS_CUP
+    LOTS_CUP --> LOT
+    LOTS_ORG --> LOT
+    LOTS_ORG --> LOTS_CUP
+    RECON --> LOT

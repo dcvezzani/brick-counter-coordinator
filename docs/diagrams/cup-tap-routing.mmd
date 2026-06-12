@@ -1,0 +1,16 @@
+%% List cups — cup card tap routing
+%% Source: docs/view-specs/list-cups.md
+
+flowchart TD
+    START(["Worker taps cup card<br>or Add new lot"])
+
+    START --> ADD{"Add new lot<br>button?"}
+    ADD -->|Yes| LOT_NEW["Lot form<br>/session/:id/lot<br>(no cupId;<br>part-number auto-select on save)"]
+
+    ADD -->|No| COUNT{"lotCount<br>on cup"}
+
+    COUNT -->|0| LOT_PIN["Lot form<br>/session/:id/lot?cupId={cupId}<br>(cup pinned for save)"]
+    COUNT -->|1| LOT_EDIT["Lot form<br>/session/:id/lot/:lotId<br>(edit sole lot)"]
+    COUNT -->|≥ 2| LOTS_CUP["List lots (cup mode)<br>?mode=cup&cupId={cupId}"]
+
+    LOTS_CUP -->|"Edit row"| LOT_EDIT2["Lot form<br>/session/:id/lot/:lotId"]

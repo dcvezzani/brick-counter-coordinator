@@ -1,0 +1,52 @@
+%% Session phase state machine
+%% Sources: docs/view-specs/home.md, part-out-import.md, part-out-reconciliation.md,
+%%          list-lots.md, feature/part-out-coordinator/product-spec.md
+%%
+%% XML export and Bricklink mass update occur in updating_inventory, after organizing.
+
+stateDiagram-v2
+    direction LR
+
+    [*] --> importing: "POST /sessions (New session submit)"
+    importing --> counting: "POST .../part-out/confirm (Confirm and begin counting)"
+    counting --> reconciling: "POST .../sessions/{id}/phase (Lead advances phase)"
+    reconciling --> organizing: "Declare ready to organize (POST .../sessions/{id}/phase)"
+    organizing --> updating_inventory: "Declare ready to import (POST .../sessions/{id}/phase)"
+    updating_inventory --> closed: "POST .../reconciliation/export-xml and Bricklink mass update success"
+    closed --> [*]
+
+    note right of importing
+        Only session-scoped screen.
+        SessionNav hidden.
+        Post-join route /import
+    end note
+
+    note right of counting
+        Default landing Lot form.
+        SessionNav visible.
+        Workers record lots and browse cups.
+    end note
+
+    note right of reconciling
+        Initial count and sort activity done.
+        Compare included part-out lines vs lot counts.
+        Edit lots and Resolve discrepancies.
+        Declare ready to organize when all cleared.
+        Post-join route /reconciliation
+    end note
+
+    note right of organizing
+        Split and print pick lists for workers.
+        Workers put parts away into storage.
+        Mark lines moved or needs location.
+        Mark organizer lists complete.
+        Declare ready to import when all lists complete.
+        Post-join route /lots?mode=organizer
+    end note
+
+    note right of updating_inventory
+        Generate and export XML.
+        Bricklink mass update call.
+        Confirm store inventory updated.
+        Post-join route /reconciliation
+    end note

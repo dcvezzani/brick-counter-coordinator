@@ -1,0 +1,17 @@
+%% Update store inventory — worker actions within updating_inventory phase
+%% Source: docs/view-specs/part-out-reconciliation.md (export actions)
+%% Follows organizing complete; precedes session closed.
+
+flowchart TD
+    enter(["Open Part-out reconciliation<br>phase updating_inventory"])
+
+    enter --> export["Export XML<br>POST .../reconciliation/export-xml"]
+
+    export --> dialog["Download XML and open Bricklink validation"]
+    export --> massUpdate["Bricklink mass update call"]
+
+    massUpdate --> success{"Store inventory<br>updated?"}
+    success -->|No| export
+    success -->|Yes| closed["Session phase to closed"]
+
+    dialog --> massUpdate

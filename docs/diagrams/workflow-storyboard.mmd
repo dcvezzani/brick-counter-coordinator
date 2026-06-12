@@ -1,0 +1,72 @@
+---
+config:
+  layout: elk
+---
+%% End-to-end part-out coordinator workflow (storyboard order)
+%% Sources: docs/view-specs/README.md, storyboard.md, all seven view specs
+
+flowchart TB
+    subgraph entry["Entry (no sessionId)"]
+        HOME["Home<br>/"]
+        NEW["New session<br>/session/new"]
+    end
+
+    subgraph import_phase["Phase: importing"]
+        IMPORT["Part-out import<br>/session/{id}/import"]
+    end
+
+    subgraph counting_phase["Phase: counting"]
+        LOT["Lot form<br>/session/{id}/lot/{lotId}"]
+        CUPS["List cups<br>/session/{id}/cups"]
+        LOTS_CUP["List lots cup mode<br>?mode=cup&cupId="]
+    end
+
+    subgraph reconciling_phase["Phase: reconciling"]
+        RECON["Part-out reconciliation<br>/session/{id}/reconciliation"]
+    end
+
+    subgraph organizing_phase["Phase: organizing"]
+        LOTS_ORG["List lots organizer mode<br>?mode=organizer"]
+    end
+
+    subgraph updating_inventory_phase["Phase: updating_inventory"]
+        STORE_UPDATE["Part-out reconciliation<br>/export and Bricklink update"]
+    end
+
+    CLOSED["Session closed"]
+
+    HOME -->|"Create new session<br>(display name)"| NEW
+    HOME -->|"Enter existing session<br>(join by phase)"| IMPORT
+    HOME -->|"Enter existing session<br>(join by phase)"| LOT
+    HOME -->|"Enter existing session<br>(join by phase)"| RECON
+    HOME -->|"Enter existing session<br>(join by phase)"| LOTS_ORG
+    HOME -->|"Enter existing session<br>(join by phase)"| STORE_UPDATE
+
+    NEW -->|"POST /sessions<br>fetch part-out"| IMPORT
+
+    IMPORT -->|"Curate exclude and restore<br>included lines"| IMPORT
+    IMPORT -->|"Confirm and begin counting"| LOT
+
+    LOT <-->|"SessionNav"| CUPS
+    LOT <-->|"SessionNav"| LOTS_ORG
+    LOT <-->|"SessionNav"| RECON
+    LOT <-->|"SessionNav"| HOME
+
+    CUPS -->|"0 lots cupId pinned"| LOT
+    CUPS -->|"1 lot"| LOT
+    CUPS -->|"2+ lots"| LOTS_CUP
+    CUPS -->|"Add new lot"| LOT
+    LOTS_CUP -->|"Edit lot"| LOT
+
+    LOT -->|"Lead advances phase<br>counting to reconciling"| RECON
+    RECON -->|"Edit row"| LOT
+    RECON -->|"Resolve discrepancies<br>sign-off"| RECON
+    RECON -->|"Declare ready to organize"| LOTS_ORG
+
+    LOTS_ORG -->|"Split list"| LOTS_ORG
+    LOTS_ORG -->|"Moved New loc Mark complete"| LOTS_ORG
+    LOTS_ORG -->|"Edit or Open cup"| LOT
+    LOTS_ORG -->|"Open cup"| LOTS_CUP
+    LOTS_ORG -->|"Declare ready to import"| STORE_UPDATE
+
+    STORE_UPDATE -->|"Export XML and mass update"| CLOSED
