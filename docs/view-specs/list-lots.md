@@ -44,6 +44,7 @@ Discrepancy reconciliation lives on [**Part-out reconciliation**](./part-out-rec
 | **Open associated cup** | **Required** row action in organizer mode (Unit 3) |
 | **Split list** | Any worker in organizer mode may run it after phase is `organizing` and all reconciliation discrepancies are resolved; session lead will typically click it |
 | **Mark entire list complete** | **Disabled** until every assigned line is **Moved to storage** or **Needs new location** (no `pending` lines) |
+| **Declare ready to import** | Visible in `organizing`; **disabled** until every joined worker has marked their list complete; advances session to `updating_inventory` via `POST …/sessions/:id/phase` |
 | Storage location column | **Required** in organizer mode — show part-out **Remarks** / storage location per line (Product Spec scenario 10; Unit 3) |
 | Page heading | Mode-specific: **Lots in cup** (cup) or **Organizer pick list** (organizer); no duplicate inner table title |
 | Cup mode without `cupId` | Invalid — redirect to **List cups** or show empty state with guidance (do not list all session lots) |
@@ -85,6 +86,7 @@ SessionNav **Lots** is visible whenever the route includes `sessionId` (see [Sha
 | Organizer: **Split list** | Visible when `mode=organizer` and pick list not yet split; any worker may click |
 | Organizer: **Print** | Triggers `window.print()` |
 | Organizer: **Mark entire list complete** | Disabled while any assigned line has status `pending`; marks current worker's pick list complete when enabled |
+| Organizer: **Declare ready to import** | Disabled until all workers' organizer lists are complete; advances phase to `updating_inventory` |
 
 ### Lot list table (shared)
 
@@ -159,6 +161,7 @@ No toast on status change or list complete.
 | Open cup | Organizer mode; lot has `cupId` | Navigate to cup-filtered List lots for that cup |
 | Print | Organizer mode | Opens print dialog; hides nav/actions via print CSS |
 | Mark entire list complete | Organizer mode; every assigned line non-`pending` | Marks current worker's pick list complete |
+| Declare ready to import | Organizer mode; `phase === 'organizing'`; all workers' lists complete | `POST …/sessions/:id/phase` → `updating_inventory`; workers proceed to [Part-out reconciliation](./part-out-reconciliation.md) for XML export |
 
 ### Organizer requirements (product)
 
@@ -209,6 +212,7 @@ WebSocket: `pick_list.updated` refreshes organizer rows ([tech spec](../../featu
 - [ ] **Open cup** navigates to cup-filtered List lots for the lot's cup
 - [ ] **Print** produces a printable pick list (includes Location column)
 - [ ] **Mark entire list complete** disabled while any line is `pending`; enabled when all lines resolved
+- [ ] **Declare ready to import** disabled until every worker's organizer list is complete; advances to `updating_inventory`
 
 ### General
 

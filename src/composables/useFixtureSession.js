@@ -1,4 +1,5 @@
 import { computed, reactive, ref } from 'vue'
+import { normalizeDisplayName } from '@/lib/display-name'
 import {
   createDemoSession,
   DEMO_COLORS,
@@ -58,8 +59,12 @@ export function useFixtureSession() {
 
   function joinSession(sessionId, displayName) {
     const session = ensureSession(sessionId)
+    const normalized = normalizeDisplayName(displayName)
+    if (!normalized) {
+      throw Object.assign(new Error('Display name is required'), { code: 'INVALID_NAME' })
+    }
     const existing = session.workers.find(
-      (w) => w.displayName.toLowerCase() === displayName.toLowerCase(),
+      (w) => normalizeDisplayName(w.displayName) === normalized,
     )
     if (existing) {
       throw Object.assign(new Error('Display name already taken in this session'), {
@@ -68,7 +73,7 @@ export function useFixtureSession() {
     }
     const worker = {
       id: `worker-${Date.now()}`,
-      displayName,
+      displayName: normalized,
       joinedAt: new Date().toISOString(),
     }
     session.workers.push(worker)
@@ -229,21 +234,45 @@ export function useFixtureSession() {
     })
   }
 
-  function canExportReconciliation(sessionId) {
+  function canDeclareReadyToOrganize(sessionId) {
+    const session = ensureSession(sessionId)
+    return session.phase === 'reconciling' && allDiscrepanciesResolved(session)
+  }
+
+  function declareReadyToOrganize(sessionId) {
+    if (!canDeclareReadyToOrganize(sessionId)) {
+      throw new Error('Resolve all discrepancies before declaring ready to organize')
+    }
+    ensureSession(sessionId).phase = 'organizing'
+  }
+
+  function canDeclareReadyToImport(sessionId) {
     const session = ensureSession(sessionId)
     return (
-      allDiscrepanciesResolved(session) &&
       session.phase === 'organizing' &&
       session.pickListSplit &&
       allOrganizersComplete(session)
     )
   }
 
+  function declareReadyToImport(sessionId) {
+    if (!canDeclareReadyToImport(sessionId)) {
+      throw new Error('Complete organizer lists before declaring ready to import')
+    }
+    ensureSession(sessionId).phase = 'updating_inventory'
+  }
+
+  function canExportReconciliation(sessionId) {
+    const session = ensureSession(sessionId)
+    return session.phase === 'updating_inventory' && allDiscrepanciesResolved(session)
+  }
+
   function exportBlockReason(sessionId) {
     const session = ensureSession(sessionId)
     if (!allDiscrepanciesResolved(session)) return 'discrepancies'
-    if (session.phase !== 'organizing') return 'phase'
-    if (!session.pickListSplit || !allOrganizersComplete(session)) return 'organize'
+    if (session.phase === 'reconciling') return 'declare_organize'
+    if (session.phase === 'organizing') return 'organize'
+    if (session.phase !== 'updating_inventory') return 'phase'
     return null
   }
 
@@ -278,9 +307,6 @@ export function useFixtureSession() {
     if (row) {
       row.resolved = true
       row.qtyAgreed = row.qtyCounted
-      if (allDiscrepanciesResolved(session) && session.phase === 'reconciling') {
-        session.phase = 'organizing'
-      }
     }
   }
 
@@ -395,6 +421,10 @@ export function useFixtureSession() {
     completePickList,
     getReconciliation,
     resolveReconciliation,
+    declareReadyToOrganize,
+    canDeclareReadyToOrganize,
+    declareReadyToImport,
+    canDeclareReadyToImport,
     exportReconciliationXml,
     canExportReconciliation,
     exportBlockReason,

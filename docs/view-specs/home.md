@@ -1,7 +1,7 @@
 # Home
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-11
+**Last updated:** 2026-06-12
 
 ---
 
@@ -13,24 +13,38 @@
 | **Route** | `/` |
 | **Route params** | — |
 | **Query params** | — |
-| **Primary actor(s)** | Join: any worker (counter, lead, organizer). Create: session lead. |
+| **Primary actor(s)** | Join: any worker (counter, lead, organizer). Create: session lead (process role — any worker with a display name may tap **Create new session**). |
 | **Delivery unit** | 0 (fixture) → 1 (live join/list) |
 | **Source file** | [`src/views/HomeView.vue`](../../src/views/HomeView.vue) |
 
 ## Related docs
 
 - [Product Spec — Application views](../../feature/part-out-coordinator/product-spec.md#application-views)
+- [Product Spec — Session lifecycle](../../feature/part-out-coordinator/product-spec.md#session-lifecycle)
 - [Product Spec — Scenario 1: Home → session](../../feature/part-out-coordinator/product-spec.md#key-scenarios)
 - [Tech Spec — Sessions API](../../feature/part-out-coordinator/tech-spec.md#sessions-unit-1)
 - [Planned views & services — Home](../support/planned-views-services.md#1-home)
 - [Storyboard walkthrough § 1. Home](../support/storyboard.md#1-home)
 - [Shared chrome](./README.md#shared-chrome)
+- [View navigation diagram](../diagrams/view-navigation.mmd)
+- [Session phases diagram](../diagrams/session-phases-state.mmd)
 
 ## Purpose
 
 Session entry point. Workers identify themselves with a display name and either create a new part-out session (lead) or join an existing open session (any worker).
 
 **Copy note:** Product Spec prose uses “enter an existing session”; the UI button label is **Enter existing session** (canonical for layout and `data-testid`).
+
+## Locked decisions
+
+| Topic | Decision |
+|-------|----------|
+| **Session lifecycle** | **Model C** — six phases: `importing` → `counting` → `reconciling` → `organizing` → `updating_inventory` → `closed`. XML export runs in `updating_inventory` after organizer lists complete. See [session-phases-state.mmd](../diagrams/session-phases-state.mmd). |
+| **Post-join routing** | Phase-aware via [`sessionRouteForPhase`](../../src/lib/session-phase-routing.js); counting default is **Lot form**, not List cups |
+| **Open session list** | All sessions where `phase !== 'closed'` |
+| **Display name** | Trim + case-fold (lowercase) on client and server before uniqueness check and persist |
+| **Re-join** | No “already joined” session-picker special casing for MVP; duplicate normalized name in a session returns **409** |
+| **Create button** | Process guideline (session lead creates); UI does not block other workers |
 
 ## Entry & exit
 
@@ -60,6 +74,7 @@ After a successful join, navigate by the joined session’s `phase` (from join r
 | `counting` | `/session/:sessionId/lot` |
 | `reconciling` | `/session/:sessionId/reconciliation` |
 | `organizing` | `/session/:sessionId/lots?mode=organizer` |
+| `updating_inventory` | `/session/:sessionId/reconciliation` |
 | `closed` | Must not appear in open session list; if encountered, stay on Home with error |
 
 ## Layout & controls
@@ -81,7 +96,7 @@ Shown after **Enter existing session** when display name is valid.
 | Element | Copy / behavior |
 |---------|-----------------|
 | Dialog title | Open sessions |
-| Dialog description | Select a session to join as {displayName} |
+| Dialog description | Select a session to join as {displayName} (normalized) |
 | Session row | Session name (bold); subtitle: `{setNumber} · {phaseLabel} · {workerCount} workers` |
 | Loading | Spinner or skeleton rows while `GET /api/v1/sessions` is in flight (Unit 1+) |
 | Empty state | “No open sessions right now” when list is empty |
@@ -95,15 +110,18 @@ Shown after **Enter existing session** when display name is valid.
 | `counting` | Counting |
 | `reconciling` | Reconciling |
 | `organizing` | Organizing |
+| `updating_inventory` | Updating inventory |
 
 ## Display name rules
 
 Applied on **create**, **join**, and `sessionStorage` writes (client and server):
 
 1. **Trim** leading/trailing whitespace.
-2. **Case-fold** to a canonical form (e.g. lowercase) before uniqueness check and persist.
+2. **Case-fold** to a canonical form (lowercase) before uniqueness check and persist.
 3. **Uniqueness** is per session: `"Alex"` and `" alex "` are duplicates after normalization.
 4. **409 Conflict** on join: show fixed copy (see Messages); do not auto-suffix or silently rename.
+
+Implementation: [`normalizeDisplayName`](../../src/lib/display-name.js).
 
 ## Client state
 
@@ -163,7 +181,7 @@ Transient notifications on Home (when added) use [toast notifications](#toast-no
 
 | Field / entity | Source (live) | Notes |
 |----------------|---------------|-------|
-| Open sessions list | `GET /api/v1/sessions` | Set number, name, phase, worker count per session. **Filter:** all sessions where `phase !== 'closed'` (`importing`, `counting`, `reconciling`, `organizing`). No “already joined” special casing for MVP. |
+| Open sessions list | `GET /api/v1/sessions` | Set number, name, phase, worker count per session. **Filter:** all sessions where `phase !== 'closed'` (`importing`, `counting`, `reconciling`, `organizing`, `updating_inventory`). No “already joined” special casing for MVP. |
 
 ### Write
 
@@ -180,7 +198,7 @@ Transient notifications on Home (when added) use [toast notifications](#toast-no
 - [ ] **Enter existing session** shows a picker of non-`closed` sessions with set, phase label, and worker count
 - [ ] Open sessions dialog shows loading, empty, and fetch-error states (Unit 1+)
 - [ ] Join errors (duplicate name, other failures) appear inside the dialog; dialog stays open on 409
-- [ ] Selecting a session joins as the normalized display name and lands on the phase-appropriate route (`counting` → Lot form, not List cups)
+- [ ] Selecting a session joins as the normalized display name and lands on the phase-appropriate route (`counting` → Lot form, `updating_inventory` → reconciliation)
 - [ ] Duplicate display name in a session is rejected with a clear message (no silent rename)
 - [ ] SessionNav is **not** shown on Home (no `sessionId` in route)
 - [ ] `/sessions` redirects to Home
@@ -191,23 +209,24 @@ Transient notifications on Home (when added) use [toast notifications](#toast-no
 
 ### Implemented (Unit 0)
 
-- Display name input and validation (trim only; case-fold pending)
-- Create → New session with `sessionStorage` name
-- Join dialog with fixture `OPEN_SESSIONS`
-- Duplicate name detection via fixture `joinSession` (`DUPLICATE_NAME` error code; case-insensitive check in fixture)
+- Display name input and validation with trim + case-fold via `normalizeDisplayName`
+- Create → New session with normalized `workerDisplayName` in `sessionStorage`
+- Join dialog with fixture `OPEN_SESSIONS` (non-`closed` filter)
+- Human-readable phase labels in session picker (`sessionPhaseLabel`)
+- Duplicate name detection via fixture `joinSession` (`DUPLICATE_NAME`; case-insensitive after normalization)
+- Join errors inside open-sessions dialog; page errors for empty name before dialog
+- Empty state when no open sessions (`open-sessions-empty`)
+- Phase-aware post-join routing via `sessionRouteForPhase` (including `updating_inventory` → reconciliation)
+- `sessionStorage` on join: `workerDisplayName`, `currentSessionId`, `currentWorkerId`
 - Dev-only playground links
-- Join always navigates to List cups (storyboard gap vs spec — update in `/build`)
+- `data-testid`: `open-sessions-dialog`, `open-sessions-empty`
 
 ### Gaps (Units 1–4)
 
 - Live `GET /api/v1/sessions` for open session discovery (non-`closed` filter)
 - Live `POST …/join` with 409 handling and server-side name normalization
-- Phase-aware post-join routing (`counting` → `/lot`)
-- Loading, empty, and fetch-error states in open sessions dialog
-- Join errors shown inside dialog (today: page-level alert behind modal)
-- `sessionStorage` on join (`currentSessionId`, `currentWorkerId`, normalized `workerDisplayName`)
+- Loading and fetch-error states in open sessions dialog (`open-sessions-loading`, `open-sessions-retry`)
 - Connect `useWebSocket` after successful join
-- Display name case-fold on client (create and join)
 - Toast notification host (top-right, configurable TTL, auto-fade) for transient Home feedback
 
 ### Out of scope (MVP)
@@ -222,9 +241,9 @@ Transient notifications on Home (when added) use [toast notifications](#toast-no
 | `display-name` | Display name input |
 | `create-session` | Create new session button |
 | `enter-existing` | Enter existing session button |
-| `open-sessions-dialog` | Open sessions dialog content (Unit 1+) |
+| `open-sessions-dialog` | Open sessions dialog content |
 | `open-sessions-loading` | Loading state in dialog (Unit 1+) |
-| `open-sessions-empty` | Empty state in dialog (Unit 1+) |
+| `open-sessions-empty` | Empty state in dialog |
 | `open-sessions-retry` | Retry after fetch failure (Unit 1+) |
 | `dev-ternary-swipe` | Dev playground link (dev only) |
 | `dev-segmented-swipe` | Dev playground link (dev only) |
@@ -234,4 +253,4 @@ Transient notifications on Home (when added) use [toast notifications](#toast-no
 
 ## Open questions
 
-- None at this time (session list scope, name normalization, and post-join routing resolved 2026-06-11).
+- None at this time (session list scope, name normalization, post-join routing, and Model C lifecycle locked 2026-06-12).

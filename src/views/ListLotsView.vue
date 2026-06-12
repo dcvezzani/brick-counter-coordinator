@@ -30,6 +30,8 @@ const {
   deleteLot,
   getCurrentWorker,
   colorName,
+  canDeclareReadyToImport,
+  declareReadyToImport,
 } = useSession()
 
 const session = computed(() => getSession(sessionId.value))
@@ -93,6 +95,12 @@ function runSplit() {
   splitPickList(sessionId.value)
 }
 
+const declareImportEnabled = computed(() => canDeclareReadyToImport(sessionId.value))
+
+function onDeclareReadyToImport() {
+  declareReadyToImport(sessionId.value)
+}
+
 function printList() {
   window.print()
 }
@@ -149,6 +157,16 @@ function printList() {
       >
         <ListChecks class="size-4 shrink-0" />
         Mark entire list complete
+      </Button>
+
+      <Button
+        v-if="mode === 'organizer' && session.phase === 'organizing'"
+        class="inline-flex min-h-11 items-center gap-2 print:hidden"
+        data-testid="declare-ready-import"
+        :disabled="!declareImportEnabled"
+        @click="onDeclareReadyToImport"
+      >
+        Declare ready to import
       </Button>
 
       <Dialog v-model:open="deleteDialogOpen">

@@ -12,6 +12,8 @@ export function sessionRouteForPhase(sessionId, phase) {
       return `/session/${sessionId}/reconciliation`
     case 'organizing':
       return `/session/${sessionId}/lots?mode=organizer`
+    case 'updating_inventory':
+      return `/session/${sessionId}/reconciliation`
     case 'closed':
       return '/'
     default:

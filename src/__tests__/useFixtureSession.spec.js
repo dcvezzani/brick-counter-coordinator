@@ -102,26 +102,38 @@ describe('useFixtureSession', () => {
     expect(updated.delta).not.toBe(0)
   })
 
-  it('blocks export until organize lists are complete', () => {
+  it('follows Model C lifecycle: reconcile, organize, import, export', () => {
     const session = fixture.getSession(fixture.DEMO_SESSION_ID)
     session.phase = 'reconciling'
     session.reconciliation.forEach((row) => {
       if (row.delta !== 0) fixture.resolveReconciliation(fixture.DEMO_SESSION_ID, row.lineId)
     })
+    expect(session.phase).toBe('reconciling')
+    expect(fixture.canDeclareReadyToOrganize(fixture.DEMO_SESSION_ID)).toBe(true)
+
+    fixture.declareReadyToOrganize(fixture.DEMO_SESSION_ID)
     expect(session.phase).toBe('organizing')
     expect(fixture.canExportReconciliation(fixture.DEMO_SESSION_ID)).toBe(false)
 
     fixture.splitPickList(fixture.DEMO_SESSION_ID)
-    expect(fixture.canExportReconciliation(fixture.DEMO_SESSION_ID)).toBe(false)
-
     for (const worker of session.workers) {
       fixture.completePickList(fixture.DEMO_SESSION_ID, worker.id)
     }
+    expect(fixture.canDeclareReadyToImport(fixture.DEMO_SESSION_ID)).toBe(true)
+
+    fixture.declareReadyToImport(fixture.DEMO_SESSION_ID)
+    expect(session.phase).toBe('updating_inventory')
     expect(fixture.canExportReconciliation(fixture.DEMO_SESSION_ID)).toBe(true)
 
     const result = fixture.exportReconciliationXml(fixture.DEMO_SESSION_ID)
     expect(result.xml).toContain('<LOTID>BL-')
     expect(result.xml).toContain('<REMARKS>')
     expect(session.phase).toBe('closed')
+  })
+
+  it('normalizes display names on join', () => {
+    const worker = fixture.joinSession(fixture.DEMO_SESSION_ID, '  Morgan  ')
+    expect(worker.displayName).toBe('morgan')
+    expect(() => fixture.joinSession(fixture.DEMO_SESSION_ID, 'MORGAN')).toThrow()
   })
 })

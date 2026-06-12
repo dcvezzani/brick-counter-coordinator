@@ -14,6 +14,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useSession } from '@/composables/useSession'
+import { normalizeDisplayName } from '@/lib/display-name'
+import { sessionPhaseLabel } from '@/lib/session-phase-labels'
 import { sessionRouteForPhase } from '@/lib/session-phase-routing'
 
 const router = useRouter()
@@ -21,47 +23,60 @@ const { listSessions, joinSession, setCurrentWorker, getSession } = useSession()
 const isDev = import.meta.env.DEV
 
 const displayName = ref('')
-const error = ref(null)
+const pageError = ref(null)
+const dialogError = ref(null)
 const showSessions = ref(false)
 const sessions = ref([])
 
+function persistWorkerSession(worker, sessionId) {
+  const normalized = normalizeDisplayName(worker.displayName)
+  sessionStorage.setItem('workerDisplayName', normalized)
+  sessionStorage.setItem('currentSessionId', sessionId)
+  sessionStorage.setItem('currentWorkerId', worker.id)
+}
+
 function openExisting() {
-  error.value = null
-  if (!displayName.value.trim()) {
-    error.value = 'Enter your display name first'
+  pageError.value = null
+  dialogError.value = null
+  if (!normalizeDisplayName(displayName.value)) {
+    pageError.value = 'Enter your display name first'
     return
   }
-  sessions.value = listSessions()
+  sessions.value = listSessions().filter((s) => s.phase !== 'closed')
   showSessions.value = true
 }
 
 function selectSession(sessionId) {
+  dialogError.value = null
   try {
-    const worker = joinSession(sessionId, displayName.value.trim())
+    const worker = joinSession(sessionId, displayName.value)
     setCurrentWorker(worker)
-    showSessions.value = false
+    persistWorkerSession(worker, sessionId)
     const session = getSession(sessionId)
     if (session?.phase === 'closed') {
-      error.value = 'That session is closed.'
+      dialogError.value = 'That session is closed.'
       return
     }
+    showSessions.value = false
     router.push(sessionRouteForPhase(sessionId, session?.phase))
   } catch (e) {
     if (e.code === 'DUPLICATE_NAME') {
-      error.value = 'That name is already taken in this session — pick another name.'
+      dialogError.value =
+        'That name is already taken in this session — pick another name.'
     } else {
-      error.value = e.message
+      dialogError.value = e.message
     }
   }
 }
 
 function createNew() {
-  error.value = null
-  if (!displayName.value.trim()) {
-    error.value = 'Enter your display name first'
+  pageError.value = null
+  const normalized = normalizeDisplayName(displayName.value)
+  if (!normalized) {
+    pageError.value = 'Enter your display name first'
     return
   }
-  sessionStorage.setItem('workerDisplayName', displayName.value.trim())
+  sessionStorage.setItem('workerDisplayName', normalized)
   router.push('/session/new')
 }
 </script>
@@ -87,8 +102,8 @@ function createNew() {
         />
       </div>
 
-      <Alert v-if="error" variant="destructive">
-        <AlertDescription>{{ error }}</AlertDescription>
+      <Alert v-if="pageError" variant="destructive">
+        <AlertDescription>{{ pageError }}</AlertDescription>
       </Alert>
 
       <div class="flex flex-col gap-2">
@@ -143,12 +158,27 @@ function createNew() {
     </div>
 
     <Dialog v-model:open="showSessions">
-      <DialogContent>
+      <DialogContent data-testid="open-sessions-dialog">
         <DialogHeader>
           <DialogTitle>Open sessions</DialogTitle>
-          <DialogDescription>Select a session to join as {{ displayName }}</DialogDescription>
+          <DialogDescription>
+            Select a session to join as {{ normalizeDisplayName(displayName) || displayName }}
+          </DialogDescription>
         </DialogHeader>
-        <ul class="flex flex-col gap-2">
+
+        <Alert v-if="dialogError" variant="destructive">
+          <AlertDescription>{{ dialogError }}</AlertDescription>
+        </Alert>
+
+        <p
+          v-if="sessions.length === 0"
+          class="text-sm text-muted-foreground"
+          data-testid="open-sessions-empty"
+        >
+          No open sessions right now
+        </p>
+
+        <ul v-else class="flex flex-col gap-2">
           <li v-for="session in sessions" :key="session.id">
             <Button
               variant="outline"
@@ -159,7 +189,8 @@ function createNew() {
               <div class="flex flex-col items-start gap-0.5 text-left">
                 <span class="font-medium">{{ session.name }}</span>
                 <span class="text-xs text-muted-foreground">
-                  {{ session.setNumber }} · {{ session.phase }} · {{ session.workerCount }} workers
+                  {{ session.setNumber }} · {{ sessionPhaseLabel(session.phase) }} ·
+                  {{ session.workerCount }} workers
                 </span>
               </div>
             </Button>

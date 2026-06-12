@@ -201,7 +201,7 @@ Shared across modes: navigation to **Lot form**, **Open cup** (organizer → cup
 | Service | Endpoints / mechanism |
 |---------|----------------------|
 | Reconciliation | `GET /api/v1/sessions/:id/reconciliation`, `POST …/reconciliation/resolve`, `POST …/reconciliation/export-xml` |
-| Session | `POST /api/v1/sessions/:id/phase` (`counting` → `reconciling`; export advances `reconciling` → `organizing`) |
+| Session | `POST /api/v1/sessions/:id/phase` (`counting` → `reconciling` → `organizing` → `updating_inventory`; export advances `updating_inventory` → `closed`) |
 | Part-out (read-only context) | Included lines only (`excluded = 0`) drive expected quantities |
 | WebSocket | `session.phase`, `lot.updated` refreshes open discrepancy counts |
 
@@ -213,9 +213,11 @@ Shared across modes: navigation to **Lot form**, **Open cup** (organizer → cup
 
 **Resolve:** Any joined worker **Edit**s lots on **Lot form** and **Resolve**s (sign-off) open discrepancies via `POST …/reconciliation/resolve` with `{ lineId }`.
 
-**Export:** When all discrepancies resolved, any worker taps **Reconciled — export XML** → `POST …/reconciliation/export-xml` → phase `organizing`.
+**Declare ready to organize:** When all discrepancies resolved in `reconciling`, `POST …/sessions/:id/phase` → `organizing`.
 
-**Organize (Units 3–4):** Pick-list split and **List lots** progress in `organizing` ([list-lots.md](../view-specs/list-lots.md)).
+**Organize (Units 3–4):** Pick-list split and **List lots** progress in `organizing` ([list-lots.md](../view-specs/list-lots.md)). When all organizer lists complete, **Declare ready to import** → `updating_inventory`.
+
+**Export:** In `updating_inventory`, **Reconciled — export XML** → `POST …/reconciliation/export-xml` → phase `closed`.
 
 **Export deliverables:** Bulk-update XML (`<LOTID>` from `bricklink_lot_id` + `<REMARKS>` per included row) and `validationUrl` (`https://www.bricklink.com/invXML.asp#update`). Client offers download and opens the validation page; upload happens outside the app.
 

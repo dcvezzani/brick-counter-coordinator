@@ -15,7 +15,7 @@
 | **Status** | In review — awaiting human approval before `/build` |
 | **Author** | AIDLC `/design` (David Vezzani, product owner) |
 | **Created** | 2026-06-10 |
-| **Last updated** | 2026-06-11 (Home spec: join routing, session list filter, name normalization) |
+| **Last updated** | 2026-06-12 (Model C lifecycle: updating_inventory phase; Home spec alignment) |
 
 ### Summary
 
@@ -130,12 +130,13 @@ brick-counter-coordinator/
 | Phase | Who acts | UI views |
 |-------|----------|----------|
 | `importing` | Lead | Part-out import (curate fetched list) |
-| `counting` | Counters, lead | Home, Lot form, List cups |
-| `reconciling` | Lead, workers resolve | Part-out reconciliation |
-| `organizing` | Organizers; lead exports when done | List lots (organizer mode); export XML on Part-out reconciliation |
+| `counting` | Counters, lead | Lot form, List cups (Home is global entry, not phase-scoped) |
+| `reconciling` | Lead, workers resolve | Part-out reconciliation — Edit, Resolve, Declare ready to organize |
+| `organizing` | Organizers | List lots (organizer mode) — split, mark lines, Declare ready to import |
+| `updating_inventory` | Lead / any worker | Part-out reconciliation — Reconciled export XML |
 | `closed` | — | Read-only or redirect Home |
 
-Lead advances phase via API (`POST /sessions/:id/phase`): `counting` → `reconciling` → `organizing`. Export (`POST …/reconciliation/export-xml`) advances `organizing` → `closed` after all organizer lists are complete. See [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md).
+Lead advances phase via API (`POST /sessions/:id/phase`): `counting` → `reconciling` → `organizing` → `updating_inventory`. Export (`POST …/reconciliation/export-xml`) advances `updating_inventory` → `closed`. See [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md), [session-phases-state.mmd](../../docs/diagrams/session-phases-state.mmd), [home.md — Post-join routing](../../docs/view-specs/home.md#post-join-routing).
 
 ---
 
@@ -151,7 +152,7 @@ SQLite schema (logical entities):
 | `set_number` | TEXT | e.g. `70404-1` or `70404-2` |
 | `name` | TEXT | Display label — server-derived `{set_number} part-out` on create |
 | `lead_worker_id` | TEXT FK | Creator / session lead — set on `POST /sessions` |
-| `phase` | TEXT | `importing` \| `counting` \| `reconciling` \| `organizing` \| `closed` |
+| `phase` | TEXT | `importing` \| `counting` \| `reconciling` \| `organizing` \| `updating_inventory` \| `closed` |
 | `part_out_fetch_status` | TEXT | `ok` \| `error` (inline fetch on create; no async `pending` in MVP) |
 | `part_out_fetch_error` | TEXT | Nullable; last fetch failure message |
 | `part_out_options` | JSON | Session condition only: `{ "condition": "new" \| "used" }` — pricing/merge are fixed server constants at fetch time |
@@ -247,7 +248,7 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 | `POST` | `/sessions/:id/join` | Body: `{ displayName }` → worker + session phase; **409** if normalized name taken (see below) |
 | `POST` | `/sessions/:id/phase` | Lead: advance phase |
 
-**Open session list (`GET /sessions`):** Returns summaries for the Home open-sessions dialog. Include sessions in `importing`, `counting`, `reconciling`, and `organizing`; exclude `closed`. Minimum fields per row: `id`, `setNumber`, `name`, `phase`, `workerCount`.
+**Open session list (`GET /sessions`):** Returns summaries for the Home open-sessions dialog. Include sessions in `importing`, `counting`, `reconciling`, `organizing`, and `updating_inventory`; exclude `closed`. Minimum fields per row: `id`, `setNumber`, `name`, `phase`, `workerCount`.
 
 **Join (`POST /sessions/:id/join`):**
 
@@ -322,11 +323,13 @@ Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session i
 |--------|------|---------|
 | `GET` | `/sessions/:id/reconciliation` | Per-line expected, counted, delta, resolved, qtyAgreed |
 | `POST` | `/sessions/:id/reconciliation/resolve` | Body `{ lineId }` — accept-as-is; sets `qtyAgreed` from `qtyCounted` |
-| `POST` | `/sessions/:id/reconciliation/export-xml` | Returns XML + validation URL; phase → `closed` |
+| `POST` | `/sessions/:id/reconciliation/export-xml` | Returns XML + validation URL; phase → `closed` (only when current phase is `updating_inventory`) |
 
 **Resolve:** Accept-as-is acknowledgment — does not mutate lots. Open discrepancy = `delta !== 0 && !resolved`.
 
-**Export XML:** Gated until all discrepancies resolved and every worker's pick list is complete. Port `buildBulkUpdateXml` from `bricklink-chrome-extension/scripts/bulk-repair/lib/build-bulk-update-xml.mjs` (`<LOTID>` from `bricklink_lot_id` + `<REMARKS>` per included row). **Not** upload XML from `inv-upload-xml.js`. Handoff: download/clipboard + `validationUrl` `https://www.bricklink.com/invXML.asp#update` — user pastes into `inv-update__textarea-xml` and verifies on BrickLink. Full contract: [docs/bricklink-mass-update-export.md](../../docs/bricklink-mass-update-export.md) and [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md).
+**Phase advances (`POST /sessions/:id/phase`):** `counting` → `reconciling` (lead); `reconciling` → `organizing` when all discrepancies resolved (**Declare ready to organize**); `organizing` → `updating_inventory` when all organizer lists complete (**Declare ready to import** on List lots).
+
+**Export XML:** Available only in `updating_inventory`. Port `buildBulkUpdateXml` from `bricklink-chrome-extension/scripts/bulk-repair/lib/build-bulk-update-xml.mjs` (`<LOTID>` from `bricklink_lot_id` + `<REMARKS>` per included row). **Not** upload XML from `inv-upload-xml.js`. Handoff: download/clipboard + `validationUrl` `https://www.bricklink.com/invXML.asp#update` — user pastes into `inv-update__textarea-xml` and verifies on BrickLink. Full contract: [docs/bricklink-mass-update-export.md](../../docs/bricklink-mass-update-export.md) and [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md).
 
 ### Pick lists (Unit 3)
 

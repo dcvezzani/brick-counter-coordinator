@@ -24,6 +24,8 @@ const {
   exportReconciliationXml,
   canExportReconciliation,
   exportBlockReason,
+  canDeclareReadyToOrganize,
+  declareReadyToOrganize,
 } = useSession()
 
 const session = computed(() => getSession(sessionId.value))
@@ -36,17 +38,31 @@ const showMatched = ref(false)
 const showExport = ref(false)
 const exportResult = ref(null)
 
+const phase = computed(() => session.value?.phase)
+const declareOrganizeEnabled = computed(() => canDeclareReadyToOrganize(sessionId.value))
 const exportEnabled = computed(() => canExportReconciliation(sessionId.value))
+
 const exportHint = computed(() => {
   const reason = exportBlockReason(sessionId.value)
-  if (reason === 'discrepancies') return 'Resolve all discrepancies before exporting.'
-  if (reason === 'organize') return 'Complete organizer lists before exporting.'
-  if (reason === 'phase') return 'Export is available during the organizing phase.'
+  if (reason === 'discrepancies') return 'Resolve all discrepancies before continuing.'
+  if (reason === 'declare_organize') {
+    return 'Declare ready to organize when all discrepancies are resolved.'
+  }
+  if (reason === 'organize') {
+    return 'Complete organizer lists on List lots before declaring ready to import.'
+  }
+  if (reason === 'phase' && phase.value !== 'updating_inventory') {
+    return 'Export is available during the updating inventory phase.'
+  }
   return ''
 })
 
 function resolve(row) {
   resolveReconciliation(sessionId.value, row.lineId)
+}
+
+function onDeclareReadyToOrganize() {
+  declareReadyToOrganize(sessionId.value)
 }
 
 function reconciled() {
@@ -84,6 +100,7 @@ function downloadXml() {
       </Alert>
 
       <LotListTable
+        v-if="phase === 'reconciling' || phase === 'updating_inventory'"
         :session-id="sessionId"
         :rows="openDiscrepancies"
         mode="reconciliation"
@@ -91,7 +108,7 @@ function downloadXml() {
       />
 
       <Button
-        v-if="matchedRows.length"
+        v-if="matchedRows.length && phase === 'reconciling'"
         variant="link"
         class="h-auto justify-start p-0"
         data-testid="reconciliation-matched-toggle"
@@ -101,7 +118,7 @@ function downloadXml() {
       </Button>
 
       <LotListTable
-        v-if="showMatched && matchedRows.length"
+        v-if="showMatched && matchedRows.length && phase === 'reconciling'"
         :session-id="sessionId"
         :rows="matchedRows"
         mode="reconciliation"
@@ -117,6 +134,17 @@ function downloadXml() {
       </p>
 
       <Button
+        v-if="phase === 'reconciling'"
+        class="min-h-11"
+        data-testid="declare-ready-organize"
+        :disabled="!declareOrganizeEnabled"
+        @click="onDeclareReadyToOrganize"
+      >
+        Declare ready to organize
+      </Button>
+
+      <Button
+        v-if="phase === 'updating_inventory'"
         class="min-h-11"
         data-testid="reconciled"
         :disabled="!exportEnabled"
