@@ -51,4 +51,4 @@
 - session counts are compared with **included** part-out lines (after import curation)
 - discrepancy table shows open mismatches only; optional **View matched lines**
 - **Resolve** accept-as-is (acknowledge counted qty); any joined worker
-- **Reconciled — export XML** on this view after organize complete — disabled until all discrepancies resolved and every organizer list is complete; generates XML, opens Bricklink bulk update validation, session → `closed`
+- **Reconciled — export XML** in `updating_inventory` — generates XML, opens Bricklink bulk update validation (phase unchanged); **Mark session complete** → `closed` after manual Bricklink handoff

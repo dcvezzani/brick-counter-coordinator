@@ -131,12 +131,12 @@ brick-counter-coordinator/
 |-------|----------|----------|
 | `importing` | Any joined worker | Part-out import (curate fetched list; last-write-wins) |
 | `counting` | Counters, lead | Lot form, List cups (Home is global entry, not phase-scoped) |
-| `reconciling` | Lead, workers resolve | Part-out reconciliation — Edit, Resolve, Declare ready to organize; List cups (browse) |
-| `organizing` | Organizers | List lots (organizer mode) — split, mark lines, Declare ready to import; List cups (browse) |
-| `updating_inventory` | Lead / any worker | Part-out reconciliation — Reconciled export XML |
+| `reconciling` | Lead, workers resolve | Part-out reconciliation — Edit, Resolve, Declare ready to organize; SessionNav **Reconcile** visible; List cups (browse) |
+| `organizing` | Organizers | List lots (organizer mode) — split, mark lines, Declare ready to import; SessionNav **Reconcile** hidden; List cups (browse) |
+| `updating_inventory` | Any joined worker | Part-out reconciliation — Reconciled export XML; Mark session complete; SessionNav **Reconcile** visible |
 | `closed` | — | Read-only or redirect Home |
 
-Lead advances phase via API (`POST /sessions/:id/phase`): `counting` → `reconciling` → `organizing` → `updating_inventory`. Export (`POST …/reconciliation/export-xml`) advances `updating_inventory` → `closed`. See [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md), [session-phases-state.mmd](../../docs/diagrams/session-phases-state.mmd), [home.md — Post-join routing](../../docs/view-specs/home.md#post-join-routing).
+Lead advances phase via API (`POST /sessions/:id/phase`): `counting` → `reconciling` → `organizing` → `updating_inventory`. Export (`POST …/reconciliation/export-xml`) returns XML + validation URL only — **does not** change phase. **Mark session complete** (`POST …/sessions/:id/phase` → `closed`) requires at least one successful export this session. See [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md), [session-phases-state.mmd](../../docs/diagrams/session-phases-state.mmd), [home.md — Post-join routing](../../docs/view-specs/home.md#post-join-routing).
 
 ---
 
@@ -222,7 +222,7 @@ Unique key: `(session_id, part_id, color_id, condition)`.
 
 ### `reconciliation_overrides` (Unit 4)
 
-Adjustments when resolving discrepancies (delta qty or agreed final qty per part-out line).
+Per-line resolve sign-off when counts do not match expected (accept-as-is); does not store a separate agreed quantity for MVP.
 
 **Retention:** Session data kept until lead closes session; no cross-session inventory (MVP).
 
@@ -321,13 +321,13 @@ Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session i
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/sessions/:id/reconciliation` | Per-line expected, counted, delta, resolved, qtyAgreed |
-| `POST` | `/sessions/:id/reconciliation/resolve` | Body `{ lineId }` — accept-as-is; sets `qtyAgreed` from `qtyCounted` |
-| `POST` | `/sessions/:id/reconciliation/export-xml` | Returns XML + validation URL; phase → `closed` (only when current phase is `updating_inventory`) |
+| `GET` | `/sessions/:id/reconciliation` | Per-line expected, counted, delta, resolved |
+| `POST` | `/sessions/:id/reconciliation/resolve` | Body `{ lineId }` — accept-as-is; sets `resolved: true` |
+| `POST` | `/sessions/:id/reconciliation/export-xml` | Returns XML + validation URL only — **does not** change phase (only when current phase is `updating_inventory`) |
 
 **Resolve:** Accept-as-is acknowledgment — does not mutate lots. Open discrepancy = `delta !== 0 && !resolved`.
 
-**Phase advances (`POST /sessions/:id/phase`):** `counting` → `reconciling` (lead); `reconciling` → `organizing` when all discrepancies resolved (**Declare ready to organize**); `organizing` → `updating_inventory` when all organizer lists complete (**Declare ready to import** on List lots).
+**Phase advances (`POST /sessions/:id/phase`):** `counting` → `reconciling` (lead); `reconciling` → `organizing` when all discrepancies resolved (**Declare ready to organize**); `organizing` → `updating_inventory` when all organizer lists complete (**Declare ready to import** on List lots); `updating_inventory` → `closed` via **Mark session complete** (server requires prior `export-xml` success this session).
 
 **Export XML:** Available only in `updating_inventory`. Port `buildBulkUpdateXml` from `bricklink-chrome-extension/scripts/bulk-repair/lib/build-bulk-update-xml.mjs` (`<LOTID>` from `bricklink_lot_id` + `<REMARKS>` per included row). **Not** upload XML from `inv-upload-xml.js`. Handoff: download/clipboard + `validationUrl` `https://www.bricklink.com/invXML.asp#update` — user pastes into `inv-update__textarea-xml` and verifies on BrickLink. Full contract: [docs/bricklink-mass-update-export.md](../../docs/bricklink-mass-update-export.md) and [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md).
 
@@ -504,7 +504,8 @@ Local-network deployment assumed; document in README for production hardening la
 - [ ] Reconciliation diff uses `excluded = 0` lines only
 - [ ] Mismatch filter on reconciliation list
 - [ ] XML validates on Bricklink bulk update validation page (manual sign-off)
-- [ ] Reconciled opens download + link to bulk update UI
+- [ ] Reconciled opens download + link to bulk update UI (phase unchanged)
+- [ ] Mark session complete advances `updating_inventory` → `closed` after export
 
 **Part-out line schema:** Align parsed fetch with extension `code-scraper.js` output; document in `server/bricklink/part-out-schema.json`. Tests use `fixtures/part-out-sample.json`.
 
@@ -559,7 +560,7 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 | #10 Pick-list split | 3 | `POST …/pick-lists/split` |
 | #11 Organizer progress | 3 | Pick-list PATCH + complete |
 | #12 Pick-list delivery / print | 3 | Print CSS on List lots |
-| #13 Bricklink XML export | 4 | `export-xml` + validation URL |
+| #13 Bricklink XML export | 4 | `export-xml` + validation URL; Mark session complete → `closed` |
 | #14 Routable views | 0 | All routes in [Routes](#routes-vue-router) |
 | #15 Storyboard walkthrough | 0 | Fixtures + [storyboard.md](../../docs/support/storyboard.md) |
 | #16 Part-out import curation | 1 | Part-out lines API + import view |

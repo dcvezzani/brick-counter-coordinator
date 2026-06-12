@@ -62,7 +62,7 @@ Visible when the route includes `sessionId`, **except** during **Part-out import
 | Cups | `/session/:sessionId/cups` | `nav-cups` | `counting`, `reconciling`, `organizing` only — see [list-cups.md](./list-cups.md#locked-decisions) |
 | Lot | `/session/:sessionId/lot` | `nav-lot` | When nav shown |
 | Lots | `/session/:sessionId/lots?mode=organizer` | `nav-lots` | When nav shown |
-| Reconcile | `/session/:sessionId/reconciliation` | `nav-reconciliation` | When nav shown |
+| Reconcile | `/session/:sessionId/reconciliation` | `nav-reconciliation` | `reconciling` and `updating_inventory` only — hidden during `importing`, `counting`, and `organizing` — see [part-out-reconciliation.md](./part-out-reconciliation.md#locked-decisions) |
 
 Nav container: `data-testid="session-nav"`.
 

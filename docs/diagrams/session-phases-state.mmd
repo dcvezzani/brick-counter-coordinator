@@ -12,7 +12,7 @@ stateDiagram-v2
     counting --> reconciling: "POST .../sessions/{id}/phase (Lead advances phase)"
     reconciling --> organizing: "Declare ready to organize (POST .../sessions/{id}/phase)"
     organizing --> updating_inventory: "Declare ready to import (POST .../sessions/{id}/phase)"
-    updating_inventory --> closed: "Reconciled — export XML (POST .../reconciliation/export-xml)"
+    updating_inventory --> closed: "Mark session complete (POST .../sessions/{id}/phase)"
     closed --> [*]
 
     note right of importing
@@ -47,12 +47,13 @@ stateDiagram-v2
         Declare ready to import when all lists complete.
         Post-join route /lots?mode=organizer
         List cups still browsable via SessionNav Cups.
+        SessionNav Reconcile hidden.
     end note
 
     note right of updating_inventory
-        Generate and export XML.
-        Phase → closed on export API success.
+        Reconciled — export XML (phase unchanged).
         Worker verifies and submits on Bricklink manually.
+        Mark session complete → closed.
         Post-join route /reconciliation
         SessionNav Cups hidden.
     end note

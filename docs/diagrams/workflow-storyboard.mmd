@@ -50,10 +50,11 @@ flowchart TB
 
     LOT <-->|"SessionNav"| CUPS
     LOT <-->|"SessionNav"| LOTS_ORG
-    LOT <-->|"SessionNav"| RECON
+    LOT <-->|"SessionNav reconciling only"| RECON
+    LOT <-->|"SessionNav updating_inventory only"| STORE_UPDATE
     LOT <-->|"SessionNav"| HOME
 
-    RECON <-->|"SessionNav Cups"| CUPS
+    RECON <-->|"SessionNav Cups reconciling only"| CUPS
     LOTS_ORG <-->|"SessionNav Cups"| CUPS
 
     CUPS -->|"0 lots cupId pinned"| LOT
@@ -76,4 +77,5 @@ flowchart TB
     LOTS_ORG -->|"Open cup"| LOTS_CUP
     LOTS_ORG -->|"Declare ready to import"| STORE_UPDATE
 
-    STORE_UPDATE -->|"Export XML and mass update"| CLOSED
+    STORE_UPDATE -->|"Reconciled export XML phase unchanged"| STORE_UPDATE
+    STORE_UPDATE -->|"Mark session complete after manual Bricklink handoff"| CLOSED

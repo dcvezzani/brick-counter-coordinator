@@ -1,14 +1,17 @@
 %% Update store inventory — worker actions within updating_inventory phase
 %% Source: docs/view-specs/part-out-reconciliation.md (export actions)
 %% Follows organizing complete; precedes session closed.
-%% Phase → closed on export API success; Bricklink verify/submit is manual outside the app.
+%% Export does not change phase; Mark session complete → closed after manual Bricklink handoff.
 
 flowchart TD
     enter(["Open Part-out reconciliation<br>phase updating_inventory"])
 
-    enter --> export["Reconciled — export XML<br>POST .../reconciliation/export-xml"]
+    enter --> export["Reconciled — export XML<br>POST .../reconciliation/export-xml<br>phase unchanged"]
 
-    export --> closed["Session phase → closed"]
     export --> dialog["Export dialog<br>Download XML + open Bricklink validation"]
 
     dialog --> manual["Worker pastes XML on Bricklink<br>verify and submit manually (out of app)"]
+
+    manual --> markComplete["Mark session complete<br>POST .../sessions/{id}/phase"]
+
+    markComplete --> closed["Session phase → closed"]

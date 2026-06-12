@@ -201,13 +201,13 @@ Shared across modes: navigation to **Lot form**, **Open cup** (organizer → cup
 | Service | Endpoints / mechanism |
 |---------|----------------------|
 | Reconciliation | `GET /api/v1/sessions/:id/reconciliation`, `POST …/reconciliation/resolve`, `POST …/reconciliation/export-xml` |
-| Session | `POST /api/v1/sessions/:id/phase` (`counting` → `reconciling` → `organizing` → `updating_inventory`; export advances `updating_inventory` → `closed`) |
+| Session | `POST /api/v1/sessions/:id/phase` (`counting` → `reconciling` → `organizing` → `updating_inventory` → `closed` via **Mark session complete** after export) |
 | Part-out (read-only context) | Included lines only (`excluded = 0`) drive expected quantities |
 | WebSocket | `session.phase`, `lot.updated` refreshes open discrepancy counts |
 
 ### Example usage
 
-**Trigger:** Lead opens **Part-out reconciliation** when session phase is `reconciling`.
+**Trigger:** Any joined worker opens **Part-out reconciliation** when session phase is `reconciling` or `updating_inventory`. SessionNav **Reconcile** hidden during `importing`, `counting`, and `organizing` (reconciliation must complete before organizing via **Declare ready to organize**).
 
 **Flow:** Client calls `GET /api/v1/sessions/:id/reconciliation` to load rows comparing summed session lot totals to **included** part-out lines (key: part + color + condition).
 
@@ -217,7 +217,9 @@ Shared across modes: navigation to **Lot form**, **Open cup** (organizer → cup
 
 **Organize (Units 3–4):** Pick-list split and **List lots** progress in `organizing` ([list-lots.md](../view-specs/list-lots.md)). When all organizer lists complete, **Declare ready to import** → `updating_inventory`.
 
-**Export:** In `updating_inventory`, **Reconciled — export XML** → `POST …/reconciliation/export-xml` → phase `closed`.
+**Export:** In `updating_inventory`, any joined worker runs **Reconciled — export XML** → `POST …/reconciliation/export-xml` — returns XML + `validationUrl`; **phase unchanged**.
+
+**Close session:** After manual Bricklink verify/submit outside the app, **Mark session complete** → `POST …/sessions/:id/phase` → `closed` (requires at least one successful export this session).
 
 **Export deliverables:** Bulk-update XML (`<LOTID>` from `bricklink_lot_id` + `<REMARKS>` per included row) and `validationUrl` (`https://www.bricklink.com/invXML.asp#update`). Client offers download and opens the validation page; upload happens outside the app.
 

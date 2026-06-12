@@ -2,7 +2,7 @@
 
 How to turn a reconciled part-out list into **BrickLink bulk-update XML** and stage it in the **Mass Inventory Update** tool for verification and manual submit.
 
-**Coordinator use:** Unit 4 **Reconciled** → `POST /sessions/:id/reconciliation/export-xml` → download/copy XML → BrickLink validation page ([product-spec](../feature/part-out-coordinator/product-spec.md)).
+**Coordinator use:** Unit 4 **Reconciled — export XML** → `POST /sessions/:id/reconciliation/export-xml` → download/copy XML → BrickLink validation page (phase unchanged). Worker **Mark session complete** after manual verify/submit ([product-spec](../feature/part-out-coordinator/product-spec.md)).
 
 **Raw notes:** [support/mass-update/readme.md](support/mass-update/readme.md)
 
@@ -140,7 +140,8 @@ Extension **Add inventory** modal uses the **upload** textarea (`inv-upload-xml.
 
 | Method | Path | Response |
 |--------|------|----------|
-| `POST` | `/sessions/:id/reconciliation/export-xml` | `{ xml, validationUrl, byteSize, warnings? }` |
+| `POST` | `/sessions/:id/reconciliation/export-xml` | `{ xml, validationUrl, byteSize, warnings? }` — does **not** change session phase |
+| `POST` | `/sessions/:id/phase` | `updating_inventory` → `closed` via **Mark session complete** (after export this session) |
 
 **Checks before return:**
 

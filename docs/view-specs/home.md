@@ -39,7 +39,7 @@ Session entry point. Workers identify themselves with a display name and either 
 
 | Topic | Decision |
 |-------|----------|
-| **Session lifecycle** | **Model C** — six phases: `importing` → `counting` → `reconciling` → `organizing` → `updating_inventory` → `closed`. XML export runs in `updating_inventory` after organizer lists complete. See [session-phases-state.mmd](../diagrams/session-phases-state.mmd). |
+| **Session lifecycle** | **Model C** — six phases: `importing` → `counting` → `reconciling` → `organizing` → `updating_inventory` → `closed`. XML export runs in `updating_inventory` after organizer lists complete; **Mark session complete** closes the session after manual Bricklink handoff. See [session-phases-state.mmd](../diagrams/session-phases-state.mmd). |
 | **Post-join routing** | Phase-aware via [`sessionRouteForPhase`](../../src/lib/session-phase-routing.js); counting default is **Lot form**, not List cups |
 | **Open session list** | All sessions where `phase !== 'closed'` |
 | **Display name** | Trim + case-fold (lowercase) on client and server before uniqueness check and persist |
