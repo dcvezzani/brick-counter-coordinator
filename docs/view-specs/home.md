@@ -61,6 +61,7 @@ Session entry point. Workers identify themselves with a display name and either 
 | Action | Destination |
 |--------|-------------|
 | **Create new session** (with display name) | `/session/new` |
+| Direct `/session/new` without display name | Redirect to `/` ([new-session.md](./new-session.md#entry--exit)) |
 | **Enter existing session** → select session | Phase-aware route (see [Post-join routing](#post-join-routing)) |
 | Dev playgrounds (dev build only, non-product) | `/dev/*` |
 

@@ -7,7 +7,7 @@
 stateDiagram-v2
     direction LR
 
-    [*] --> importing: "POST /sessions (New session submit; 201 only)"
+    [*] --> importing: "POST /sessions (New session submit - 201 only)"
     importing --> counting: "POST .../part-out/confirm (Confirm and begin counting)"
     counting --> reconciling: "POST .../sessions/{id}/phase (Lead advances phase)"
     reconciling --> organizing: "Declare ready to organize (POST .../sessions/{id}/phase)"

@@ -1,7 +1,7 @@
 # Part-out import
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-11
+**Last updated:** 2026-06-12 (Dave decision — create-time fetch error: Loading then Error)
 
 ---
 
@@ -44,6 +44,12 @@ Any joined worker reviews the server-fetched Bricklink part-out list and curates
 
 While `phase === 'importing'`, this view is the **only** session-scoped screen — [`SessionNav`](./README.md#sessionnav-bottom-bar) is hidden.
 
+## Locked decisions
+
+| Topic | Decision |
+|-------|----------|
+| Create-time fetch error entry | When user arrives from [New session](./new-session.md) with `partOutFetchStatus=error` and zero lines: **Loading then Error** — run `GET …/part-out/lines` on mount (spinner); if still empty/failed, show **Error** (empty table + Refetch). **No** auto-refetch on mount. |
+
 ### Where actions navigate
 
 | Action | Destination |
@@ -75,6 +81,16 @@ Read-only strip below the page heading (`data-testid="session-import-context"`):
 | Condition | `partOutOptions.condition` | **New** or **Used** (human label) |
 | Fetch status | `part_out_fetch_status` | Drives [Loading & fetch states](#loading--fetch-states); no separate badge required for MVP |
 
+### Create-time fetch error entry
+
+When navigation follows [New session create with network failure](./new-session.md#submit-outcomes-unit-1) (`partOutFetchStatus=error`, zero persisted lines):
+
+1. **Loading** — Same as any mount: spinner + “Loading part-out…” while `GET …/part-out/lines` runs.
+2. **Error** — If response is empty or indicates fetch failure, show empty table + **Refetch** (no automatic `POST …/refetch` on mount).
+3. User taps **Refetch** to retry (server retry rules apply per [Refetch](#loading--fetch-states) below).
+
+This path is **not** ErrorState immediately and **not** auto-refetch-on-mount.
+
 ### Loading & fetch states
 
 On mount (and on manual refetch), load part-out lines from `GET /api/v1/sessions/:id/part-out/lines`. Show a spinner (`data-testid="import-loading-spinner"`) during load and during automatic network retries (up to **3 attempts**, aligned with [new-session.md](./new-session.md)).
@@ -85,8 +101,8 @@ stateDiagram-v2
   Loading --> Ready: lines_loaded
   Loading --> Retrying: network_error
   Retrying --> Ready: retry_success
-  Retrying --> ErrorToast: retries_exhausted
-  ErrorToast --> Retrying: user_refetch
+  Retrying --> ErrorState: retries_exhausted
+  ErrorState --> Retrying: user_refetch
   Ready --> Ready: refetch_success
 ```
 
@@ -235,7 +251,7 @@ Footer **Exclude** maps to `POST …/part-out/lines/bulk-exclude` in live mode. 
 - [ ] Excluded tab includes **Cond** column (parity with Included)
 - [ ] Tab counts update when lines move between Included and Excluded
 - [ ] SessionNav **hidden** while `phase === 'importing'`; visible after confirm
-- [ ] Spinner shown during initial load and network retry (≤3 attempts)
+- [ ] Create-time fetch error ([new-session](./new-session.md)): **Loading then Error** on mount — spinner during `GET …/lines`, then empty table + Refetch if still failed; **no** auto-refetch on mount
 - [ ] **Confirm** disabled when no lines loaded or included count is 0; toast when confirm attempted with zero included
 - [ ] **Refetch** available on fetch error; no pre-refetch dialog; exclusions preserved after successful refetch
 - [ ] **Confirm & begin counting** advances session to counting phase and opens **Lot form**
