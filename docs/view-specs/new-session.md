@@ -1,7 +1,7 @@
 # New session
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-11 (consistency review)
+**Last updated:** 2026-06-12 (diagram alignment review)
 
 ---
 
@@ -28,6 +28,10 @@
 - [ADR-0004 — Part-out server fetch](../../adr/0004-part-out-server-fetch-curated-import.md)
 - [Set part-out list — request capture](../support/set-part-out-list/request.md) — canonical `curl` and fixed form values
 - [BrickLink set part-out fetch](../bricklink-set-part-out-fetch.md) — server mapping contract
+- [Session phases state diagram](../diagrams/session-phases-state.mmd)
+- [View navigation diagram](../diagrams/view-navigation.mmd)
+- [Workflow storyboard diagram](../diagrams/workflow-storyboard.mmd)
+- [Part-out import fetch states](../diagrams/part-out-import-fetch-state.mmd) — cross-reference for network failure after create
 
 ## Purpose
 
@@ -368,8 +372,54 @@ Server-side on create: normalize `setNumber`, derive `itemNo` (base before first
 | `display-name-required-error` | Display name validation alert | 1+ |
 | `submit-new-session` | Submit button | 0+ |
 
+## Diagram alignment
+
+Reviewed 2026-06-12 against [session-phases-state.mmd](../diagrams/session-phases-state.mmd), [view-navigation.mmd](../diagrams/view-navigation.mmd), [workflow-storyboard.mmd](../diagrams/workflow-storyboard.mmd), and [part-out-import-fetch-state.mmd](../diagrams/part-out-import-fetch-state.mmd). Product and Tech Specs cross-checked.
+
+### Aligned
+
+| Topic | Spec | Diagrams / related docs |
+|-------|------|-------------------------|
+| Entry route | `/session/new` | `view-navigation.mmd`, `workflow-storyboard.mmd` |
+| Happy-path exit | `POST /api/v1/sessions` → `/session/:sessionId/import` | `NEW --> IMPORT` in both navigation diagrams; `workflow-storyboard.mmd` labels `POST /sessions fetch part-out` |
+| Initial phase | Session created in `importing` | `session-phases-state.mmd` `[*] --> importing` on New session submit |
+| SessionNav hidden | No `sessionId` on route until after create; import hides nav while `importing` | `view-navigation.mmd` subgraph note “hidden during importing”; [README — Shared chrome](./README.md#shared-chrome) |
+| Home prerequisite | Display name from Home (`sessionStorage`) | `workflow-storyboard.mmd` edge label “Create new session (display name)” |
+| Form scope | Set number + condition only (Unit 1+) | Product Spec scenario 2; Tech Spec create body |
+| Fetch retry count | Server retries BrickLink POST up to **3×** on create | Inline mermaid in [BrickLink mapping](#bricklink-part-out-request-mapping); Tech Spec create |
+| Invalid set | HTTP **422**, no session, stay on New session | Tech Spec; [planned-views-services](../support/planned-views-services.md#2-new-session) |
+| Network exhausted | HTTP **201**, `partOutFetchStatus=error`, navigate to import | Tech Spec; [part-out-import.md](./part-out-import.md#loading--fetch-states) |
+
+### Discrepancies & gaps (diagram vs this spec)
+
+| # | Issue | Spec says | Diagram / doc gap | Resolution |
+|---|-------|-----------|-------------------|------------|
+| D1 | **Create submit outcomes** | Three paths: 201+ok → import; 201+error → import; 422 → stay | `workflow-storyboard.mmd` shows only happy path `NEW --> IMPORT` | **Diagram fix** — add 422 self-loop and error-status edge (see diagram PR) |
+| D2 | **Fetch error still enters `importing`** | Network failure after retries creates session in `importing` with `part_out_fetch_status=error` | `session-phases-state.mmd` transition label does not distinguish inline fetch ok vs error | **Diagram note** added — both enter `importing`; refetch UX is on import view |
+| D3 | **Import arrival after create-time fetch failure** | Client navigates to import; refetch UX delegated to [part-out-import.md](./part-out-import.md#loading--fetch-states) | `part-out-import-fetch-state.mmd` starts at `GET .../part-out/lines` on mount — no entry annotation for “arrived from create with `partOutFetchStatus=error` and zero lines” | **Diagram note** added; **open question** OQ4 — mount behavior |
+| D4 | **Route path shorthand** | Full route `/session/:sessionId/import` | `view-navigation.mmd` uses `/import` (abbreviated nodes) | Intentional shorthand per post-review (#7–#9); full paths in `workflow-storyboard.mmd` and Tech Spec |
+| D5 | **WebSocket on create** | Connect `useWebSocket` after every HTTP 201 before navigation | No diagram shows post-create WebSocket | Out of scope for navigation/phase diagrams; documented in [Client state](#client-state) |
+| D6 | **Display name — two entry paths** | Home blocks Create without name (alert); direct `/session/new` bookmark shows toast on mount | Diagrams show only Home → New with display name | Spec covers both paths in [Entry & exit](#entry--exit); diagrams omit direct-nav edge (acceptable) |
+| D7 | **Retry context on import diagram** | Create-time retry is inline in `POST /sessions`; import mount retry is separate (`GET` / `refetch`) | `part-out-import-fetch-state.mmd` retry states apply to **import view** load/refetch, not create | Cross-link only — not a conflict if readers distinguish create vs import retry (see [Submit outcomes](#submit-outcomes-unit-1)) |
+
+### Ambiguities in this spec (not diagram conflicts)
+
+| # | Topic | Notes |
+|---|-------|-------|
+| A1 | Set number client validation | Malformed input is passed to BrickLink; only empty submit is blocked client-side. No regex for `{digits}-{variant}` before submit. |
+| A2 | Normalize timing | Append `-1` on blur **or** submit — both valid; UX if user blurs `70404` then changes mind before submit is unspecified. |
+| A3 | Unit 0 storyboard | Fixture simulates successful create with lines; no 422 or network-error paths in storyboard — acceptable for Unit 0. |
+
 ## Open questions
 
+Decisions needed from Dave (product owner):
+
+1. **Back to Home** — Add an explicit control on New session (link/button), or rely on browser back + AppShell header “Brick Counter” title tap only?
+2. **Invalid set copy** — Show server `error.message` only, or wrap with fixed client copy (e.g. “Set not found — check the set number”)?
+3. **Import mount after create-time fetch error (OQ4)** — When the user lands on Part-out import with `partOutFetchStatus=error` and zero `part_out_lines`, should the import view (a) show **ErrorState + Refetch immediately** after `GET …/lines` returns empty, (b) **auto-invoke** `POST …/part-out/refetch` once on mount, or (c) show Loading then Error without auto-refetch? Spec currently defers to [part-out-import.md](./part-out-import.md) but that doc does not lock (a)/(b)/(c).
+4. **Set number format validation** — Keep “pass through to BrickLink” for odd input (e.g. `abc`, `70404-`), or add client-side pattern validation before submit?
+5. **Direct bookmark to `/session/new`** — Is toast-on-mount + submit-block the intended product behavior, or should the app redirect to Home when `workerDisplayName` is missing?
+
+**Deferred (no decision needed for MVP):**
+
 - Show fetch progress / line count after create (beyond disabled submit + “Fetching part-out…” helper)? **Deferred** — MVP uses disabled submit + helper text only; see [tech-spec — DevOps](../../feature/part-out-coordinator/tech-spec.md) for timeout notes if needed.
-- Explicit **Back to Home** control vs browser back / AppShell header only?
-- Fixed client copy for invalid set vs server message only?

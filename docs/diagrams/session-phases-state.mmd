@@ -1,5 +1,5 @@
 %% Session phase state machine
-%% Sources: docs/view-specs/home.md, part-out-import.md, part-out-reconciliation.md,
+%% Sources: docs/view-specs/home.md, new-session.md, part-out-import.md, part-out-reconciliation.md,
 %%          list-cups.md, list-lots.md, feature/part-out-coordinator/product-spec.md
 %%
 %% XML export and Bricklink mass update occur in updating_inventory, after organizing.
@@ -7,7 +7,7 @@
 stateDiagram-v2
     direction LR
 
-    [*] --> importing: "POST /sessions (New session submit)"
+    [*] --> importing: "POST /sessions (New session submit; 201 only)"
     importing --> counting: "POST .../part-out/confirm (Confirm and begin counting)"
     counting --> reconciling: "POST .../sessions/{id}/phase (Lead advances phase)"
     reconciling --> organizing: "Declare ready to organize (POST .../sessions/{id}/phase)"
@@ -18,7 +18,9 @@ stateDiagram-v2
     note right of importing
         Only session-scoped screen.
         SessionNav hidden.
-        Post-join route /import
+        Post-join route /session/:id/import
+        Inline fetch ok or error after 3 retries
+        (422 invalid set: no session, stay on New session)
     end note
 
     note right of counting
