@@ -16,7 +16,7 @@ flowchart TB
     end
 
     subgraph counting_phase["Phase: counting"]
-        LOT["Lot form<br>/session/{id}/lot/{lotId}"]
+        LOT["Lot form<br>/session/{id}/lot or /lot/{lotId}<br>new vs edit"]
         CUPS["List cups<br>/session/{id}/cups<br>also reconciling and organizing"]
         LOTS_CUP["List lots cup mode<br>?mode=cup&cupId="]
     end
