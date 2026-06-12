@@ -50,7 +50,7 @@ Session lead specifies the LEGO **set number** and **condition** (New or Used), 
 | Display name | Set on **Home** only. Apply [Home display name rules](./home.md#display-name-rules) (trim + case-fold) before `POST`. No editable name field here; no silent `"Session Lead"` fallback. |
 | Display name feedback | **Toast** on mount when `workerDisplayName` is missing ([Home — toast notifications](./home.md#toast-notifications)). **Destructive alert** on submit attempt with same copy as Home (“Enter your display name first”) plus instruction to return to `/`. |
 | Fetch failure — invalid set | BrickLink rejects or returns an unparseable part-out → **HTTP 422**, **no session created**; destructive alert with server message; stay on New session. |
-| Fetch failure — network | Server **retries the BrickLink POST up to 3 times** during `POST /api/v1/sessions`. If all retries fail, session **is created** in `importing` with `part_out_fetch_status=error`; client navigates to Part-out import for refetch ([part-out-import.md — Fetch error on mount](./part-out-import.md#fetch-error-on-mount)). |
+| Fetch failure — network | Server **retries the BrickLink POST up to 3 times** during `POST /api/v1/sessions`. If all retries fail, session **is created** in `importing` with `part_out_fetch_status=error`; client navigates to Part-out import for refetch ([part-out-import.md — Loading & fetch states](./part-out-import.md#loading--fetch-states)). |
 | Shell chrome | Renders inside [`AppShell`](../../src/components/AppShell.vue) (header + storyboard badge in fixture mode). **SessionNav is hidden** — no `sessionId` in route until after create. |
 
 ## Entry & exit
@@ -187,7 +187,7 @@ Single reference for field rules (also reflected in Locked decisions):
 |---------|------|------------------|----------------------|------------|---------------|
 | Valid set, fetch OK | 201 | Yes | `ok` | `/session/:sessionId/import` | — |
 | Invalid set | 422 | No | — | Stay on `/session/new` | Destructive alert (`{server message}`) |
-| Network exhausted (3 retries) | 201 | Yes | `error` | `/session/:sessionId/import` | [Import fetch-error banner](./part-out-import.md#fetch-error-on-mount) + refetch |
+| Network exhausted (3 retries) | 201 | Yes | `error` | `/session/:sessionId/import` | [Import loading & fetch states](./part-out-import.md#loading--fetch-states) — spinner, refetch, toast on non-network errors |
 
 Server performs network retries (up to 3) — not the browser client.
 
@@ -228,7 +228,7 @@ Server performs network retries (up to 3) — not the browser client.
 | Select New or Used condition | Destructive alert / inline | Submit with no condition selected |
 | Fetching part-out… | Helper text / disabled submit | Create request in flight |
 | {server message} | Destructive alert | Invalid set — HTTP 422; stay on view |
-| *(import view)* | Alert + refetch | Network failure after retries — see [part-out-import.md — Fetch error on mount](./part-out-import.md#fetch-error-on-mount) |
+| *(import view)* | Spinner, refetch, toast | Network failure after retries — see [part-out-import.md — Loading & fetch states](./part-out-import.md#loading--fetch-states) |
 
 ## User actions
 
@@ -328,7 +328,7 @@ Server-side on create: normalize `setNumber`, derive `itemNo` (base before first
 - [ ] Fetched part-out lines available on import when `partOutFetchStatus=ok`; refetch offered when `error`
 - [ ] Condition (`new` or `used`) persisted on session; drives read-only lot form label
 - [ ] Invalid set: HTTP 422, error on New session, no session record
-- [ ] Network failure after 3 retries: session created with error status; import view shows refetch ([part-out-import.md](./part-out-import.md))
+- [ ] Network failure after 3 retries: session created with error status; import view handles refetch per [part-out-import.md — Loading & fetch states](./part-out-import.md#loading--fetch-states)
 - [ ] SessionNav **not** shown (no `sessionId` until after create)
 - [ ] Creator worker stored as `lead_worker_id` on session
 

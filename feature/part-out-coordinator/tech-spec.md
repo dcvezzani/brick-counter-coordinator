@@ -277,8 +277,9 @@ Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session i
 | `GET` | `/sessions/:id/part-out/lines` | Query: `includedOnly=true\|false` (default `false` on import view) |
 | `PATCH` | `/sessions/:id/part-out/lines/:lineId` | Body: `{ excluded: true\|false }` |
 | `POST` | `/sessions/:id/part-out/lines/bulk-exclude` | Body: `{ lineIds: [] }` — exclude multiple |
-| `POST` | `/sessions/:id/part-out/confirm` | Lead confirms curation → phase `counting` |
-| `POST` | `/sessions/:id/part-out/refetch` | Re-fetch from Bricklink (resets lines; confirm in UI) |
+| `POST` | `/sessions/:id/part-out/lines/bulk-restore` | Body `{}` or `{ all: true }` — restore all excluded lines |
+| `POST` | `/sessions/:id/part-out/confirm` | Worker confirms curation → phase `counting` |
+| `POST` | `/sessions/:id/part-out/refetch` | Re-fetch from Bricklink; merge rows; **preserve existing exclusions**; no pre-refetch confirm dialog |
 
 ### Lots & cups (Unit 2)
 
