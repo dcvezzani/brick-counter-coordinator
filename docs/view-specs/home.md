@@ -39,7 +39,7 @@ Session entry point. Workers identify themselves with a display name and either 
 
 | Topic | Decision |
 |-------|----------|
-| **Session lifecycle** | **Model C** — six phases: `importing` → `counting` → `reconciling` → `organizing` → `updating_inventory` → `closed`. XML export runs in `updating_inventory` after organizer lists complete. See [session-phases-state.mmd](../diagrams/session-phases-state.mmd). |
+| **Session lifecycle** | **Model C** — six phases: `importing` → `counting` → `reconciling` → `organizing` → `updating_inventory` → `closed`. XML export runs in `updating_inventory` after organizer lists complete; **Mark session complete** closes the session after manual Bricklink handoff. See [session-phases-state.mmd](../diagrams/session-phases-state.mmd). |
 | **Post-join routing** | Phase-aware via [`sessionRouteForPhase`](../../src/lib/session-phase-routing.js); counting default is **Lot form**, not List cups |
 | **Open session list** | All sessions where `phase !== 'closed'` |
 | **Display name** | Trim + case-fold (lowercase) on client and server before uniqueness check and persist |
@@ -76,7 +76,7 @@ After a successful join, navigate by the joined session’s `phase` (from join r
 | `reconciling` | `/session/:sessionId/reconciliation` |
 | `organizing` | `/session/:sessionId/lots?mode=organizer` |
 | `updating_inventory` | `/session/:sessionId/reconciliation` |
-| `closed` | Must not appear in open session list; if encountered, stay on Home with error |
+| `closed` | Must not appear in open session list; any session-scoped route redirects to Home |
 
 ## Layout & controls
 
@@ -135,7 +135,9 @@ Unit 1+: connect `useWebSocket` after successful join (before navigation). Displ
 
 ## Toast notifications
 
-When the user needs to be notified (non-blocking status or outcome feedback on Home):
+AppShell hosts toasts on **every session view** (see [README — Toast notifications](./README.md#toast-notifications)). Home uses the same host when applicable.
+
+When the user needs to be notified (non-blocking status or outcome feedback):
 
 | Requirement | Behavior |
 |-------------|----------|
@@ -147,7 +149,7 @@ When the user needs to be notified (non-blocking status or outcome feedback on H
 
 | Pattern | Use for |
 |---------|---------|
-| **Toast** | Transient notifications the user should notice but does not need to dismiss manually |
+| **Toast** | Transient notifications the user should notice but does not need to dismiss manually — including **`session.phase`** changes on any session view |
 | **Destructive alert (page)** | Blocking validation before an action can proceed (e.g. empty display name) |
 | **Destructive alert / empty state (dialog)** | Errors or empty state while the open sessions dialog is open and the user must act |
 

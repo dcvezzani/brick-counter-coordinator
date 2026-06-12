@@ -76,7 +76,8 @@ Check off during a review session; note feedback inline or in a new `qa-NNN.md`.
 - [ ] Resolve at least one discrepancy (accept-as-is)
 - [ ] **Declare ready to organize** when discrepancies cleared → organizing phase
 - [ ] After organize + all lists complete: **Declare ready to import** → updating_inventory
-- [ ] **Reconciled — export XML** → download + Bricklink validation link → closed
+- [ ] **Reconciled — export XML** → download + Bricklink validation link (phase unchanged)
+- [ ] **Mark session complete** → `closed` after manual Bricklink handoff
 
 ## Exit criteria (before Unit 1 backend)
 
