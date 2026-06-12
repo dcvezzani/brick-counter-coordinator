@@ -1,7 +1,7 @@
 # List lots
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-11
+**Last updated:** 2026-06-12
 
 ---
 
@@ -12,34 +12,48 @@
 | **View name** | List lots |
 | **Route** | `/session/:sessionId/lots` |
 | **Route params** | `sessionId` |
-| **Query params** | `mode` (default `cup`); `cupId` (cup mode) |
+| **Query params** | `mode` (`cup` \| `organizer`; required for correct behavior); `cupId` (required when `mode=cup`) |
 | **Primary actor(s)** | Counter (cup mode) / Organizer (organizer mode) |
-| **Delivery unit** | 0 (fixture) → 2 (cup) / 3 (organizer) |
+| **Delivery unit** | 0 (fixture) → 2 (cup) → 3 (organizer) |
 | **Source file** | [`src/views/ListLotsView.vue`](../../src/views/ListLotsView.vue) |
 | **Table component** | [`LotListTable.vue`](../../src/components/LotListTable.vue) |
 
 ## Related docs
 
 - [Product Spec — Application views](../../feature/part-out-coordinator/product-spec.md#application-views)
-- [Product Spec — View naming note (three contexts)](../../feature/part-out-coordinator/product-spec.md#view-naming-note)
-- [Product Spec — Scenario 8: Organize](../../feature/part-out-coordinator/product-spec.md#key-scenarios)
-- [Planned views & services — List lots](../support/planned-views-services.md)
+- [Product Spec — Scenario 10–11: Organize](../../feature/part-out-coordinator/product-spec.md#key-scenarios)
+- [Tech Spec — Routes & pick lists](../../feature/part-out-coordinator/tech-spec.md)
+- [Planned views & services — List lots](../support/planned-views-services.md#6-list-lots)
 - [Storyboard walkthrough § 6. List lots](../support/storyboard.md#6-list-lots)
+- [List cups](./list-cups.md) — cup-mode entry
+- [Part-out reconciliation](./part-out-reconciliation.md) — discrepancy list (shared `LotListTable` component; not a mode on this route)
 - [Shared chrome](./README.md#shared-chrome)
 
 ## Purpose
 
-One list UI serves three product contexts via `mode` query parameter. Workers and organizers see lots filtered to their task: pick a lot from a multi-lot cup, work an organizer pick list, or (via query) reconciliation discrepancies.
+One list UI serves **two** product contexts via the `mode` query parameter. Counters pick a lot from a multi-lot cup; organizers work their assigned pick list after split.
 
-> **Note:** Dedicated **Part-out reconciliation** view also hosts discrepancy UI. Reconciliation `mode` on this route exists in code but primary product path is the reconciliation view.
+Discrepancy reconciliation lives on [**Part-out reconciliation**](./part-out-reconciliation.md) only — not as a `mode` on this route.
+
+## Locked decisions
+
+| Topic | Decision |
+|-------|----------|
+| Product modes on this route | **cup** and **organizer** only; reconciliation removed from this route |
+| **Add another lot** | **Not on this view** — use SessionNav **Lot** or **List cups** |
+| **Open associated cup** | **Required** row action in organizer mode (Unit 3) |
+| **Split list** | Any worker in organizer mode may run it after phase is `organizing` and all reconciliation discrepancies are resolved; session lead will typically click it |
+| **Mark entire list complete** | **Disabled** until every assigned line is **Moved to storage** or **Needs new location** (no `pending` lines) |
+| Storage location column | **Required** in organizer mode — show part-out **Remarks** / storage location per line (Product Spec scenario 10; Unit 3) |
+| Page heading | Mode-specific: **Lots in cup** (cup) or **Organizer pick list** (organizer); no duplicate inner table title |
+| Cup mode without `cupId` | Invalid — redirect to **List cups** or show empty state with guidance (do not list all session lots) |
 
 ## Modes
 
-| Mode | Query | Title | Primary actor | Reached from |
-|------|-------|-------|---------------|--------------|
-| **cup** | `?mode=cup&cupId={id}` | Lots in cup | Counter | List cups (multi-lot cup) |
+| Mode | Query | Page heading | Primary actor | Reached from |
+|------|-------|--------------|---------------|--------------|
+| **cup** | `?mode=cup&cupId={id}` | Lots in cup | Counter | [List cups](./list-cups.md) (multi-lot cup) |
 | **organizer** | `?mode=organizer` | Organizer pick list | Organizer | SessionNav **Lots** |
-| **reconciliation** | `?mode=reconciliation` | Discrepancies | Lead | Code path; prefer Reconciliation view |
 
 ## Entry & exit
 
@@ -49,13 +63,15 @@ One list UI serves three product contexts via `mode` query parameter. Workers an
 |------|---------------|
 | List cups → multi-lot cup | `?mode=cup&cupId={cupId}` |
 | SessionNav **Lots** | `?mode=organizer` |
-| Direct / legacy | `?mode=reconciliation` |
+
+SessionNav **Lots** is visible whenever the route includes `sessionId` (see [Shared chrome](./README.md#sessionnav-bottom-bar)). Organizer workflow runs in the `organizing` phase **after** [Part-out reconciliation](./part-out-reconciliation.md) discrepancies are resolved and the lead advances phase.
 
 ### Where actions navigate
 
 | Action | Destination |
 |--------|-------------|
 | **Edit** (table) | `/session/:sessionId/lot/:lotId` |
+| **Open cup** (organizer) | `/session/:sessionId/lots?mode=cup&cupId={cupId}` for that lot's cup |
 | Delete confirm | Stays on list (lot removed) |
 | Print | Browser print dialog (organizer) |
 
@@ -65,27 +81,35 @@ One list UI serves three product contexts via `mode` query parameter. Workers an
 
 | Element | Copy / behavior |
 |---------|-----------------|
-| Page heading | List lots |
-| Mode indicator | Mode: {mode} |
-| Organizer: **Split list** | Visible when `mode=organizer` and pick list not yet split |
+| Page heading | **Lots in cup** (cup mode) or **Organizer pick list** (organizer mode) |
+| Organizer: **Split list** | Visible when `mode=organizer` and pick list not yet split; any worker may click |
 | Organizer: **Print** | Triggers `window.print()` |
-| Organizer: **Mark entire list complete** | Marks current worker's pick list complete |
+| Organizer: **Mark entire list complete** | Disabled while any assigned line has status `pending`; marks current worker's pick list complete when enabled |
 
 ### Lot list table (shared)
 
-| Mode | Table title | Columns |
-|------|-------------|---------|
-| cup | Lots in cup | Part, Color, Qty, Actions |
-| organizer | Organizer pick list | Part, Color, Qty, Status, Actions |
-| reconciliation | Discrepancies | Part, Color, Expected, Counted, Actions |
+No separate table `<h2>` — page heading is the only title.
+
+| Mode | Columns |
+|------|---------|
+| cup | Part, Color, Qty, Actions |
+| organizer | Part, Color, Qty, Location, Status, Actions |
+
+**Location** (organizer): storage hint from part-out **Remarks** for that part/color line.
 
 ### Row actions
 
 | Mode | Actions |
 |------|---------|
-| cup / organizer | **Edit**, **Delete** |
-| organizer | **Moved**, **New loc** (status updates) |
-| reconciliation | **Resolve** (when unresolved) |
+| cup | **Edit**, **Delete** |
+| organizer | **Edit**, **Delete**, **Moved**, **New loc**, **Open cup** |
+
+### Copy map (organizer status buttons)
+
+| Button label | Sets status | Badge label |
+|--------------|-------------|-------------|
+| Moved | `moved_to_storage` | Moved to storage |
+| New loc | `needs_new_location` | Needs new location |
 
 ### Status labels (organizer)
 
@@ -104,33 +128,44 @@ One list UI serves three product contexts via `mode` query parameter. Workers an
 | Cancel | Cancel |
 | Confirm | Delete |
 
+### Empty states
+
+| Situation | Behavior |
+|-----------|----------|
+| Organizer mode, pick list not split | **Split list** button visible; table empty or shows all lots unassigned until split runs |
+| Organizer mode, worker has zero assigned lines after split | Empty table with copy such as "No lots assigned to you" |
+| Cup mode, invalid or missing `cupId` | Redirect to **List cups** or empty state — do not show all session lots |
+
 ## Messages & feedback
 
 | Message | Type | Trigger |
 |---------|------|---------|
-| Mode: {mode} | Subtitle | Always |
 | Delete lot? / description | Dialog | Delete → confirm |
 | Status badge | Badge per row | Organizer mode |
+| No lots assigned to you | Empty hint | Organizer mode; worker has zero lines after split |
 
 No toast on status change or list complete.
+
+**Fixture-only (Unit 0):** `Mode: {mode}` subtitle and `data-testid="lots-mode"` — remove before production; not listed as product copy.
 
 ## User actions
 
 | Action | Preconditions | Outcome |
 |--------|---------------|---------|
-| Split list | Organizer mode; not yet split | Evenly divides lots across workers; creates pick-list items |
-| Edit | Any non-reconciliation row | Navigate to Lot form |
-| Delete → confirm | cup or organizer | Removes lot and associated pick-list items |
-| Moved / New loc | Organizer mode | Updates pick-list item status |
+| Split list | Organizer mode; `phase === 'organizing'`; all reconciliation discrepancies resolved; pick list not yet split | Evenly divides lots across joined workers (round-robin by part id sorted); creates pick-list items; sets `pickListSplit` |
+| Edit | cup or organizer row | Navigate to Lot form |
+| Delete → confirm | cup or organizer row on worker's assigned lot (organizer) | Removes lot and associated pick-list items |
+| Moved / New loc | Organizer mode; assigned line | Updates pick-list item status; refreshes badge |
+| Open cup | Organizer mode; lot has `cupId` | Navigate to cup-filtered List lots for that cup |
 | Print | Organizer mode | Opens print dialog; hides nav/actions via print CSS |
-| Mark entire list complete | Organizer mode | Marks worker's pick list complete |
+| Mark entire list complete | Organizer mode; every assigned line non-`pending` | Marks current worker's pick list complete |
 
 ### Organizer requirements (product)
 
-- Lots split evenly across workers
-- Ordered by part id
+- Lots split evenly across joined workers; ordered by part id
 - Each worker sees only their assigned lots
-- **Mark entire list complete** when every line is moved or needs new location
+- Each line shows storage **Location** from part-out Remarks
+- **Mark entire list complete** enabled only when every assigned line is moved or needs new location
 
 ## Data requirements
 
@@ -138,65 +173,79 @@ No toast on status change or list complete.
 
 | Field / entity | Source (live) | Notes |
 |----------------|---------------|-------|
-| Lots (cup mode) | `GET …/lots?cupId=` | Filtered to cup |
-| Pick list (organizer) | `GET …/pick-list?workerId=` | Worker's assigned lots + status |
-| Session | `GET …/sessions/:id` | `pickListSplit` flag |
+| Lots (cup mode) | `GET /api/v1/sessions/:id/lots?cupId=` | Filtered to cup; `cupId` required |
+| Pick list (organizer) | `GET /api/v1/sessions/:id/lots?mode=organizer&workerId=` | Worker's assigned lots + status + location |
+| Session | `GET /api/v1/sessions/:id` | `pickListSplit` flag, phase |
 
 ### Write
 
 | Operation | Endpoint (live) | Notes |
 |-----------|-----------------|-------|
-| Split pick list | `POST …/pick-list/split` | Even distribution |
-| Update pick status | `PATCH …/pick-list/items/:id` | moved / needs location |
-| Complete list | `POST …/pick-list/complete` | Per worker |
-| Delete lot | `DELETE …/lots/:lotId` | |
+| Split pick list | `POST /api/v1/sessions/:id/pick-lists/split` | Even distribution among current workers |
+| Update pick status | `PATCH /api/v1/sessions/:id/pick-lists/:itemId` | `{ status: "moved_to_storage" \| "needs_new_location" }` |
+| Complete list | `POST /api/v1/sessions/:id/pick-lists/complete` | Per worker |
+| Delete lot | `DELETE /api/v1/sessions/:id/lots/:lotId` | Also removes associated pick-list items |
+
+WebSocket: `pick_list.updated` refreshes organizer rows ([tech spec](../../feature/part-out-coordinator/tech-spec.md)).
 
 ## Acceptance criteria
 
 ### Cup mode
 
-- [ ] Shows only lots in the selected cup
+- [ ] Shows only lots in the selected cup (`cupId` required)
+- [ ] Invalid/missing `cupId` does not list all session lots
+- [ ] Page heading reads **Lots in cup**
 - [ ] Edit opens Lot form for that lot
 - [ ] Delete removes lot after confirmation
 
 ### Organizer mode
 
-- [ ] **Split list** divides lots evenly across workers (once per session)
-- [ ] Worker's list ordered by part id
+- [ ] Page heading reads **Organizer pick list**
+- [ ] **Split list** divides lots evenly across workers (once per session); any worker may trigger
+- [ ] Worker's list ordered by part id; only assigned lots visible
+- [ ] **Location** column shows storage hint from part-out Remarks
 - [ ] **Moved** and **New loc** update status badges
-- [ ] **Edit** and **Delete** work on assigned lots
-- [ ] **Print** produces a printable pick list
-- [ ] **Mark entire list complete** available for current worker
+- [ ] **Edit**, **Delete**, and **Open cup** work on assigned lots
+- [ ] **Open cup** navigates to cup-filtered List lots for the lot's cup
+- [ ] **Print** produces a printable pick list (includes Location column)
+- [ ] **Mark entire list complete** disabled while any line is `pending`; enabled when all lines resolved
 
 ### General
 
 - [ ] SessionNav **Lots** opens organizer mode
 - [ ] Multi-lot cup navigation from List cups lands in cup mode with correct filter
+- [ ] Reconciliation is **not** reachable via `mode` on this route (use Part-out reconciliation)
 
 ## Storyboard status
 
 ### Implemented (Unit 0)
 
-- All three modes in one view + shared `LotListTable`
-- Split list, status buttons, print, mark complete
+- Cup and organizer modes in one view + shared `LotListTable`
+- Split list, status buttons, print, mark complete (mark complete not yet gated)
 - Delete confirmation dialog
 - Fixture in-memory pick-list and lot mutations
+- Cup mode entry from List cups (see [list-cups.md](./list-cups.md))
 
 ### Gaps (Units 1–4)
 
-- No **Add another lot** button on this view (product spec mentions it — use SessionNav Lot or List cups)
-- No **open associated cup** action (navigate to cup-filtered list from organizer row)
-- Reconciliation mode duplicated by dedicated Reconciliation view
+- **Open cup** row action not implemented
+- **Location** column not shown in organizer table
+- **Mark entire list complete** not disabled when pending lines remain
+- Cup mode without `cupId` may show all lots (should redirect or empty)
+- Page heading still generic "List lots"; inner table title duplicates heading
+- `Mode: {mode}` debug subtitle still visible (fixture artifact — remove for production)
 - No live pick-list persistence or WebSocket updates
-- Print layout not styled for production
+- Print layout not styled for production (Location column TBD until column ships)
+- ~~Legacy `mode=reconciliation` code path~~ — removed; use [Part-out reconciliation](./part-out-reconciliation.md)
 
 ### `data-testid` inventory
 
 | Test id | Element |
 |---------|---------|
 | `list-lots-view` | Page container |
-| `lots-mode` | Mode indicator |
+| `lots-mode` | Mode indicator (fixture-only — remove for production) |
 | `split-pick-list` | Split list button |
+| `print-pick-list` | Print button (planned) |
 | `mark-complete` | Mark entire list complete |
 | `delete-lot-dialog` | Delete dialog |
 | `delete-lot-cancel` | Cancel delete |
@@ -204,10 +253,11 @@ No toast on status change or list complete.
 | `lot-list-table` | Table root |
 | `lot-edit` | Edit row action |
 | `lot-delete` | Delete row action |
+| `lot-moved` | Moved row action (planned) |
+| `lot-new-loc` | New loc row action (planned) |
+| `lot-open-cup` | Open cup row action (planned) |
 
 ## Open questions
 
-- Add explicit **Add lot** and **Open cup** actions per product spec?
-- Can lead re-split after workers start?
-- List complete: require all lines non-pending, or honor partial complete?
-- Remove reconciliation `mode` from this route in favor of Reconciliation view only?
+- Can workers re-run **Split list** after workers have started (or after partial progress)?
+- May an organizer **Delete** lots that are on another worker's pick list, or only their own assigned lines?

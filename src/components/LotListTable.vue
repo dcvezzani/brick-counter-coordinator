@@ -124,6 +124,7 @@ const title = computed(() => {
                 size="sm"
                 variant="outline"
                 class="inline-flex items-center gap-2"
+                data-testid="reconcile-resolve"
                 @click="emit('resolve', row)"
               >
                 <CheckCircle class="size-4 shrink-0" />

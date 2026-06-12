@@ -215,7 +215,36 @@ export function useFixtureSession() {
       listComplete: false,
     }))
     session.pickListSplit = true
-    session.phase = 'organizing'
+  }
+
+  function allDiscrepanciesResolved(session) {
+    return session.reconciliation.every((row) => row.delta === 0 || row.resolved)
+  }
+
+  function allOrganizersComplete(session) {
+    if (!session.pickListSplit) return false
+    return session.workers.every((worker) => {
+      const items = session.pickListItems.filter((item) => item.workerId === worker.id)
+      return items.length > 0 && items.every((item) => item.listComplete)
+    })
+  }
+
+  function canExportReconciliation(sessionId) {
+    const session = ensureSession(sessionId)
+    return (
+      allDiscrepanciesResolved(session) &&
+      session.phase === 'organizing' &&
+      session.pickListSplit &&
+      allOrganizersComplete(session)
+    )
+  }
+
+  function exportBlockReason(sessionId) {
+    const session = ensureSession(sessionId)
+    if (!allDiscrepanciesResolved(session)) return 'discrepancies'
+    if (session.phase !== 'organizing') return 'phase'
+    if (!session.pickListSplit || !allOrganizersComplete(session)) return 'organize'
+    return null
   }
 
   function getPickListItems(sessionId, workerId) {
@@ -248,24 +277,29 @@ export function useFixtureSession() {
     const row = session.reconciliation.find((r) => r.lineId === lineId)
     if (row) {
       row.resolved = true
-      row.qtyCounted = row.qtyExpected
-      row.delta = 0
+      row.qtyAgreed = row.qtyCounted
+      if (allDiscrepanciesResolved(session) && session.phase === 'reconciling') {
+        session.phase = 'organizing'
+      }
     }
   }
 
   function exportReconciliationXml(sessionId) {
     const session = ensureSession(sessionId)
-    const lines = session.reconciliation.filter((r) => r.resolved)
+    if (!canExportReconciliation(sessionId)) {
+      throw new Error('Export blocked until discrepancies are resolved and organizer lists are complete')
+    }
+    const lines = session.reconciliation.filter((r) => r.bricklinkLotId)
     const xml = [
       '<?xml version="1.0" encoding="UTF-8"?>',
       '<INVENTORY>',
       ...lines.map(
         (row) =>
-          `  <ITEM><LOTID>${row.lineId}</LOTID><QTY>${row.qtyExpected}</QTY><REMARKS>${row.remarks}</REMARKS></ITEM>`,
+          `  <ITEM><LOTID>${row.bricklinkLotId}</LOTID><REMARKS>${row.remarks ?? ''}</REMARKS></ITEM>`,
       ),
       '</INVENTORY>',
     ].join('\n')
-    session.phase = 'organizing'
+    session.phase = 'closed'
     return {
       xml,
       validationUrl: 'https://www.bricklink.com/invXML.asp#update',
@@ -362,6 +396,8 @@ export function useFixtureSession() {
     getReconciliation,
     resolveReconciliation,
     exportReconciliationXml,
+    canExportReconciliation,
+    exportBlockReason,
     searchParts,
     resolvePartId,
     lookupPart,

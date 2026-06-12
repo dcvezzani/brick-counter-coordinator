@@ -24,7 +24,6 @@ const {
   getSession,
   getLots,
   getPickListItems,
-  getReconciliation,
   updatePickListItem,
   completePickList,
   splitPickList,
@@ -40,9 +39,6 @@ const lotToDelete = ref(null)
 const deleteDialogOpen = ref(false)
 
 const rows = computed(() => {
-  if (mode.value === 'reconciliation') {
-    return getReconciliation(sessionId.value).filter((r) => r.delta !== 0)
-  }
   if (mode.value === 'organizer') {
     const workerId = currentWorker.value?.id ?? session.value.workers[0]?.id
     const items = getPickListItems(sessionId.value, workerId)
@@ -140,7 +136,7 @@ function printList() {
         :session-id="sessionId"
         :rows="rows"
         :mode="mode"
-        :show-actions="mode !== 'reconciliation' || true"
+        :show-actions="true"
         @status-change="onStatusChange"
         @delete="requestDelete"
       />

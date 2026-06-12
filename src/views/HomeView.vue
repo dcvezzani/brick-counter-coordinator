@@ -14,9 +14,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useSession } from '@/composables/useSession'
+import { sessionRouteForPhase } from '@/lib/session-phase-routing'
 
 const router = useRouter()
-const { listSessions, joinSession, setCurrentWorker } = useSession()
+const { listSessions, joinSession, setCurrentWorker, getSession } = useSession()
 const isDev = import.meta.env.DEV
 
 const displayName = ref('')
@@ -39,7 +40,12 @@ function selectSession(sessionId) {
     const worker = joinSession(sessionId, displayName.value.trim())
     setCurrentWorker(worker)
     showSessions.value = false
-    router.push(`/session/${sessionId}/cups`)
+    const session = getSession(sessionId)
+    if (session?.phase === 'closed') {
+      error.value = 'That session is closed.'
+      return
+    }
+    router.push(sessionRouteForPhase(sessionId, session?.phase))
   } catch (e) {
     if (e.code === 'DUPLICATE_NAME') {
       error.value = 'That name is already taken in this session — pick another name.'

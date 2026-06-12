@@ -32,21 +32,23 @@
   - press button: "Save" or "Save and Add Another"
 
 ### list cups
-- select a cup
-- if there are multiple lots in a cup, show "list lots" filtering for only those lots in the same cup
-- else opens in "lot form"
+- browse session cups (counting default landing is lot form, not list cups)
+- add new lot → lot form (part-number cup auto-select on save)
+- select a cup: zero lots → lot form with cup pinned; one lot → lot form edit; multiple lots → cup-filtered list lots
 
 ### list lots
 - lists a selection of lots assigned to a given worker; lists are evenly divided between workers, ordered by part id
+- storage location (from part-out Remarks) shown per line in organizer mode
 - mark a lot as having been moved out of cup and into storage location
 - mark a lot as needing to be assigned a new storage location
-- add another lot
 - open a lot for editing
-- open associated cup (filtered "list lots")
+- open associated cup (filtered "list lots" in cup mode)
 - send list to printer
-- mark entire list as complete; all parts on the list have been moved to storage or marked as needing a new storage location assignment
+- mark entire list as complete when all parts on the list have been moved to storage or marked as needing a new storage location assignment (disabled while any line is pending)
+- cup mode: pick a lot from a multi-lot cup (see list cups); new lots via SessionNav Lot or list cups — not on this view
 
 ### part out reconciliation
 - session counts are compared with **included** part-out lines (after import curation)
-- a list of parts that have discrepancies is generated ("list lots")
-- press "Reconciled" to generate XML and send to Bricklink's bulk update validation page
+- discrepancy table shows open mismatches only; optional **View matched lines**
+- **Resolve** accept-as-is (acknowledge counted qty); any joined worker
+- **Reconciled — export XML** on this view after organize complete — disabled until all discrepancies resolved and every organizer list is complete; generates XML, opens Bricklink bulk update validation, session → `closed`

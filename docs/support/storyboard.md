@@ -34,7 +34,7 @@ Check off during a review session; note feedback inline or in a new `qa-NNN.md`.
 
 - [ ] Enter display name
 - [ ] Choose **create new session** → New session
-- [ ] Return to Home → **enter existing session** → lands in session hub / List cups
+- [ ] Return to Home → **enter existing session** (`counting` phase) → lands on **Lot form**
 
 ### 2. New session
 
@@ -47,7 +47,7 @@ Check off during a review session; note feedback inline or in a new `qa-NNN.md`.
 - [ ] Exclude lines not in scope for this sweep; restore excluded lines
 - [ ] Walk single-sweep path: brand-new or loose — confirm all lines, no exclusions
 - [ ] Optional: demo two-sweep partial-bag story — first pass excludes sealed-bag parts
-- [ ] Confirm → counting phase (List cups / Lot form)
+- [ ] Confirm → counting phase → **Lot form**
 
 ### 4. Lot form
 
@@ -58,8 +58,11 @@ Check off during a review session; note feedback inline or in a new `qa-NNN.md`.
 
 ### 5. List cups
 
+- [ ] SessionNav **Cups** opens List cups
+- [ ] Tap cup with zero lots → Lot form (`?cupId=` pinned)
 - [ ] Tap cup with one lot → Lot form
 - [ ] Tap cup with multiple lots → cup-filtered List lots → pick lot → Lot form
+- [ ] **Add new lot** → Lot form (no pinned cup)
 
 ### 6. List lots (organizer)
 
@@ -69,9 +72,9 @@ Check off during a review session; note feedback inline or in a new `qa-NNN.md`.
 
 ### 7. Part-out reconciliation
 
-- [ ] Compare fixture official list vs session counts
-- [ ] Discrepancy list; resolve at least one row
-- [ ] **Reconciled** → explain XML + Bricklink bulk update validation (mock or link)
+- [ ] Compare fixture official list vs session counts (discrepancies only; optional matched toggle)
+- [ ] Resolve at least one discrepancy (accept-as-is)
+- [ ] After organize + list complete: **Reconciled — export XML** → download + Bricklink validation link
 
 ## Exit criteria (before Unit 1 backend)
 

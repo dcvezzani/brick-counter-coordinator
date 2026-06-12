@@ -64,13 +64,13 @@ These tie directly to the **scorecard** in `/ship`. Each should be **testable** 
 | 4 | **Session lifecycle** — Lead can create a session from a Bricklink part-out for a set (server fetch + import curation); workers pick a **display name at join**, select the session, and all counts roll up. | End-to-end walkthrough: create → curate import → join with name → submit → view session totals. |
 | 5 | **Part search** — Worker can search/select a part to populate the part identifier field (search behavior matches business need for finding parts by number or name). | Search for a known part; selection fills the part field. |
 | 6 | **Save and Add Another** — Form offers **Save** and **Save and Add Another**; the latter saves the current lot and opens a fresh form with the **same part id pre-filled** (one lot per form). | Submit via Save and Add Another; new form shows previous part id; color cleared; qty reset to 1; session condition unchanged. |
-| 7 | **List cups navigation** — **List cups** shows all cups in the session; tapping a cup opens **Lot form**, or **List lots** filtered to that cup when it has **multiple lots**. | Cup with one lot opens Lot form directly; cup with multiple lots shows cup-filtered List lots then Lot form. |
-| 8 | **Reconciliation** — System compares session counts to the imported Bricklink part-out list, showing matches and mismatches, with a filter for **mismatches only**. | Known part-out + session data; report classifies rows correctly. |
-| 9 | **Discrepancy resolution** — Workers can resolve mismatches until reconciled totals reflect agreed final quantities. | Resolve at least one mismatch; reconciled view updates. |
-| 10 | **Pick-list split** — After finalize, lead generates **roughly even** organizer lists per worker; each line includes **storage location** from part-out Remarks. | Split among M workers; locations visible; no worker gets zero lines when N ≥ M. |
+| 7 | **List cups navigation** — **List cups** shows all cups in the session; tapping a cup opens **Lot form** (0 or 1 lot) or **List lots** filtered to that cup when it has **multiple lots**. | Cup with zero lots opens Lot form with cup pinned; one lot opens Lot form directly; multiple lots shows cup-filtered List lots then Lot form. |
+| 8 | **Reconciliation** — System compares session counts to the imported Bricklink part-out list; **Discrepancies** tab shows open mismatches; **All lines** tab shows full included-line comparison. | Known part-out + session data; open discrepancies classified correctly. |
+| 9 | **Discrepancy resolution** — Any joined worker can **Edit** lots on **Lot form** and **Resolve** (sign-off) until reconciled totals reflect agreed final quantities. | Resolve at least one mismatch; row leaves Discrepancies tab when agreed. |
+| 10 | **Pick-list split** — After **Reconciled — export XML** advances phase to `organizing`, any worker may run **Split list** (session lead typically); system generates **roughly even** organizer lists per worker; each line includes **storage location** from part-out Remarks. | Split among M workers; locations visible; no worker gets zero lines when N ≥ M. |
 | 11 | **Organizer progress** — On **List lots**, a worker can mark each lot as **moved to storage**, **needs new storage location**, or open it for editing; **mark entire list complete** when every line is in one of those states. Progress persists for their list during the session. | Mark lines with both outcomes; list-complete enabled only when all lines resolved; state survives refresh. |
 | 12 | **Pick-list delivery** — **List lots** is available on worker devices; worker can **send list to printer** when a printer is available. | View on device; print or print-ready output for one worker list. |
-| 13 | **Bricklink XML export** — From **Part-out reconciliation**, **Reconciled** generates **XML** and opens Bricklink **bulk update validation** (manual confirm/upload outside the app if required). | XML validates on Bricklink bulk-update validation page; spot-check row contents vs reconciled session. |
+| 13 | **Bricklink XML export** — From **Part-out reconciliation**, **Reconciled — export XML** (disabled until all discrepancies resolved) generates **XML** and opens Bricklink **bulk update validation** (manual confirm/upload outside the app if required); session → `organizing`. | XML validates on Bricklink bulk-update validation page; spot-check row contents vs reconciled session. |
 | 14 | **Application views** — All seven canonical views (see below) are **routable** with session-aware navigation. | Navigate to every view from an active session; no dead-end routes. |
 | 15 | **Storyboard walkthrough** — Before live backend work, stakeholders complete key scenarios (below) on an **interactive UI prototype** using **fixture data** only; feedback informs spec updates. | [storyboard.md](../../docs/support/storyboard.md) script checked off; at least one counter/organizer walkthrough; gaps logged. |
 | 16 | **Part-out import curation** — After session create, lead sees the **full** server-fetched Bricklink part-out list, **confirms** scope (optionally excludes lines for partial-bag two-sweep); reconciliation compares session totals to **included** lines only. | Single-sweep: confirm all lines → count → reconcile. Partial-bag: exclude lines → confirm → count → reconcile; excluded lines not in expected quantities. |
@@ -92,21 +92,20 @@ Canonical screen inventory from [application-views.md](../../docs/support/applic
 | **New session** | Session creation | Specify **set number** and **condition** (New or Used); submit — server **fetches** the official part-out list using fixed Bricklink pricing/merge defaults. |
 | **Part-out import** | Curate counting scope | Shows **all** fetched part-out lines (part, color, condition, qty, Remarks). Lead **confirms** to start counting (typical: full list, no changes). For partial-bag sets, lead may **exclude** out-of-scope lines per sweep; excluded lines can be **restored** before confirm. |
 | **Lot form** | Counting entry | A **lot** = part id + color + condition. Enter or find part number, select color, enter count; session condition shown read-only; **Save** or **Save and Add Another**. Part and color required. |
-| **List cups** | Cup navigation | Select a cup. If the cup has **multiple lots**, open **List lots** filtered to that cup only; otherwise open **Lot form** for the single lot. |
-| **List lots** | Organizer pick list (per worker) | Shows this worker's share of lots (evenly divided, ordered by part id). Mark lot **moved to storage** or **needs new storage location**; **add another lot**; **open lot for editing**; **open associated cup** (cup-filtered List lots); **send list to printer**; **mark entire list complete** when every line is resolved. |
-| **Part-out reconciliation** | Reconcile & export | Compare session counts to **included** part-out lines (from import curation); show discrepancies as a **List lots**-style list; **Reconciled** generates XML and sends to Bricklink **bulk update validation**. |
+| **List cups** | Cup navigation | Browse session cups. **Add new lot** opens **Lot form** (part-number cup auto-select on save). Tap cup: **0 lots** → new **Lot form** (cup pinned); **1 lot** → edit lot; **multiple lots** → cup-filtered **List lots**. Counting default landing is **Lot form**, not List cups. |
+| **List lots** | Organizer pick list (per worker) or cup lot picker | **Organizer:** this worker's share of lots (evenly divided, ordered by part id, **Location** from Remarks). Mark lot **moved to storage** or **needs new storage location**; **open lot for editing**; **open associated cup** (cup-filtered List lots); **send list to printer**; **mark entire list complete** when every line is resolved. **Cup mode:** pick a lot from a multi-lot cup (see **List cups**). New lots via SessionNav **Lot** or **List cups** — not on this view. |
+| **Part-out reconciliation** | Reconcile & export | Compare session counts to **included** part-out lines (shared table component); **Discrepancies** / **All lines** tabs; **Edit** + **Resolve** (sign-off); **Reconciled — export XML** when all discrepancies resolved → Bricklink **bulk update validation** → phase `organizing`. |
 
 ### View naming note
 
-**List lots** appears in three contexts — same list UI pattern, different data filters:
+**List lots** (`/session/:id/lots`) serves two contexts via `mode` query — same list UI pattern, different data filters:
 
 | Context | Filter / scope | Reached from |
 |---------|----------------|--------------|
-| **Organizer list** | This worker's assigned lots for the session | Session navigation after pick-list split |
+| **Organizer list** | This worker's assigned lots for the session | SessionNav **Lots** after pick-list split |
 | **Cup list** | Lots in one physical cup only | **List cups** when a cup has multiple lots |
-| **Reconciliation discrepancies** | Lots that do not match the official part-out | **Part-out reconciliation** |
 
-Design may use one shared list component with a mode/filter parameter; product behavior must match the table above.
+**Part-out reconciliation** is a separate view (`/session/:id/reconciliation`) that reuses the shared list component for discrepancy rows — not a `mode` on List lots. See [list-lots.md](../../docs/view-specs/list-lots.md) and [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md).
 
 ### Delivery units (MVP slices)
 
@@ -128,6 +127,20 @@ Work is split into **Units** at `/design` (one Tech Spec and one or more GitHub 
 
 Success criteria **#15** → Unit 0; **#1–#7, #14, #16** → Units 0–2 ( **#16** live in Unit 1); **#8–#9, #13** → Unit 4; **#10–#12** → Unit 3.
 
+### Session lifecycle
+
+End-to-end phase order for a single part-out session:
+
+| Step | Phase | Primary views / actions |
+|------|-------|-------------------------|
+| 1 | `importing` | Part-out import — curate included lines |
+| 2 | `counting` | Lot form, List cups — workers record lots |
+| 3 | `reconciling` | Part-out reconciliation — Edit lots, Resolve discrepancies (sign-off) |
+| 4 | `organizing` | **Reconciled — export XML** advances here; List lots — split pick list; organizers mark lines moved / needs location; mark lists complete |
+| 5 | `closed` | Session done (future gate); Bricklink upload manual outside app |
+
+Lead advances `counting` → `reconciling` via API. **Reconciled — export XML** advances `reconciling` → `organizing`. Details: [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md).
+
 ## User experience & scenarios
 
 ### Key scenarios
@@ -145,15 +158,18 @@ Success criteria **#15** → Unit 0; **#1–#7, #14, #16** → Units 0–2 ( **#
 
 5. **Discover an existing lot** — If the part/color/condition already exists in the session, worker sees who created it, current quantity, and that other physical cups may exist for the same lot.
 
-6. **Browse cups (List cups)** — Worker opens **List cups**. Tapping a cup:
+6. **Browse cups (List cups)** — Worker opens **List cups** from session navigation (counting phase default landing is **Lot form** — scenario 4). Tapping a cup:
+   - **Zero lots** in the cup → opens **Lot form** (new lot) with that cup pre-selected.
    - **One lot** in the cup → opens **Lot form** for that lot.
    - **Multiple lots** in the cup → opens **List lots** filtered to that cup; worker picks a lot, then **Lot form**.
 
-7. **Reconcile (Part-out reconciliation)** — Lead opens **Part-out reconciliation**; **included** part-out lines are compared to session counts. Discrepancies appear in a list; workers resolve until totals agree.
+7. **Reconcile (Part-out reconciliation)** — Lead advances to `reconciling` and opens **Part-out reconciliation**; **included** part-out lines are compared to session counts. **Discrepancies** tab lists open mismatches; **All lines** tab shows the full comparison. Workers **Edit** lots on **Lot form** and **Resolve** (sign-off) until none remain.
 
-8. **Organize (List lots)** — After split, each worker opens their **List lots** view (even share, ordered by part id). They mark lots **moved to storage** or **needs new storage location**, edit lots, jump to the associated cup, print the list, and **mark entire list complete** when done.
+8. **Export to Bricklink** — On **Part-out reconciliation**, lead or worker presses **Reconciled — export XML** (enabled only when all discrepancies resolved). Generates **XML**, opens Bricklink **bulk update validation**, and advances session to `organizing` (confirm/upload outside the app if required).
 
-9. **Export to Bricklink** — From **Part-out reconciliation**, lead presses **Reconciled** to generate **XML** and open Bricklink **bulk update validation** (confirm/upload outside the app if required).
+9. **Split organizer lists (List lots)** — Any worker (lead typically) runs **Split list** on **List lots** (organizer mode). Lots divide evenly across joined workers, ordered by part id, with storage **Location** from Remarks.
+
+10. **Organize (List lots)** — Each worker opens their **List lots** view. They mark lots **moved to storage** or **needs new storage location**, edit lots, jump to the associated cup, print the list, and **mark entire list complete** when every line is resolved.
 
 ### Experience principles
 
@@ -185,7 +201,7 @@ Success criteria **#15** → Unit 0; **#1–#7, #14, #16** → Units 0–2 ( **#
 - **Duplicate-lot notification** when a lot already exists in the session.
 - **Part-out reconciliation** vs imported Bricklink part-out: matches, mismatches, discrepancy list.
 - **Discrepancy resolution** until reconciled totals are agreed.
-- **List lots** organizer view: even split across workers, ordered by part id; per-lot **moved to storage** / **needs new storage location**; **add lot**, **edit lot**, **open associated cup**, **print**, **mark entire list complete**.
+- **List lots** organizer view: even split across workers, ordered by part id; **Location** column from part-out Remarks; per-lot **moved to storage** / **needs new storage location**; **edit lot**, **open associated cup**, **print**, **mark entire list complete** (disabled until all lines resolved).
 - **Reconciled** action: XML generation and handoff to Bricklink **bulk update validation** page.
 
 ### Out of scope
@@ -236,6 +252,8 @@ Resolved in [qa-001.md](../../docs/support/qa-001.md):
 | 2026-06-10 | **UI stack:** **shadcn-vue** + Tailwind v4 + Lucide + Vue Router on Vite; client **JavaScript** (`typescript: false`). Supersedes Font Awesome / generic ShadCN notes. |
 | 2026-06-10 | **Part-out import:** **Server-side fetch** on session create (not JSON upload). New **Part-out import** view shows full fetched list; lead confirms before counting (excludes lines only when needed). **Single sweep** for brand-new sealed sets (all new) or loose bricks (all used). **Two sweeps** only for partial-bag sets (mixed opened/sealed bags). Supersedes [ADR-0003](../../adr/0003-part-out-import-json-upload-mvp.md) → [ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md). |
 | 2026-06-11 | **New session scope:** Form exposes **set number + condition only**; Bricklink pricing and inventory-merge options are fixed server-side ([new-session.md](../../docs/view-specs/new-session.md)). Display name remains on Home. |
+| 2026-06-12 | **List lots view spec:** Two modes on route (`cup`, `organizer`); reconciliation is Part-out reconciliation only. **Add lot** via SessionNav **Lot** / **List cups**, not on List lots. **Split list** any worker (lead typically). **Mark complete** gated until all lines resolved. **Location** column required in organizer mode. |
+| 2026-06-12 | **Reconciliation view spec:** **Edit** + **Resolve** (sign-off); **Discrepancies** / **All lines** tabs; **Reconciled** gated until all resolved → `organizing`. See [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md). |
 
 ## Related documents
 

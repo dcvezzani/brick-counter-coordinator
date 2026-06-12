@@ -30,6 +30,7 @@ export function createDemoSession() {
     { id: 'cup-b', label: 'Cup B — yellows' },
     { id: 'cup-c', label: 'Cup C — mixed' },
     { id: 'cup-d', label: 'Cup D — specials' },
+    { id: 'cup-e', label: 'Cup E — empty' },
   ]
 
   const lots = [
@@ -181,6 +182,8 @@ export function createDemoSession() {
         qtyCounted: counted,
         delta,
         remarks: line.remarks,
+        bricklinkLotId: line.bricklinkLotId,
+        qtyAgreed: delta === 0 ? counted : null,
         resolved: delta === 0,
       }
     })
@@ -205,7 +208,7 @@ export function createDemoSession() {
     partOutLines,
     pickListItems,
     reconciliation,
-    pickListSplit: true,
+    pickListSplit: false,
   }
 }
 

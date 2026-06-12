@@ -16,13 +16,14 @@ const session = computed(() => getSession(sessionId.value))
 const cups = computed(() => getCups(sessionId.value))
 
 function openCup(cup) {
-  const lots = getLots(sessionId.value, { cupId: cup.id })
-  if (lots.length === 1) {
+  const { lotCount } = cup
+  if (lotCount === 0) {
+    router.push(`/session/${sessionId.value}/lot?cupId=${cup.id}`)
+  } else if (lotCount === 1) {
+    const lots = getLots(sessionId.value, { cupId: cup.id })
     router.push(`/session/${sessionId.value}/lot/${lots[0].id}`)
-  } else if (lots.length > 1) {
-    router.push(`/session/${sessionId.value}/lots?mode=cup&cupId=${cup.id}`)
   } else {
-    router.push(`/session/${sessionId.value}/lot`)
+    router.push(`/session/${sessionId.value}/lots?mode=cup&cupId=${cup.id}`)
   }
 }
 </script>

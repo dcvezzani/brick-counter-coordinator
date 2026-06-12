@@ -33,6 +33,8 @@ export function useSession() {
     getReconciliation: fixture.getReconciliation,
     resolveReconciliation: fixture.resolveReconciliation,
     exportReconciliationXml: fixture.exportReconciliationXml,
+    canExportReconciliation: fixture.canExportReconciliation,
+    exportBlockReason: fixture.exportBlockReason,
     searchParts: fixture.searchParts,
     resolvePartId: fixture.resolvePartId,
     lookupPart: fixture.lookupPart,

@@ -249,7 +249,7 @@ Footer **Exclude** maps to `POST …/part-out/lines/bulk-exclude` in live mode. 
 
 - Full included/excluded tabs with counts
 - Per-row exclude, table-header bulk exclude, and restore — **legacy**; spec targets checkbox + footer Exclude, select-all, Restore all, and thumbnails
-- Confirm advances phase and navigates to List cups — **spec targets Lot form**
+- Confirm advances phase and navigates to Lot form
 - Fixture in-memory line mutations
 - SessionNav visible during import — **spec targets hidden until confirm**
 

@@ -89,7 +89,7 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 **Flow:** Client calls `GET /api/v1/sessions/:id/part-out/lines` (default: all lines, included and excluded). Lead excludes out-of-scope lines for a partial-bag sweep via `PATCH …/lines/:lineId` with `{ excluded: true }`.
 
-**Deliverables:** Full part-out row set (part id, color, condition, expected qty, Remarks, excluded flag). After lead taps **Confirm**, `POST …/part-out/confirm` advances phase to `counting` and the app routes to counting views (**List cups** / **Lot form**).
+**Deliverables:** Full part-out row set (part id, color, condition, expected qty, Remarks, excluded flag). After lead taps **Confirm**, `POST …/part-out/confirm` advances phase to `counting` and the app routes to **Lot form** (`/session/:id/lot`).
 
 ---
 
@@ -115,7 +115,7 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 **Trigger:** Worker types in the part search combobox (debounced).
 
-**Flow:** Client calls `GET /api/v1/bricklink/inventory-search?q=3001` to resolve part numbers and optional store lot metadata. After the worker selects color and taps **Save**, client calls `POST /api/v1/sessions/:id/lots` with part id, color id, session condition (`N` or `U`), qty, and optional `cupId`. Part and color are required.
+**Flow:** Client calls `GET /api/v1/bricklink/inventory-search?q=3001` to resolve part numbers and optional store lot metadata. After the worker selects color and taps **Save**, client resolves cup: pinned `cupId` from query, part-number auto-select (reuse cup that already has that part id, else create cup), or **Create new cup** override. Then `POST /api/v1/sessions/:id/lots` with part id, color id, session condition (`N` or `U`), qty, and `cupId`. Part and color are required.
 
 **Deliverables:** Saved `lot` object with consolidated qty. If the unique key `(sessionId, partId, colorId, condition)` already exists, response includes `duplicate: true` and `existing: { createdBy, qty }` so the UI can show who counted it first. WebSocket broadcasts `lot.updated` to other clients for near-real-time totals.
 
@@ -145,10 +145,11 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 **Flow:** Client calls `GET /api/v1/sessions/:id/cups` and renders each cup with its lot count.
 
-**Deliverables:** Cup list with labels and lot counts. Tapping a cup branches navigation:
+**Deliverables:** Cup list with labels and lot counts. **Add new lot** → `/session/:sessionId/lot` (no pinned cup). Tapping a cup branches on `lotCount`:
 
-- **One lot in cup** → router pushes `/session/:sessionId/lot/:lotId`
-- **Multiple lots** → router pushes `/session/:sessionId/lots?mode=cup&cupId=:cupId`
+- **Zero lots** → `/session/:sessionId/lot?cupId=:cupId` (cup pinned)
+- **One lot in cup** → `/session/:sessionId/lot/:lotId`
+- **Multiple lots** → `/session/:sessionId/lots?mode=cup&cupId=:cupId`
 
 ---
 
@@ -156,26 +157,25 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 | Field | Value |
 |-------|-------|
-| **Route** | `/session/:sessionId/lots` with query `mode=organizer\|cup\|reconciliation` and optional `cupId` |
-| **Delivery unit** | 0 (fixture, mode switching) → 2 (cup mode) → 3 (organizer) → 4 (reconciliation discrepancies reuse list UI) |
+| **Route** | `/session/:sessionId/lots` with query `mode=organizer\|cup` and `cupId` when `mode=cup` |
+| **Delivery unit** | 0 (fixture, mode switching) → 2 (cup mode) → 3 (organizer) |
 
-One shared list component (`LotListTable`) serves three product contexts; the `mode` query selects data source and actions.
+One shared list component (`LotListTable`) serves cup and organizer contexts on this route; the `mode` query selects data source and actions. Discrepancy rows use the same component on **Part-out reconciliation** (§7) — not a `mode` here.
 
 ### Dependent services
 
 | Mode | Services | Endpoints |
 |------|----------|-----------|
 | **Organizer** | Pick list, Lots, WebSocket | `POST …/pick-lists/split`, `GET …/lots?mode=organizer&workerId=`, `PATCH …/pick-lists/:itemId`, `POST …/pick-lists/complete`, `pick_list.updated` |
-| **Cup** | Lots | `GET …/lots?cupId=` |
-| **Reconciliation discrepancies** | Reconciliation | `GET …/reconciliation` (mismatch rows only) |
+| **Cup** | Lots | `GET …/lots?cupId=` (`cupId` required) |
 
-Shared across modes: navigation to **Lot form**, associated cup (cup-filtered mode), and print (`window.print()` / print CSS).
+Shared across modes: navigation to **Lot form**, **Open cup** (organizer → cup-filtered mode), and print (`window.print()` / print CSS).
 
 ### Example usage (organizer mode)
 
-**Trigger:** Session enters `organizing` phase; lead runs pick-list split; worker opens **List lots** from nav.
+**Trigger:** Session enters `organizing` phase; a worker runs pick-list split (session lead typically); worker opens **List lots** from nav.
 
-**Flow:** Lead (or auto on phase entry) calls `POST /api/v1/sessions/:id/pick-lists/split` to assign lots evenly among joined workers (round-robin by sorted part id). Worker’s view calls `GET /api/v1/sessions/:id/lots?mode=organizer&workerId=:currentWorkerId`.
+**Flow:** `POST /api/v1/sessions/:id/pick-lists/split` assigns lots evenly among joined workers (round-robin by sorted part id). Worker’s view calls `GET /api/v1/sessions/:id/lots?mode=organizer&workerId=:currentWorkerId`.
 
 **Deliverables:** Ordered pick-list rows with Remarks/storage hints. Worker marks a line **moved to storage** → `PATCH …/pick-lists/:itemId` with `{ status: "moved_to_storage" }` → updated row and `pick_list.updated` event. **Mark entire list complete** → `POST …/pick-lists/complete`.
 
@@ -201,19 +201,23 @@ Shared across modes: navigation to **Lot form**, associated cup (cup-filtered mo
 | Service | Endpoints / mechanism |
 |---------|----------------------|
 | Reconciliation | `GET /api/v1/sessions/:id/reconciliation`, `POST …/reconciliation/resolve`, `POST …/reconciliation/export-xml` |
-| Session | `POST /api/v1/sessions/:id/phase` (advance to `organizing` after reconcile) |
+| Session | `POST /api/v1/sessions/:id/phase` (`counting` → `reconciling`; export advances `reconciling` → `organizing`) |
 | Part-out (read-only context) | Included lines only (`excluded = 0`) drive expected quantities |
-| WebSocket | `session.phase`, optional `lot.updated` while resolving |
+| WebSocket | `session.phase`, `lot.updated` refreshes open discrepancy counts |
 
 ### Example usage
 
 **Trigger:** Lead opens **Part-out reconciliation** when session phase is `reconciling`.
 
-**Flow:** Client calls `GET /api/v1/sessions/:id/reconciliation` to load match/mismatch rows comparing session lot totals to **included** part-out lines.
+**Flow:** Client calls `GET /api/v1/sessions/:id/reconciliation` to load rows comparing summed session lot totals to **included** part-out lines (key: part + color + condition).
 
-**Deliverables:** Per-line expected vs counted qty, delta, and resolution state. Worker or lead resolves a row via `POST …/reconciliation/resolve`. When totals agree, lead taps **Reconciled** → `POST …/reconciliation/export-xml`.
+**Resolve:** Any joined worker **Edit**s lots on **Lot form** and **Resolve**s (sign-off) open discrepancies via `POST …/reconciliation/resolve` with `{ lineId }`.
 
-**Export deliverables:** Bulk-update XML ( `<LOTID>` + `<REMARKS>` per reconciled row) and `validationUrl` (`https://www.bricklink.com/invXML.asp#update`) for paste-and-validate on Bricklink. Client offers download/clipboard and opens the validation page; upload happens outside the app.
+**Export:** When all discrepancies resolved, any worker taps **Reconciled — export XML** → `POST …/reconciliation/export-xml` → phase `organizing`.
+
+**Organize (Units 3–4):** Pick-list split and **List lots** progress in `organizing` ([list-lots.md](../view-specs/list-lots.md)).
+
+**Export deliverables:** Bulk-update XML (`<LOTID>` from `bricklink_lot_id` + `<REMARKS>` per included row) and `validationUrl` (`https://www.bricklink.com/invXML.asp#update`). Client offers download and opens the validation page; upload happens outside the app.
 
 ---
 
@@ -262,7 +266,7 @@ Used primarily by **Lot form**; cookie stays on server (`BRICKLINK_SESSION_COOKI
 | Part-out import | `/session/:sessionId/import` |
 | Lot form | `/session/:sessionId/lot/:lotId?` |
 | List cups | `/session/:sessionId/cups` |
-| List lots | `/session/:sessionId/lots?mode=organizer\|cup\|reconciliation&cupId=` |
+| List lots | `/session/:sessionId/lots?mode=organizer\|cup&cupId=` (cupId required when mode=cup) |
 | Part-out reconciliation | `/session/:sessionId/reconciliation` |
 
 ---

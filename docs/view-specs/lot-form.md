@@ -1,7 +1,7 @@
 # Lot form
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-11
+**Last updated:** 2026-06-12
 
 ---
 
@@ -12,7 +12,7 @@
 | **View name** | Lot form |
 | **Route** | `/session/:sessionId/lot/:lotId?` |
 | **Route params** | `sessionId`; optional `lotId` (omit for new lot) |
-| **Query params** | — |
+| **Query params** | `cupId` (optional — pinned cup from List cups tap) |
 | **Primary actor(s)** | Counter / any worker |
 | **Delivery unit** | 0 (fixture) → 2 (live lots + real-time) |
 | **Source file** | [`src/views/LotFormView.vue`](../../src/views/LotFormView.vue) |
@@ -39,6 +39,23 @@ Workers record one lot at a time: part id, color, and quantity. **Condition** is
 | Condition on form | **Read-only** inline label from session; not in tab order (`tabindex="-1"`). |
 | Required fields | **Part and color** are required before Save; show inline validation and block submit when either is missing. |
 | Duplicate awareness (MVP) | Dialog on submit when `duplicate: true`; proactive inline hint deferred to Unit 2+ (see [Planned](#planned-not-implemented)). |
+| Counting phase landing | **Lot form** after Part-out import **Confirm** and Home join (`counting`). See [home.md](./home.md#post-join-routing). |
+| Cup on save (default) | **Part-number auto-select:** if a cup already has lots for the entered part id (any color), assign to that cup; otherwise create a new cup (`Cup A`, `Cup B`, …). |
+| Cup on save (override) | Worker may choose **Create new cup** on the form even when auto-select would reuse an existing cup. |
+| Cup on save (pinned) | When `?cupId=` is present (from List cups tap on 0-lot cup), use that cup unless worker explicitly chooses **Create new cup**. |
+
+## Cup association
+
+Physical cups group lots by **part number** (multiple colors of the same part may share one cup).
+
+| Entry path | Cup resolution on save |
+|------------|------------------------|
+| SessionNav **Lot**, Part-out **Confirm**, Home join, **Add new lot** | Part-number auto-select → existing cup for part, or new cup |
+| List cups → tap **0-lot** cup (`?cupId=`) | Pinned cup unless worker overrides |
+| List cups → tap **1-lot** cup (edit) | Lot's existing cup (edit path) |
+| List lots → **Edit** | Lot's existing cup (edit path) |
+
+**Create new cup** control: secondary action on Lot form (label TBD — e.g. outline **New cup**). Clears pinned/auto cup for the current save.
 
 ## Entry & exit
 
@@ -46,12 +63,14 @@ Workers record one lot at a time: part id, color, and quantity. **Condition** is
 
 | From | Path / action |
 |------|---------------|
+| Part-out import → **Confirm** | `/session/:sessionId/lot` (new lot) |
+| Home → join (`counting` phase) | `/session/:sessionId/lot` (new lot) — [home.md](./home.md#post-join-routing) |
 | SessionNav **Lot** | `/session/:sessionId/lot` (new lot) |
-| List cups → cup with **0 lots** | `/session/:sessionId/lot` (new lot; cup association TBD — see [list-cups.md](./list-cups.md#open-questions)) |
+| List cups → cup with **0 lots** | `/session/:sessionId/lot?cupId={cupId}` (new lot; cup pinned) |
 | List cups → cup with **1 lot** | `/session/:sessionId/lot/:lotId` (edit that lot) |
 | List cups → cup with **2+ lots** | `/session/:sessionId/lots?mode=cup&cupId={cupId}` → pick lot → edit |
 | List lots → **Edit** | `/session/:sessionId/lot/:lotId` |
-| List cups → **Add new lot** | `/session/:sessionId/lot` (new lot; no cup in route today) |
+| List cups → **Add new lot** | `/session/:sessionId/lot` (new lot; part-number auto-select on save) |
 
 ### New lot vs edit lot
 
@@ -243,7 +262,7 @@ Unique key: `(sessionId, partId, colorId, condition)`.
 - No live part search / color API
 - No Bricklink inventory duplicate hint during entry
 - No WebSocket updates when another worker saves same lot
-- No explicit cup assignment UI on this view (fixture defaults to first cup on save)
+- No part-number cup auto-select, **Create new cup** override, or `?cupId=` pinned cup (fixture defaults to first cup on save)
 - Live API `mergeDuplicate` contract (fixture only in Unit 0)
 - Remove color **None** option once required-color validation ships
 
@@ -267,7 +286,7 @@ Unique key: `(sessionId, partId, colorId, condition)`.
 ## Open questions
 
 - Should qty 0 be allowed on save?
-- Cup selection: auto-assign tapped cup vs explicit picker on save? (shared with [list-cups.md](./list-cups.md#open-questions))
+- Exact label for **Create new cup** override control on Lot form.
 - Show existing lot qty inline before save (proactive duplicate hint)?
 - Live edit pre-fill: list cache vs dedicated `GET /api/v1/sessions/:id/lots/:lotId`?
 - Remove color picker **None** option when required-color validation ships?

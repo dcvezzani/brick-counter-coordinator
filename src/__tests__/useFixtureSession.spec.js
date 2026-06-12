@@ -85,4 +85,43 @@ describe('useFixtureSession', () => {
       /Lot not found/,
     )
   })
+
+  it('resolveReconciliation accepts counted qty as-is', () => {
+    const session = fixture.getSession(fixture.DEMO_SESSION_ID)
+    session.phase = 'reconciling'
+    const row = session.reconciliation.find((r) => r.delta !== 0)
+    expect(row).toBeTruthy()
+
+    const counted = row.qtyCounted
+    fixture.resolveReconciliation(fixture.DEMO_SESSION_ID, row.lineId)
+
+    const updated = session.reconciliation.find((r) => r.lineId === row.lineId)
+    expect(updated.resolved).toBe(true)
+    expect(updated.qtyAgreed).toBe(counted)
+    expect(updated.qtyCounted).toBe(counted)
+    expect(updated.delta).not.toBe(0)
+  })
+
+  it('blocks export until organize lists are complete', () => {
+    const session = fixture.getSession(fixture.DEMO_SESSION_ID)
+    session.phase = 'reconciling'
+    session.reconciliation.forEach((row) => {
+      if (row.delta !== 0) fixture.resolveReconciliation(fixture.DEMO_SESSION_ID, row.lineId)
+    })
+    expect(session.phase).toBe('organizing')
+    expect(fixture.canExportReconciliation(fixture.DEMO_SESSION_ID)).toBe(false)
+
+    fixture.splitPickList(fixture.DEMO_SESSION_ID)
+    expect(fixture.canExportReconciliation(fixture.DEMO_SESSION_ID)).toBe(false)
+
+    for (const worker of session.workers) {
+      fixture.completePickList(fixture.DEMO_SESSION_ID, worker.id)
+    }
+    expect(fixture.canExportReconciliation(fixture.DEMO_SESSION_ID)).toBe(true)
+
+    const result = fixture.exportReconciliationXml(fixture.DEMO_SESSION_ID)
+    expect(result.xml).toContain('<LOTID>BL-')
+    expect(result.xml).toContain('<REMARKS>')
+    expect(session.phase).toBe('closed')
+  })
 })

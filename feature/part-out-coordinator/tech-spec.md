@@ -132,10 +132,10 @@ brick-counter-coordinator/
 | `importing` | Lead | Part-out import (curate fetched list) |
 | `counting` | Counters, lead | Home, Lot form, List cups |
 | `reconciling` | Lead, workers resolve | Part-out reconciliation |
-| `organizing` | Organizers | List lots (organizer mode) |
+| `organizing` | Organizers; lead exports when done | List lots (organizer mode); export XML on Part-out reconciliation |
 | `closed` | — | Read-only or redirect Home |
 
-Lead advances phase via API (`POST /sessions/:id/phase`).
+Lead advances phase via API (`POST /sessions/:id/phase`): `counting` → `reconciling` → `organizing`. Export (`POST …/reconciliation/export-xml`) advances `organizing` → `closed` after all organizer lists are complete. See [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md).
 
 ---
 
@@ -320,11 +320,13 @@ Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session i
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/sessions/:id/reconciliation` | Match/mismatch rows |
-| `POST` | `/sessions/:id/reconciliation/resolve` | Apply resolution |
-| `POST` | `/sessions/:id/reconciliation/export-xml` | Returns XML + validation URL |
+| `GET` | `/sessions/:id/reconciliation` | Per-line expected, counted, delta, resolved, qtyAgreed |
+| `POST` | `/sessions/:id/reconciliation/resolve` | Body `{ lineId }` — accept-as-is; sets `qtyAgreed` from `qtyCounted` |
+| `POST` | `/sessions/:id/reconciliation/export-xml` | Returns XML + validation URL; phase → `closed` |
 
-**Export XML:** Port `buildBulkUpdateXml` from `bricklink-chrome-extension/scripts/bulk-repair/lib/build-bulk-update-xml.mjs` (`<LOTID>` + `<REMARKS>` per reconciled row). **Not** upload XML from `inv-upload-xml.js`. Handoff: download/clipboard + `validationUrl` `https://www.bricklink.com/invXML.asp#update` — user pastes into `inv-update__textarea-xml` and verifies on BrickLink. Full contract: [docs/bricklink-mass-update-export.md](../../docs/bricklink-mass-update-export.md).
+**Resolve:** Accept-as-is acknowledgment — does not mutate lots. Open discrepancy = `delta !== 0 && !resolved`.
+
+**Export XML:** Gated until all discrepancies resolved and every worker's pick list is complete. Port `buildBulkUpdateXml` from `bricklink-chrome-extension/scripts/bulk-repair/lib/build-bulk-update-xml.mjs` (`<LOTID>` from `bricklink_lot_id` + `<REMARKS>` per included row). **Not** upload XML from `inv-upload-xml.js`. Handoff: download/clipboard + `validationUrl` `https://www.bricklink.com/invXML.asp#update` — user pastes into `inv-update__textarea-xml` and verifies on BrickLink. Full contract: [docs/bricklink-mass-update-export.md](../../docs/bricklink-mass-update-export.md) and [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md).
 
 ### Pick lists (Unit 3)
 
@@ -363,7 +365,7 @@ Connect: `ws://host/ws?sessionId=&workerId=`
 | `/sessions` | Enter existing (modal or sub-view on Home) | 0 |
 | `/session/:sessionId/cups` | List cups | 0 |
 | `/session/:sessionId/lot/:lotId?` | Lot form (`lotId` optional = new) | 0 |
-| `/session/:sessionId/lots` | List lots — query `mode=organizer\|cup\|reconciliation`, `cupId` | 0 |
+| `/session/:sessionId/lots` | List lots — query `mode=organizer\|cup`, `cupId` when cup mode | 0 |
 | `/session/:sessionId/reconciliation` | Part-out reconciliation | 0 |
 
 **Layout:** `AppShell` with session nav links, **“Storyboard — sample data”** badge (Unit 0 only), mobile bottom nav.
@@ -437,7 +439,7 @@ Local-network deployment assumed; document in README for production hardening la
 - [ ] All seven views reachable per [storyboard.md](../../docs/support/storyboard.md)
 - [ ] Storyboard badge visible; no API calls
 - [ ] Lot form fits mobile viewport without scroll
-- [ ] List lots supports `mode` query switching (organizer / cup / reconciliation UI)
+- [ ] List lots supports `mode` query switching (organizer / cup UI)
 - [ ] Playwright smoke: Home → New session → List cups → Lot form
 
 **Tests:** Vitest for composables; Playwright happy-path walkthrough.

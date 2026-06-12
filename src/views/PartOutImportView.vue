@@ -35,7 +35,7 @@ function bulkExclude(lineIds) {
 
 function confirm() {
   confirmPartOut(sessionId.value)
-  router.push(`/session/${sessionId.value}/cups`)
+  router.push(`/session/${sessionId.value}/lot`)
 }
 </script>
 

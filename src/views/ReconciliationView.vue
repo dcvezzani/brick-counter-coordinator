@@ -17,20 +17,40 @@ import { useSession } from '@/composables/useSession'
 const route = useRoute()
 const sessionId = computed(() => route.params.sessionId)
 
-const { getSession, getReconciliation, resolveReconciliation, exportReconciliationXml } =
-  useSession()
+const {
+  getSession,
+  getReconciliation,
+  resolveReconciliation,
+  exportReconciliationXml,
+  canExportReconciliation,
+  exportBlockReason,
+} = useSession()
 
 const session = computed(() => getSession(sessionId.value))
 const allRows = computed(() => getReconciliation(sessionId.value))
-const mismatches = computed(() => allRows.value.filter((r) => r.delta !== 0))
+const openDiscrepancies = computed(() =>
+  allRows.value.filter((r) => r.delta !== 0 && !r.resolved),
+)
+const matchedRows = computed(() => allRows.value.filter((r) => r.delta === 0))
+const showMatched = ref(false)
 const showExport = ref(false)
 const exportResult = ref(null)
+
+const exportEnabled = computed(() => canExportReconciliation(sessionId.value))
+const exportHint = computed(() => {
+  const reason = exportBlockReason(sessionId.value)
+  if (reason === 'discrepancies') return 'Resolve all discrepancies before exporting.'
+  if (reason === 'organize') return 'Complete organizer lists before exporting.'
+  if (reason === 'phase') return 'Export is available during the organizing phase.'
+  return ''
+})
 
 function resolve(row) {
   resolveReconciliation(sessionId.value, row.lineId)
 }
 
 function reconciled() {
+  if (!exportEnabled.value) return
   exportResult.value = exportReconciliationXml(sessionId.value)
   showExport.value = true
 }
@@ -56,26 +76,58 @@ function downloadXml() {
         </p>
       </div>
 
-      <Alert v-if="mismatches.length">
+      <Alert v-if="openDiscrepancies.length">
         <AlertDescription>
-          {{ mismatches.length }} discrepanc{{ mismatches.length === 1 ? 'y' : 'ies' }} found
+          {{ openDiscrepancies.length }} discrepanc{{ openDiscrepancies.length === 1 ? 'y' : 'ies' }}
+          found
         </AlertDescription>
       </Alert>
 
       <LotListTable
         :session-id="sessionId"
-        :rows="mismatches.length ? mismatches : allRows"
+        :rows="openDiscrepancies"
         mode="reconciliation"
         @resolve="resolve"
       />
 
-      <Button class="min-h-11" data-testid="reconciled" @click="reconciled">
+      <Button
+        v-if="matchedRows.length"
+        variant="link"
+        class="h-auto justify-start p-0"
+        data-testid="reconciliation-matched-toggle"
+        @click="showMatched = !showMatched"
+      >
+        {{ showMatched ? 'Hide matched lines' : `View matched lines (${matchedRows.length})` }}
+      </Button>
+
+      <LotListTable
+        v-if="showMatched && matchedRows.length"
+        :session-id="sessionId"
+        :rows="matchedRows"
+        mode="reconciliation"
+        :show-actions="false"
+      />
+
+      <p
+        v-if="exportHint"
+        class="text-sm text-muted-foreground"
+        data-testid="reconciliation-export-hint"
+      >
+        {{ exportHint }}
+      </p>
+
+      <Button
+        class="min-h-11"
+        data-testid="reconciled"
+        :disabled="!exportEnabled"
+        @click="reconciled"
+      >
         Reconciled — export XML
       </Button>
     </div>
 
     <Dialog v-model:open="showExport">
-      <DialogContent>
+      <DialogContent data-testid="export-dialog">
         <DialogHeader>
           <DialogTitle>Bulk update XML ready</DialogTitle>
           <DialogDescription>
@@ -83,8 +135,14 @@ function downloadXml() {
           </DialogDescription>
         </DialogHeader>
         <div class="flex flex-col gap-2">
-          <Button @click="downloadXml">Download XML</Button>
-          <Button variant="outline" as="a" :href="exportResult?.validationUrl" target="_blank">
+          <Button data-testid="export-download" @click="downloadXml">Download XML</Button>
+          <Button
+            variant="outline"
+            as="a"
+            data-testid="export-validation-link"
+            :href="exportResult?.validationUrl"
+            target="_blank"
+          >
             Open Bricklink validation page
           </Button>
         </div>

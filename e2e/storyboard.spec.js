@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Storyboard walkthrough', () => {
-  test('Home → New session → List cups → Lot form', async ({ page }) => {
+  test('Home → New session → Lot form after confirm → List cups → Lot form', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByTestId('storyboard-badge')).toBeVisible()
 
@@ -14,6 +14,10 @@ test.describe('Storyboard walkthrough', () => {
     await expect(page.getByTestId('part-out-import-view')).toBeVisible()
     await page.getByTestId('confirm-import').click()
 
+    await expect(page.getByTestId('lot-form-view')).toBeVisible()
+    await expect(page.getByTestId('lot-form')).toBeVisible()
+
+    await page.getByTestId('nav-cups').click()
     await expect(page.getByTestId('list-cups-view')).toBeVisible()
     await page.getByTestId('cup-cup-a').click()
 
@@ -26,6 +30,6 @@ test.describe('Storyboard walkthrough', () => {
     await page.getByTestId('display-name').fill('Taylor')
     await page.getByTestId('enter-existing').click()
     await page.getByTestId('session-demo-session-70404').click()
-    await expect(page.getByTestId('list-cups-view')).toBeVisible()
+    await expect(page.getByTestId('lot-form-view')).toBeVisible()
   })
 })
