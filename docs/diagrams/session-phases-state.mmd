@@ -9,7 +9,7 @@ stateDiagram-v2
 
     [*] --> importing: "POST /sessions (New session submit - 201 only)"
     importing --> counting: "POST .../part-out/confirm (Confirm and begin counting)"
-    counting --> reconciling: "POST .../sessions/{id}/phase (any joined worker; lead typically)"
+    counting --> reconciling: "Compare with Part-Out List (POST .../sessions/{id}/phase; any joined worker)"
     reconciling --> organizing: "Declare ready to organize (POST .../sessions/{id}/phase)"
     organizing --> updating_inventory: "Declare ready to import (POST .../sessions/{id}/phase)"
     organizing --> reconciling: "Return to reconciling (POST .../sessions/{id}/phase)<br>organizer progress preserved"
@@ -26,9 +26,9 @@ stateDiagram-v2
 
     note right of counting
         Default landing Lot form.
-        SessionNav visible.
+        SessionNav visible (Home Lot Lots Reconcile; Cups).
         Workers record lots and browse cups.
-        List cups via SessionNav Cups.
+        Reconcile nav: diff preview; Compare with Part-Out List advances phase.
     end note
 
     note right of reconciling

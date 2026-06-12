@@ -51,13 +51,15 @@ Discrepancy reconciliation lives on [**Part-out reconciliation**](./part-out-rec
 | Product modes on this route | **cup** and **organizer** only; reconciliation removed from this route |
 | **Add another lot** | **Not on this view** — use SessionNav **Lot** or **List cups** |
 | **Open associated cup** | **Required** row action in organizer mode (Unit 3) |
-| **Split list** | Any worker in organizer mode may run it after phase is `organizing` and every reconciliation row is resolved; session lead will typically click it |
+| **SessionNav Lots** | **Always visible** whenever SessionNav is shown (after session create/join through `updating_inventory`). Tapping **Lots** navigates to `?mode=organizer`. Before `organizing`, show a simple empty/helper state — no split/status actions. See [session-nav-by-view.md](../session-nav-by-view.md). |
+| **Split list** | Any joined worker may run **once per session** when `phase === 'organizing'` and `pickListSplit === false`. After first successful split, **Split list** is **not shown** — no re-split for MVP. |
+| **Organizer Delete** | **Delete** only on lots **assigned to the current worker** in organizer mode. Cup mode: **Delete** any lot in that cup. |
 | **Return to reconciling** | If a count error surfaces during organizing, any joined worker may advance phase **`organizing` → `reconciling`** (session lead typically; [process-roles.md](../process-roles.md)) — pick-list **Moved** / **New loc** checks and split assignments **preserved** (no rollback) |
 | **Mark entire list complete** | **Disabled** until every assigned line is **Moved to storage** or **Needs new location** (no `pending` lines) |
 | **Declare ready to import** | Visible in `organizing`; **disabled** until every joined worker has marked their list complete; advances session to `updating_inventory` via `POST …/sessions/:id/phase` |
 | Storage location column | **Required** in organizer mode — show part-out **Remarks** / storage location per line (Product Spec scenario 10; Unit 3) |
 | Page heading | Mode-specific: **Lots in cup** (cup) or **Organizer pick list** (organizer); no duplicate inner table title |
-| Cup mode without `cupId` | Invalid — redirect to **List cups** or show empty state with guidance (do not list all session lots) |
+| Cup mode without `cupId` | Invalid — **redirect to List cups** on mount (MVP); do not list all session lots |
 
 ## Modes
 
@@ -76,7 +78,7 @@ Discrepancy reconciliation lives on [**Part-out reconciliation**](./part-out-rec
 | SessionNav **Lots** | `?mode=organizer` |
 | Organizer mode → **Open cup** | `?mode=cup&cupId={cupId}` |
 
-SessionNav **Lots** is visible whenever the route includes `sessionId` (see [Shared chrome](./README.md#sessionnav-bottom-bar)). Organizer workflow runs in the `organizing` phase **after** [Part-out reconciliation](./part-out-reconciliation.md) discrepancies are resolved and the lead advances phase.
+SessionNav **Lots** is **always visible** whenever SessionNav is shown ([session-nav-by-view.md](../session-nav-by-view.md)). Full organizer workflow (split, status buttons, **Declare ready to import**) runs in `organizing` only — earlier phases show a guarded empty state on this route.
 
 ### Where actions navigate
 
@@ -95,7 +97,7 @@ SessionNav **Lots** is visible whenever the route includes `sessionId` (see [Sha
 | Element | Copy / behavior |
 |---------|-----------------|
 | Page heading | **Lots in cup** (cup mode) or **Organizer pick list** (organizer mode) |
-| Organizer: **Split list** | Visible when `mode=organizer` and pick list not yet split; any worker may click |
+| Organizer: **Split list** | Visible when `mode=organizer`, `phase === 'organizing'`, and `pickListSplit === false`; hidden permanently after first split |
 | Organizer: **Print** | Triggers `window.print()` |
 | Organizer: **Mark entire list complete** | Disabled while any assigned line has status `pending`; marks current worker's pick list complete when enabled |
 | Organizer: **Declare ready to import** | Disabled until all workers' organizer lists are complete; advances phase to `updating_inventory` |
@@ -115,8 +117,8 @@ No separate table `<h2>` — page heading is the only title.
 
 | Mode | Actions |
 |------|---------|
-| cup | **Edit**, **Delete** |
-| organizer | **Edit**, **Delete**, **Moved**, **New loc**, **Open cup** |
+| cup | **Edit**, **Delete** (any lot in cup) |
+| organizer | **Edit**, **Delete** (assigned lots only), **Moved**, **New loc**, **Open cup** |
 
 ### Copy map (organizer status buttons)
 
@@ -148,7 +150,7 @@ No separate table `<h2>` — page heading is the only title.
 |-----------|----------|
 | Organizer mode, pick list not split | **Split list** button visible; table empty or shows all lots unassigned until split runs |
 | Organizer mode, worker has zero assigned lines after split | Empty table with copy such as "No lots assigned to you" |
-| Cup mode, invalid or missing `cupId` | Redirect to **List cups** or empty state — do not show all session lots |
+| Cup mode, invalid or missing `cupId` | Redirect to **List cups** on mount |
 
 ## Messages & feedback
 
@@ -166,9 +168,9 @@ No toast on status change or list complete.
 
 | Action | Preconditions | Outcome |
 |--------|---------------|---------|
-| Split list | Organizer mode; `phase === 'organizing'`; all reconciliation discrepancies resolved; pick list not yet split | Evenly divides lots across joined workers (round-robin by part id sorted); creates pick-list items; sets `pickListSplit` |
-| Edit | cup or organizer row | Navigate to Lot form |
-| Delete → confirm | cup or organizer row on worker's assigned lot (organizer) | Removes lot and associated pick-list items |
+| Split list | Organizer mode; `phase === 'organizing'`; `pickListSplit === false` | Evenly divides lots across **current** joined workers (round-robin by part id sorted); sets `pickListSplit`; button never shown again this session |
+| Edit | cup or organizer row (organizer: assigned to current worker) | Navigate to Lot form |
+| Delete → confirm | Cup mode: any lot in cup. Organizer mode: **current worker's assigned lot only** | Removes lot and associated pick-list items |
 | Moved / New loc | Organizer mode; assigned line | Updates pick-list item status; refreshes badge |
 | Open cup | Organizer mode; lot has `cupId` | Navigate to cup-filtered List lots for that cup |
 | Print | Organizer mode | Opens print dialog; hides nav/actions via print CSS |
@@ -196,10 +198,10 @@ No toast on status change or list complete.
 
 | Operation | Endpoint (live) | Notes |
 |-----------|-----------------|-------|
-| Split pick list | `POST /api/v1/sessions/:id/pick-lists/split` | Even distribution among current workers |
+| Split pick list | `POST /api/v1/sessions/:id/pick-lists/split` | Even distribution among current workers — **once per session** (`pickListSplit` must be false) |
 | Update pick status | `PATCH /api/v1/sessions/:id/pick-lists/:itemId` | `{ status: "moved_to_storage" \| "needs_new_location" }` |
 | Complete list | `POST /api/v1/sessions/:id/pick-lists/complete` | Per worker |
-| Delete lot | `DELETE /api/v1/sessions/:id/lots/:lotId` | Also removes associated pick-list items |
+| Delete lot | `DELETE /api/v1/sessions/:id/lots/:lotId` | Cup mode: any lot in cup. Organizer: **403** if not on current worker's pick list |
 
 WebSocket: `pick_list.updated` refreshes organizer rows ([tech spec](../../feature/part-out-coordinator/tech-spec.md)).
 
@@ -216,11 +218,13 @@ WebSocket: `pick_list.updated` refreshes organizer rows ([tech spec](../../featu
 ### Organizer mode
 
 - [ ] Page heading reads **Organizer pick list**
-- [ ] **Split list** divides lots evenly across workers (once per session); any worker may trigger
+- [ ] **Split list** runs **at most once** per session; button hidden after `pickListSplit`
 - [ ] Worker's list ordered by part id; only assigned lots visible
+- [ ] **Delete** in organizer mode only on **current worker's** assigned lots; cup mode delete any lot in cup
+- [ ] Invalid/missing `cupId` in cup mode redirects to **List cups**
 - [ ] **Location** column shows storage hint from part-out Remarks
 - [ ] **Moved** and **New loc** update status badges
-- [ ] **Edit**, **Delete**, and **Open cup** work on assigned lots
+- [ ] **Edit**, **Delete**, and **Open cup** work on assigned lots (Delete: own assignments only)
 - [ ] **Open cup** navigates to cup-filtered List lots for the lot's cup
 - [ ] **Print** produces a printable pick list (includes Location column)
 - [ ] **Mark entire list complete** disabled while any line is `pending`; enabled when all lines resolved
@@ -283,11 +287,10 @@ WebSocket: `pick_list.updated` refreshes organizer rows ([tech spec](../../featu
 | Organizer **Open cup** | `view-navigation.mmd`, `workflow-storyboard.mmd` | `LOTS_ORG → LOTS_CUP` edge present; matches [Where actions navigate](#where-actions-navigate). | Pass |
 | **Declare ready to import** | `workflow-storyboard.mmd` | `LOTS_ORG → STORE_UPDATE` in `updating_inventory` phase matches spec outcome (XML export on reconciliation view). | Pass |
 | [Cup mode without cupId](#locked-decisions) | All diagrams | Invalid/missing `cupId` redirect to List cups is **not** diagrammed. Spec requires redirect or empty state — gap in diagrams only. | Advisory |
-| SessionNav **Lots** phase gating | `view-navigation.mmd` NAV_LOTS, [Shared chrome](./README.md#sessionnav-bottom-bar) | Diagram and README show **Lots** whenever SessionNav is visible (`counting` onward). Spec organizer workflow is `organizing` phase only ([Entry & exit](#entry--exit)). Tapping **Lots** during `counting` or `reconciling` is undefined in this spec. | **Blocking** |
+| SessionNav **Lots** phase gating | [session-nav-by-view.md](../session-nav-by-view.md), `view-navigation.mmd` | **Lots** always when nav shown; guarded empty state before `organizing`. | **Resolved** — Dave 2026-06-12 |
 
 ## Open questions
 
-- Can workers re-run **Split list** after workers have started (or after partial progress)?
-- May an organizer **Delete** lots that are on another worker's pick list, or only their own assigned lines?
-- **SessionNav Lots before `organizing`:** MVP stance in [session-nav-by-view.md](../session-nav-by-view.md) — nav item **visible**; destination shows guarded empty state until `organizing`. Promote to locked decision here when Dave confirms.
-- **Dave:** When `mode=cup` is missing `cupId`, prefer hard redirect to List cups vs inline empty state with guidance?
+- None at this time.
+
+**Resolved (Dave 2026-06-12):** **Split list** once per session (no re-run). Organizer **Delete** = own assigned lines only. Missing `cupId` → redirect **List cups**. **SessionNav Lots** always visible when nav shown.

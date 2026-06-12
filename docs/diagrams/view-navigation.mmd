@@ -1,7 +1,6 @@
 %% View navigation and post-join routing
-%% Sources: docs/view-specs/README.md, home.md, new-session.md, list-cups.md, list-lots.md, lot-form.md
+%% Sources: docs/session-nav-by-view.md, docs/view-specs/README.md
 %% Cup tap detail: cup-tap-routing.mmd
-%% Post-review (2026-06-12): PRs #7–#9 spec–diagram alignment
 %% Route shorthand: /import = /session/:sessionId/import (full paths in workflow-storyboard.mmd)
 
 flowchart LR
@@ -11,16 +10,16 @@ flowchart LR
         direction TB
         NAV_HOME["Home to /"]
         NAV_CUPS["Cups to /cups<br>counting reconciling organizing only"]
-        NAV_LOT["Lot to /lot"]
-        NAV_LOTS["Lots to /lots?mode=organizer<br>visible when nav shown;<br>organizer workflow organizing phase<br>phase gating TBD — list-lots.md"]
-        NAV_RECON["Reconcile to /reconciliation<br>counting reconciling organizing updating_inventory"]
+        NAV_LOT["Lot to /lot<br>always when nav shown"]
+        NAV_LOTS["Lots to /lots?mode=organizer<br>always when nav shown"]
+        NAV_RECON["Reconcile to /reconciliation<br>counting through updating_inventory"]
     end
 
     NEW["New session<br>/session/new"]
     IMPORT["Part-out import<br>/import"]
     LOT_NEW["Lot form new<br>/lot or /lot?cupId="]
     LOT_EDIT["Lot form edit<br>/lot/:lotId"]
-    CUPS["List cups<br>/cups<br>empty cups redirects to /lot"]
+    CUPS["List cups<br>/cups<br>empty cups redirects to /lot on mount"]
     LOTS_CUP["List lots cup mode<br>?mode=cup&cupId="]
     LOTS_ORG["List lots organizer mode"]
     RECON["Part-out reconciliation"]
@@ -52,4 +51,5 @@ flowchart LR
     LOTS_CUP -->|"missing or invalid cupId"| CUPS
     LOTS_ORG --> LOT_EDIT
     LOTS_ORG --> LOTS_CUP
-    RECON --> LOT_EDIT
+    RECON -->|"Compare with Part-Out List<br>counting only"| RECON
+    RECON -->|"Edit row"| LOT_EDIT

@@ -1,7 +1,7 @@
 # Brick Counter Coordinator — Project Memory
 
 **Owner:** David Vezzani (Dave)  
-**Last updated:** 2026-06-10 (JS client, shadcn-vue, storyboard Unit 0)  
+**Last updated:** 2026-06-12 (session-nav matrix, process roles, MVP doc alignment)  
 **Status:** Design — Tech Spec in review; GitHub Projects v2 board [#2](https://github.com/users/dcvezzani/projects/2) live for **`dcvezzani`**
 
 ## What this project is

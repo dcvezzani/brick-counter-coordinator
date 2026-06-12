@@ -1,30 +1,41 @@
-%% Part-out reconciliation — worker actions within reconciling phase
-%% Source: docs/view-specs/part-out-reconciliation.md
-%% Export XML happens later in updating_inventory (see store-inventory-update.mmd).
+%% Part-out reconciliation — worker actions by session phase on this view
+%% Source: docs/view-specs/part-out-reconciliation.md, docs/session-nav-by-view.md
+%% Export XML: updating_inventory only (see store-inventory-update.mmd).
 
 flowchart TD
-    enter(["Open Part-out reconciliation<br>phase reconciling"])
+    enter(["Open Part-out reconciliation"])
 
-    enter --> tabs{"Active tab"}
+    enter --> phase{"Session phase"}
 
-    tabs --> disc["Discrepancies tab<br>not resolved"]
-    tabs --> all["All lines tab<br>included lines + unexpected counts"]
+    phase -->|counting| counting["Live diff preview<br>Edit and Resolve disabled"]
+    counting --> compare["Compare with Part-Out List<br>POST .../sessions/{id}/phase"]
+    compare --> phaseRecon["Session phase to reconciling"]
 
-    disc --> row{"Row action"}
-    all --> row
+    phase -->|reconciling| reconFlow
+    phase -->|organizing| returnBtn["Return to reconciling<br>POST .../sessions/{id}/phase<br>organizer progress preserved"]
+    returnBtn --> phaseRecon
 
-    row -->|Edit| lot["Lot form<br>adjust session counts"]
-    row -->|Resolve| sign["POST .../reconciliation/resolve<br>sign-off (not resolved)"]
+    subgraph reconFlow["Reconciling workflow"]
+        tabs{"Active tab"}
+        tabs --> disc["Discrepancies tab<br>not resolved"]
+        tabs --> all["All lines tab<br>included + unexpected counts"]
 
-    lot --> disc
-    sign --> disc
+        disc --> row{"Row action"}
+        all --> row
 
-    disc --> match{"All included lines<br>delta 0?"}
-    match -->|Yes, rows still open| celebrate["Celebratory alert<br>counts match part-out list"]
-    match -->|No| check
-    celebrate --> check{"Every row<br>resolved?"}
-    match -->|No| check
+        row -->|Edit| lot["Lot form<br>adjust session counts"]
+        row -->|Resolve| sign["POST .../reconciliation/resolve<br>sign-off"]
 
-    check -->|No| disc
-    check -->|Yes| ready["Declare ready to organize<br>POST .../sessions/{id}/phase"]
-    ready --> phaseOrg["Session phase to organizing"]
+        lot --> disc
+        sign --> disc
+
+        disc --> match{"All included lines<br>delta 0?"}
+        match -->|Yes, rows still open| celebrate["Celebratory alert<br>counts match part-out list"]
+        match -->|No| check
+        celebrate --> check{"Every row<br>resolved?"}
+        match -->|No| check
+
+        check -->|No| disc
+        check -->|Yes| ready["Declare ready to organize<br>POST .../sessions/{id}/phase"]
+        ready --> phaseOrg["Session phase to organizing"]
+    end

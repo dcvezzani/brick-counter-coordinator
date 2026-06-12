@@ -17,6 +17,18 @@ Per-view requirements for the seven canonical application screens. Use these to 
 
 Each view spec is **requirements-first** (what the view must do), with a **Storyboard status** section noting what the current fixture UI implements vs. what ships in Units 1–4.
 
+## Fixture vs target (Unit 0)
+
+**View specs are canonical** for product behavior. The Unit 0 storyboard (`VITE_USE_FIXTURES` default on) may lag — badge **Storyboard — sample data** reminds reviewers.
+
+| Rule | Meaning |
+|------|---------|
+| Spec wins | Do not change view specs to match old fixture UI without a product decision |
+| Storyboard status | Each view spec lists **Implemented (Unit 0)** vs **Gaps** — use as the punch list |
+| Demo honesty | Fixture mode is for navigation and flow walkthroughs, not proof that every acceptance criterion passes |
+
+High-impact fixture gaps (track in view specs): Part-out import curation UX, SessionNav phase gating, reconciliation tabs/Resolve, organizer Location column, Lot form **New cup** / cup auto-select, **Compare with Part-Out List** button.
+
 ## Process roles (documentation only)
 
 Roles in view specs (**counter**, **session lead**, **organizer**, **Primary actor(s)**, etc.) describe **typical floor workflow**, not software permissions.
@@ -73,8 +85,8 @@ Visible when the route includes `sessionId`, **except** during **Part-out import
 |-------|-------|---------------|------------------|
 | Home | `/` | `nav-home` | Always (when nav shown) |
 | Cups | `/session/:sessionId/cups` | `nav-cups` | `counting`, `reconciling`, `organizing` only — see [list-cups.md](./list-cups.md#locked-decisions) |
-| Lot | `/session/:sessionId/lot` | `nav-lot` | When nav shown |
-| Lots | `/session/:sessionId/lots?mode=organizer` | `nav-lots` | When nav shown |
+| Lot | `/session/:sessionId/lot` | `nav-lot` | **Always** when nav shown |
+| Lots | `/session/:sessionId/lots?mode=organizer` | `nav-lots` | **Always** when nav shown — [session-nav-by-view.md](../session-nav-by-view.md) |
 | Reconcile | `/session/:sessionId/reconciliation` | `nav-reconciliation` | `counting`, `reconciling`, `organizing`, `updating_inventory` — hidden during `importing` and `closed` — see [part-out-reconciliation.md](./part-out-reconciliation.md#locked-decisions) |
 
 Nav container: `data-testid="session-nav"`.

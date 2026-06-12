@@ -47,11 +47,14 @@ Workers record one lot at a time: part id, color, and quantity. **Condition** is
 | Session condition | Each session is **New** or **Used** only (`partOutOptions.condition` is `new` or `used`). Partial-bag two-sweep work uses **two separate sessions**, not a Mixed option on New session. |
 | Condition on form | **Read-only** inline label from session; not in tab order (`tabindex="-1"`). |
 | Required fields | **Part and color** are required before Save; show inline validation and block submit when either is missing. |
+| Minimum count | **Qty must be ≥ 1** — count input `min` 1; block Save and Save and Add Another when qty is 0 or empty. |
 | Duplicate awareness (MVP) | Dialog on submit when `duplicate: true`; proactive inline hint deferred to Unit 2+ (see [Planned](#planned-not-implemented)). |
 | Counting phase landing | **Lot form** after Part-out import **Confirm** and Home join (`counting`). See [home.md](./home.md#post-join-routing). |
 | Cup on save (default) | **Part-number auto-select:** if a cup already has lots for the entered part id (any color), assign to that cup; otherwise create a new cup (`Cup A`, `Cup B`, …). |
-| Cup on save (override) | Worker may choose **Create new cup** on the form even when auto-select would reuse an existing cup. |
-| Cup on save (pinned) | When `?cupId=` is present (from List cups tap on 0-lot cup), use that cup unless worker explicitly chooses **Create new cup**. |
+| Cup on save (override) | Worker may tap **New cup** on the form even when auto-select would reuse an existing cup. |
+| Cup on save (pinned) | When `?cupId=` is present (from List cups tap on 0-lot cup), use that cup unless worker taps **New cup**. |
+| **New cup** control | Secondary outline button labeled **New cup** (`data-testid="new-cup"`). Clears pinned/auto cup for the current save. |
+| **Duplicate merge (live)** | First `POST …/lots` → `{ duplicate: true, existing: {…} }`. After worker confirms dialog, re-POST same body with **`confirmMerge: true`** → server adds entered qty to existing lot. Unit 0 fixture may use `mergeDuplicate` until aligned. |
 
 ## Cup association
 
@@ -64,7 +67,7 @@ Physical cups group lots by **part number** (multiple colors of the same part ma
 | List cups → tap **1-lot** cup (edit) | Lot's existing cup (edit path) |
 | List lots → **Edit** | Lot's existing cup (edit path) |
 
-**Create new cup** control: secondary action on Lot form (label TBD — e.g. outline **New cup**). Clears pinned/auto cup for the current save.
+**New cup** control: secondary outline button **New cup** — clears pinned/auto cup for the current save.
 
 ## Entry & exit
 
@@ -112,7 +115,8 @@ Physical cups group lots by **part number** (multiple colors of the same part ma
 | Part field label | Part number (+ resolved part name when valid) |
 | Color label | Color |
 | Condition | Inline read-only on one line: `Condition: New` or `Condition: Used` (not focusable) |
-| Count label | Count — stepped swipe number input (`min` 0) |
+| Count label | Count — stepped swipe number input (`min` 1) |
+| Secondary button (cup override) | **New cup** — outline; clears auto/pinned cup for this save (`data-testid="new-cup"`) |
 | Primary button | Save |
 | Secondary button | Save and Add Another |
 
@@ -158,6 +162,7 @@ Workers do not choose New vs Used per lot on this screen. On edit, the lot's sto
 |---------|------|---------|
 | Select a part | Inline field error | Save with empty part |
 | Select a color | Inline field error | Save with empty color |
+| Count must be at least 1 | Inline field error | Save with qty 0 or empty |
 
 ## Keyboard & focus
 
@@ -204,11 +209,11 @@ See Layout & controls above for part search and color picker hint copy.
 |--------|---------------|---------|
 | Search / select part | — | Sets partId; enables color list for part |
 | Select color | Part selected | Sets colorId |
-| Adjust count | — | Sets qty (integer, min 0) |
-| Save | Part and color selected | Calls `saveLot`; on duplicate shows confirm dialog; on success clears form (or exits edit route), focuses part search |
-| Save | Part or color missing | Blocked with inline validation (planned Unit 1+) |
+| Adjust count | — | Sets qty (integer, min 1) |
+| Save | Part and color selected; qty ≥ 1 | Calls `saveLot`; on duplicate shows confirm dialog; on success clears form (or exits edit route), focuses part search |
+| Save | Part or color missing, or qty &lt; 1 | Blocked with inline validation |
 | Save and Add Another | Part and color selected | On success: keeps partId, clears color, resets qty to 1, opens color picker and focuses filter; on edit, `replace` to new-lot route first |
-| Confirm duplicate save | Duplicate dialog open | Merges qty into existing lot; completes pending Save or Save and Add Another flow |
+| Confirm duplicate save | Duplicate dialog open | Re-POST with **`confirmMerge: true`** (fixture: `mergeDuplicate` until aligned); adds entered qty to existing lot; completes pending Save or Save and Add Another flow |
 | Cancel duplicate save | Duplicate dialog open | Closes dialog; form unchanged |
 
 ## Data requirements
@@ -229,8 +234,8 @@ Canonical API paths are under `/api/v1` per [tech-spec.md](../../feature/part-ou
 | Operation | Endpoint (live) | Notes |
 |-----------|-----------------|-------|
 | Create/update lot | `POST /api/v1/sessions/:id/lots` | Body: `partId`, `colorId`, `condition`, `qty`, optional `id` (edit), optional `cupId` |
-| Duplicate key (first attempt) | Same endpoint | Response: `duplicate: true`, `existing: { createdBy, qty }` |
-| Duplicate merge | Same endpoint + `mergeDuplicate: true` | **Fixture only (Unit 0)** — adds entered qty to existing lot; live contract TBD in Tech Spec |
+| Duplicate key (first attempt) | Same endpoint | Response: `duplicate: true`, `existing: { createdBy, qty }` — no lot created/updated |
+| Duplicate merge (confirm) | Same endpoint + **`confirmMerge: true`** | Same body as first attempt; server adds `qty` to existing lot for key `(partId, colorId, condition)` |
 
 Unique key: `(sessionId, partId, colorId, condition)`.
 
@@ -243,7 +248,8 @@ Unique key: `(sessionId, partId, colorId, condition)`.
 - [ ] Tab and Shift+Tab cycle part → color → count (condition not in tab order)
 - [ ] New lot: part search filter focused on load for immediate entry
 - [ ] Edit lot: part, color, and qty pre-filled from existing lot
-- [ ] Save blocked with clear inline message when part or color is missing
+- [ ] Save blocked with clear inline message when part or color is missing or qty &lt; 1
+- [ ] Count input minimum is 1; saving a lot with qty 0 is not possible
 - [ ] **Save** (new lot) persists lot, clears form, focuses part search filter
 - [ ] **Save** (edit) updates lot, `replace` to `/lot`, clears form, focuses part search filter
 - [ ] **Save and Add Another** keeps part id, clears color, resets qty to 1, opens color picker and focuses filter
@@ -251,6 +257,8 @@ Unique key: `(sessionId, partId, colorId, condition)`.
 - [ ] **Save** on edit route updates lot without duplicate dialog for same key
 - [ ] Duplicate lot shows confirm dialog with creator and existing qty on submit
 - [ ] Confirm adds entered qty to existing lot and completes save
+- [ ] **New cup** button clears auto/pinned cup for the next save
+- [ ] Duplicate confirm re-POSTs with **`confirmMerge: true`** (live) or fixture equivalent
 - [ ] Cancel duplicate leaves form data intact
 - [ ] One lot per form — no multi-line entry on same screen
 
@@ -271,8 +279,8 @@ Unique key: `(sessionId, partId, colorId, condition)`.
 - No live part search / color API
 - No Bricklink inventory duplicate hint during entry
 - No WebSocket updates when another worker saves same lot
-- No part-number cup auto-select, **Create new cup** override, or `?cupId=` pinned cup (fixture defaults to first cup on save)
-- Live API `mergeDuplicate` contract (fixture only in Unit 0)
+- No part-number cup auto-select, **New cup** override, or `?cupId=` pinned cup (fixture defaults to first cup on save)
+- Align fixture duplicate merge flag with live **`confirmMerge`** name
 - Remove color **None** option once required-color validation ships
 
 ### `data-testid` inventory
@@ -291,6 +299,7 @@ Unique key: `(sessionId, partId, colorId, condition)`.
 | `duplicate-cancel` | Cancel duplicate button |
 | `save-lot` | Save button |
 | `save-and-add-another` | Save and Add Another button |
+| `new-cup` | New cup button (cup override) |
 
 ## Spec–diagram review (2026-06-12)
 
@@ -306,9 +315,8 @@ Unique key: `(sessionId, partId, colorId, condition)`.
 
 ## Open questions
 
-- Should qty 0 be allowed on save?
-- Exact label for **Create new cup** override control on Lot form.
 - Show existing lot qty inline before save (proactive duplicate hint)?
 - Live edit pre-fill: list cache vs dedicated `GET /api/v1/sessions/:id/lots/:lotId`?
 - Remove color picker **None** option when required-color validation ships?
-- **Dave:** Should navigation diagrams add a Lot-form annotation for **Create new cup** (save override), or keep that documented only in this spec?
+
+**Resolved (Dave 2026-06-12):** **New cup** label; duplicate merge via **`confirmMerge: true`**; qty ≥ 1 required (no zero-count save).

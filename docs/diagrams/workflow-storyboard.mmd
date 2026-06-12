@@ -3,7 +3,8 @@ config:
   layout: elk
 ---
 %% End-to-end part-out coordinator workflow (storyboard order)
-%% Sources: docs/view-specs/README.md, storyboard.md, all seven view specs
+%% Sources: docs/view-specs/README.md, session-nav-by-view.md, all seven view specs
+%% SessionNav: Home Lot Lots Reconcile always when bar shown; Cups counting reconciling organizing only
 
 flowchart TB
     subgraph entry["Entry (no sessionId)"]
@@ -17,8 +18,9 @@ flowchart TB
 
     subgraph counting_phase["Phase: counting"]
         LOT["Lot form<br>/session/{id}/lot or /lot/{lotId}<br>new vs edit"]
-        CUPS["List cups<br>/session/{id}/cups<br>also reconciling and organizing"]
+        CUPS["List cups<br>/session/{id}/cups"]
         LOTS_CUP["List lots cup mode<br>?mode=cup&cupId="]
+        LOTS_ORG_EARLY["List lots organizer mode<br>?mode=organizer<br>empty until organizing"]
     end
 
     subgraph reconciling_phase["Phase: reconciling"]
@@ -30,7 +32,7 @@ flowchart TB
     end
 
     subgraph updating_inventory_phase["Phase: updating_inventory"]
-        STORE_UPDATE["Part-out reconciliation<br>/export and Bricklink update"]
+        RECON_EXPORT["Part-out reconciliation<br>export XML + Mark complete"]
     end
 
     CLOSED["Session closed"]
@@ -40,7 +42,7 @@ flowchart TB
     HOME -->|"Enter existing session<br>(join by phase)"| LOT
     HOME -->|"Enter existing session<br>(join by phase)"| RECON
     HOME -->|"Enter existing session<br>(join by phase)"| LOTS_ORG
-    HOME -->|"Enter existing session<br>(join by phase)"| STORE_UPDATE
+    HOME -->|"Enter existing session<br>(join by phase)"| RECON_EXPORT
 
     NEW -->|"POST /sessions<br>fetch ok or network error (201)"| IMPORT
     NEW -->|"Invalid set (422)<br>no session created"| NEW
@@ -49,33 +51,37 @@ flowchart TB
     IMPORT -->|"Confirm and begin counting"| LOT
 
     LOT <-->|"SessionNav"| CUPS
-    LOT <-->|"SessionNav"| LOTS_ORG
-    LOT <-->|"SessionNav reconciling only"| RECON
-    LOT <-->|"SessionNav updating_inventory only"| STORE_UPDATE
+    LOT <-->|"SessionNav Lots always"| LOTS_ORG_EARLY
+    LOT <-->|"SessionNav Reconcile"| RECON
     LOT <-->|"SessionNav"| HOME
 
-    RECON <-->|"SessionNav Cups reconciling only"| CUPS
+    RECON <-->|"SessionNav Cups"| CUPS
+    RECON <-->|"SessionNav Lots"| LOTS_ORG_EARLY
     LOTS_ORG <-->|"SessionNav Cups"| CUPS
+    LOTS_ORG <-->|"SessionNav Reconcile"| RECON
 
     CUPS -->|"0 lots cupId pinned"| LOT
     CUPS -->|"1 lot soleLotId"| LOT
     CUPS -->|"2+ lots"| LOTS_CUP
     CUPS -->|"Add new lot no cupId"| LOT
-    CUPS -->|"empty cups list"| LOT
+    CUPS -->|"empty cups list on mount"| LOT
 
     LOTS_CUP -->|"Edit lot"| LOT
     LOTS_CUP -->|"Back or SessionNav Cups"| CUPS
+    LOTS_CUP -->|"missing or invalid cupId"| CUPS
 
-    LOT -->|"Advance phase counting to reconciling<br>any joined worker"| RECON
+    LOT -->|"SessionNav Reconcile"| RECON
+    RECON -->|"Compare with Part-Out List<br>counting to reconciling"| RECON
     RECON -->|"Edit row"| LOT
     RECON -->|"Resolve discrepancies<br>sign-off"| RECON
     RECON -->|"Declare ready to organize"| LOTS_ORG
+    RECON -->|"Return to reconciling<br>from organizing"| RECON
 
     LOTS_ORG -->|"Split list"| LOTS_ORG
     LOTS_ORG -->|"Moved New loc Mark complete"| LOTS_ORG
     LOTS_ORG -->|"Edit or Open cup"| LOT
     LOTS_ORG -->|"Open cup"| LOTS_CUP
-    LOTS_ORG -->|"Declare ready to import"| STORE_UPDATE
+    LOTS_ORG -->|"Declare ready to import"| RECON_EXPORT
 
-    STORE_UPDATE -->|"Reconciled export XML phase unchanged"| STORE_UPDATE
-    STORE_UPDATE -->|"Mark session complete after manual Bricklink handoff"| CLOSED
+    RECON_EXPORT -->|"Reconciled export XML phase unchanged"| RECON_EXPORT
+    RECON_EXPORT -->|"Mark session complete after manual Bricklink handoff"| CLOSED

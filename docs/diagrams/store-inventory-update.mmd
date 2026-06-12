@@ -8,10 +8,17 @@ flowchart TD
 
     enter --> export["Reconciled — export XML<br>POST .../reconciliation/export-xml<br>phase unchanged"]
 
-    export --> dialog["Export dialog<br>Download XML + open Bricklink validation"]
+    export --> warnings{"Response includes<br>warnings?"}
+    warnings -->|Yes| warnAlert["Inline export warnings alert<br>persists until dismissed or next export"]
+    warnings -->|No| dialog
+    warnAlert --> dialog
+
+    dialog["Export dialog<br>Download XML + open Bricklink validation"]
 
     dialog --> manual["Worker pastes XML on Bricklink<br>verify and submit manually (out of app)"]
 
-    manual --> markComplete["Mark session complete<br>POST .../sessions/{id}/phase"]
+    manual --> exportDone{"At least one successful<br>export this session?"}
+    exportDone -->|No| markDisabled["Mark session complete disabled"]
+    exportDone -->|Yes| markComplete["Mark session complete<br>POST .../sessions/{id}/phase"]
 
     markComplete --> closed["Session phase → closed"]

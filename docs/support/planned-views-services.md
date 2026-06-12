@@ -62,7 +62,7 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 ### Example usage
 
-**Trigger:** Session lead searches/selects set via **SetSearchCombobox** (FilterablePicker; client pattern validation), chooses condition (New or Used; no default), and may use **Back to Home** to return to `/`. Display name comes from Home via `sessionStorage`; direct `/session/new` without a name redirects to Home.
+**Trigger:** Worker searches/selects set via **SetSearchCombobox** (FilterablePicker + **fixture catalog in Unit 0**; live catalog Unit 1+), chooses condition (New or Used; no default), and may use **Back to Home** to return to `/`. Display name comes from Home via `sessionStorage`; direct `/session/new` without a name redirects to Home.
 
 **Flow:** Client calls `POST /api/v1/sessions` with `setNumber`, `partOutOptions.condition` (`new` \| `used`), and `displayName`. Server normalizes set number, maps to Bricklink form (fixed pricing/merge constants + `itemNo` / `itemCondition`), retries fetch up to 3 times on network failure, creates session (phase `importing`), and persists `part_out_lines` on success.
 
@@ -177,7 +177,7 @@ Shared across modes: navigation to **Lot form**, **Open cup** (organizer → cup
 
 **Trigger:** Session enters `organizing` phase; a worker runs pick-list split (session lead typically); worker opens **List lots** from nav.
 
-**Flow:** `POST /api/v1/sessions/:id/pick-lists/split` assigns lots evenly among joined workers (round-robin by sorted part id). Worker’s view calls `GET /api/v1/sessions/:id/lots?mode=organizer&workerId=:currentWorkerId`.
+**Flow:** `POST /api/v1/sessions/:id/pick-lists/split` assigns lots evenly among joined workers (round-robin by sorted part id) — **once per session**; button hidden after `pickListSplit`. Worker's view calls `GET /api/v1/sessions/:id/lots?mode=organizer&workerId=:currentWorkerId`. **Delete** in organizer mode: current worker's assigned lots only.
 
 **Deliverables:** Ordered pick-list rows with Remarks/storage hints. Worker marks a line **moved to storage** → `PATCH …/pick-lists/:itemId` with `{ status: "moved_to_storage" }` → updated row and `pick_list.updated` event. **Mark entire list complete** → `POST …/pick-lists/complete`.
 

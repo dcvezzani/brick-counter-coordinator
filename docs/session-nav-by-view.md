@@ -1,14 +1,18 @@
 # SessionNav by view
 
-**Status:** Draft — MVP reference for spec consistency  
-**Last updated:** 2026-06-12  
+**Status:** Locked — Dave 2026-06-12 (MVP reference for spec consistency)  
 **Audience:** Dave, implementers, spec authors
 
 Canonical bottom bar: [`SessionNav`](../src/components/SessionNav.vue) inside [`AppShell`](../src/components/AppShell.vue). Container `data-testid="session-nav"`.
 
 **Sources:** [view-specs/README.md — SessionNav](./view-specs/README.md#sessionnav-bottom-bar), per-view specs, [process-roles.md](./process-roles.md).
 
-**MVP principle:** Show nav items whenever the bar is visible unless a view spec **explicitly** hides an item by phase. No role-based hiding. When specs were ambiguous (e.g. **Lots** before `organizing`), this doc chooses the **open** option: keep the nav item visible; the destination view handles empty or out-of-phase copy.
+**MVP principles:**
+
+- **Lots** and **Lot** nav items are **always visible** whenever SessionNav is shown (after session create/join).
+- **Cups** and **Reconcile** follow phase rules below.
+- No role-based hiding ([process-roles.md](./process-roles.md)).
+- Phase advances (`POST …/sessions/:id/phase`) — any joined worker when the UI offers the control.
 
 ---
 
@@ -20,15 +24,13 @@ Canonical bottom bar: [`SessionNav`](../src/components/SessionNav.vue) inside [`
 |-----------|------------|
 | Route has **no** `sessionId` (**Home**, **New session**) | **Hidden** |
 | **Part-out import** while `phase === 'importing'` | **Hidden** |
-| `phase === 'closed'` (worker should not remain on session routes) | **Hidden** — session routes redirect **Home** |
+| `phase === 'closed'` | **Hidden** — session routes redirect **Home** |
 
 ### When the bar is shown
 
 Any route matching `/session/:sessionId/*` **except** Part-out import during `importing`, and except `closed` (redirect before render).
 
 ### Nav item visibility by session phase
-
-Applies whenever SessionNav is shown. **Home** and **Lot** follow “when nav shown.” **Cups**, **Lots**, and **Reconcile** are phase-gated per locked view specs.
 
 | Nav label | `data-testid` | Target route | `importing` | `counting` | `reconciling` | `organizing` | `updating_inventory` |
 |-----------|---------------|--------------|-------------|------------|---------------|--------------|----------------------|
@@ -38,200 +40,109 @@ Applies whenever SessionNav is shown. **Home** and **Lot** follow “when nav sh
 | **Lots** | `nav-lots` | `/session/:sessionId/lots?mode=organizer` | — | ✓ | ✓ | ✓ | ✓ |
 | **Reconcile** | `nav-reconciliation` | `/session/:sessionId/reconciliation` | — | ✓ | ✓ | ✓ | ✓ |
 
-`—` = whole bar hidden (importing). ✓ = item visible and tappable. ✗ = item **not rendered** (or disabled with no navigation — prefer **not rendered** for MVP).
+`—` = whole bar hidden. ✓ = item visible and tappable. ✗ = item not rendered.
 
-**Lots (MVP open rule):** Visible in every phase where SessionNav is shown, including `counting`, `reconciling`, and `updating_inventory`. Organizer **workflow** still starts in `organizing`; earlier phases show a simple empty or status message on the List lots view (see below). Resolves open question in [list-lots.md](./view-specs/list-lots.md#open-questions).
+**Lots (locked):** Always visible whenever SessionNav is shown. Organizer **workflow** UI on the destination is full only in `organizing`; earlier phases show a simple empty/helper state ([list-lots.md](./view-specs/list-lots.md#locked-decisions)).
 
-**Active item:** Highlight the nav button that matches the current primary view. Cup-mode List lots (`?mode=cup`) is a drill-down from **Cups** — highlight **Cups**, not **Lots**.
+**Active item:** Highlight the nav button matching the current primary view. Cup-mode List lots (`?mode=cup`) highlights **Cups**, not **Lots**.
 
 ---
 
 ## Per view
 
-### 1. Home
+### 1. Home — **No SessionNav**
 
-| Field | Value |
-|-------|-------|
-| **Route** | `/` |
-| **SessionNav** | **Not shown** (no `sessionId`) |
-
----
-
-### 2. New session
-
-| Field | Value |
-|-------|-------|
-| **Route** | `/session/new` |
-| **SessionNav** | **Not shown** (no `sessionId` until after create) |
-
----
+### 2. New session — **No SessionNav**
 
 ### 3. Part-out import
 
-| Field | Value |
-|-------|-------|
-| **Route** | `/session/:sessionId/import` |
+| Condition | SessionNav |
+|-----------|------------|
+| `phase === 'importing'` | **Hidden** |
+| After confirm → `counting` | Nav appears on **Lot form** |
 
-#### SessionNav by condition
-
-| Condition | SessionNav bar | Notes |
-|-----------|----------------|-------|
-| `phase === 'importing'` | **Hidden** | Only session-scoped screen during import ([part-out-import.md](./view-specs/part-out-import.md#entry--exit)) |
-| After confirm → `counting` | Worker navigates to **Lot form**; nav **shown** on next view | — |
-
-Fetch UI states (Loading, Error, Ready) do **not** change SessionNav — bar stays hidden until phase leaves `importing`.
-
----
+Fetch states (Loading, Error, Ready) do not change SessionNav.
 
 ### 4. Lot form
 
-| Field | Value |
-|-------|-------|
-| **Routes** | `/session/:sessionId/lot`, `/session/:sessionId/lot/:lotId`, optional `?cupId=` |
-| **Active nav item** | **Lot** |
+**Active:** Lot
 
-#### SessionNav by `phase`
-
-| Phase | Bar shown? | Home | Cups | Lot | Lots | Reconcile |
-|-------|------------|------|------|-----|------|-----------|
-| `importing` | — | — | — | — | — | — |
-| `counting` | ✓ | ✓ | ✓ | ✓ (active) | ✓ | ✓ |
-| `reconciling` | ✓ | ✓ | ✓ | ✓ (active) | ✓ | ✓ |
-| `organizing` | ✓ | ✓ | ✓ | ✓ (active) | ✓ | ✓ |
-| `updating_inventory` | ✓ | ✓ | ✗ | ✓ (active) | ✓ | ✓ |
-| `closed` | Redirect Home | — | — | — | — | — |
-
-New lot vs edit lot does **not** change SessionNav.
-
----
+| Phase | Home | Cups | Lot | Lots | Reconcile |
+|-------|------|------|-----|------|-----------|
+| `counting` – `organizing` | ✓ | ✓ | active | ✓ | ✓ |
+| `updating_inventory` | ✓ | ✗ | active | ✓ | ✓ |
 
 ### 5. List cups
 
-| Field | Value |
-|-------|-------|
-| **Route** | `/session/:sessionId/cups` |
-| **Active nav item** | **Cups** |
-| **Reachability** | Direct nav only when `phase` is `counting`, `reconciling`, or `organizing` ([list-cups.md](./view-specs/list-cups.md#locked-decisions)) |
+**Active:** Cups · Reachable via nav in `counting`, `reconciling`, `organizing` only.
 
-#### SessionNav by `phase`
+| Phase | Home | Cups | Lot | Lots | Reconcile |
+|-------|------|------|-----|------|-----------|
+| `counting` – `organizing` | ✓ | active | ✓ | ✓ | ✓ |
 
-| Phase | Bar shown? | Home | Cups | Lot | Lots | Reconcile |
-|-------|------------|------|------|-----|------|-----------|
-| `importing` | — | — | — | — | — | — |
-| `counting` | ✓ | ✓ | ✓ (active) | ✓ | ✓ | ✓ |
-| `reconciling` | ✓ | ✓ | ✓ (active) | ✓ | ✓ | ✓ |
-| `organizing` | ✓ | ✓ | ✓ (active) | ✓ | ✓ | ✓ |
-| `updating_inventory` | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ |
-| `closed` | Redirect Home | — | — | — | — | — |
-
-#### View-level conditions (same nav)
-
-| Condition | SessionNav | Page behavior |
-|-----------|------------|---------------|
-| `GET …/cups` returns **empty** array on mount | Unchanged (if phase allows this view) | Redirect to **Lot form** (`/lot`) — worker may not see List cups UI ([list-cups.md](./view-specs/list-cups.md#empty-states)) |
-| Cups exist | Standard row above | — |
-
----
+**Empty cups on mount:** redirect to `/lot` (nav unchanged if worker lands on Lot form).
 
 ### 6. List lots
 
-Two product modes on one route; **SessionNav is identical** in both.
+| Mode | Active nav |
+|------|------------|
+| `?mode=organizer` | **Lots** |
+| `?mode=cup&cupId=` | **Cups** |
 
-| Mode | Route | Active nav item |
-|------|-------|-----------------|
-| **cup** | `?mode=cup&cupId=` | **Cups** (drill-down from cups) |
-| **organizer** | `?mode=organizer` | **Lots** |
+Same nav buttons in both modes:
 
-#### SessionNav by `phase` — organizer mode (`?mode=organizer`)
+| Phase | Home | Cups | Lot | Lots | Reconcile |
+|-------|------|------|-----|------|-----------|
+| `counting` – `updating_inventory` | ✓ | ✓† | ✓ | active‡ | ✓ |
 
-| Phase | Bar shown? | Home | Cups | Lot | Lots | Reconcile |
-|-------|------------|------|------|-----|------|-----------|
-| `importing` | — | — | — | — | — | — |
-| `counting` | ✓ | ✓ | ✓ | ✓ | ✓ (active) | ✓ |
-| `reconciling` | ✓ | ✓ | ✓ | ✓ | ✓ (active) | ✓ |
-| `organizing` | ✓ | ✓ | ✓ | ✓ | ✓ (active) | ✓ |
-| `updating_inventory` | ✓ | ✓ | ✗ | ✓ | ✓ (active) | ✓ |
-| `closed` | Redirect Home | — | — | — | — | — |
+† Cup mode: **Cups** active. ‡ Organizer mode: **Lots** active. **Cups** hidden in `updating_inventory`.
 
-**MVP destination when phase ≠ `organizing` (open rule):**
+**Organizer mode before `organizing`:** Helper empty state (e.g. pick lists available after reconciliation). No split/status actions.
 
-| Phase | Tapping **Lots** nav or landing via nav |
-|-------|----------------------------------------|
-| `counting` | Organizer mode page with short helper: organizing starts after reconciliation (e.g. “Pick lists are available in the organizing phase.”). No **Split list** / status actions. |
-| `reconciling` | Same guarded empty state — reconciliation must finish and phase advance first. |
-| `organizing` | Full organizer UI per [list-lots.md](./view-specs/list-lots.md). |
-| `updating_inventory` | Read-only or completion message: organizing done; use **Reconcile** for export. No phase-advance buttons on this view. |
-
-#### SessionNav by `phase` — cup mode (`?mode=cup&cupId=`)
-
-Same button visibility as organizer mode table above; **Cups** is active.
-
-| Condition | SessionNav | Page behavior |
-|-----------|------------|---------------|
-| Missing or invalid `cupId` | Unchanged | Redirect **List cups** or empty state — do not list all session lots ([list-lots.md](./view-specs/list-lots.md#locked-decisions)) |
-| Valid `cupId` | Standard | Cup-filtered lot table |
-
----
+**Invalid/missing `cupId`:** Redirect **List cups** (nav unchanged).
 
 ### 7. Part-out reconciliation
 
-| Field | Value |
-|-------|-------|
-| **Route** | `/session/:sessionId/reconciliation` |
-| **Active nav item** | **Reconcile** |
+**Active:** Reconcile
 
-#### SessionNav by `phase`
+| Phase | Home | Cups | Lot | Lots | Reconcile |
+|-------|------|------|-----|------|-----------|
+| `counting` – `organizing` | ✓ | ✓ | ✓ | ✓ | active |
+| `updating_inventory` | ✓ | ✗ | ✓ | ✓ | active |
 
-| Phase | Bar shown? | Home | Cups | Lot | Lots | Reconcile |
-|-------|------------|------|------|-----|------|-----------|
-| `importing` | — | — | — | — | — | — |
-| `counting` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (active) |
-| `reconciling` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (active) |
-| `organizing` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (active) |
-| `updating_inventory` | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ (active) |
-| `closed` | Redirect Home | — | — | — | — | — |
+**In-page primary actions** (not SessionNav):
 
-SessionNav does **not** change between reconciliation **page** phases; only **in-page** primary actions differ ([part-out-reconciliation.md](./view-specs/part-out-reconciliation.md#layout--controls)):
-
-| Phase | In-page primary actions (not SessionNav) |
-|-------|------------------------------------------|
-| `counting` | Preview only — **Edit** / **Resolve** / **Declare ready to organize** disabled |
-| `reconciling` | **Edit**, **Resolve**, **Declare ready to organize** when preconditions met |
+| Phase | Primary action |
+|-------|----------------|
+| `counting` | **Compare with Part-Out List** → `reconciling` |
+| `reconciling` | **Declare ready to organize** (when all rows resolved) |
 | `organizing` | **Return to reconciling** (optional) |
-| `updating_inventory` | **Reconciled — export XML**, **Mark session complete** (after export) |
-
-Fetch/reconciliation table tabs do **not** affect SessionNav.
+| `updating_inventory` | **Reconciled — export XML** · **Mark session complete** (after export) |
 
 ---
 
-## Quick lookup: view → visible nav buttons
+## Quick lookup
 
-Summary when SessionNav is **shown** (correct phase row from tables above).
+| View | Nav buttons (when bar shown) |
+|------|------------------------------|
+| **Lot form** | Home, Cups†, Lot, Lots, Reconcile |
+| **List cups** | Home, Cups, Lot, Lots, Reconcile |
+| **List lots** | Home, Cups†, Lot, Lots, Reconcile |
+| **Part-out reconciliation** | Home, Cups†, Lot, Lots, Reconcile |
 
-| View | Typical `phase` | Nav buttons shown |
-|------|-----------------|-------------------|
-| **Lot form** | `counting` – `updating_inventory` | Home, Cups†, Lot, Lots, Reconcile |
-| **List cups** | `counting` – `organizing` | Home, Cups, Lot, Lots, Reconcile |
-| **List lots** (organizer) | any shown phase | Home, Cups†, Lot, Lots, Reconcile |
-| **List lots** (cup) | `counting` – `organizing` | Home, Cups, Lot, Lots, Reconcile |
-| **Part-out reconciliation** | `counting` – `updating_inventory` | Home, Cups†, Lot, Lots, Reconcile |
-
-† **Cups** hidden when `phase === 'updating_inventory'`.
+† **Cups** hidden in `updating_inventory`.
 
 ---
 
-## Consistency checklist (for spec reviews)
+## Consistency checklist
 
-Use this when editing view specs or implementing `SessionNav.vue`:
-
-- [ ] SessionNav hidden on **Home**, **New session**, and **Part-out import** during `importing`
-- [ ] **Cups** hidden only in `updating_inventory` and `closed` (and whole bar hidden in `importing`)
-- [ ] **Reconcile** hidden only in `importing` and `closed`
-- [ ] **Lot**, **Lots**, and **Home** visible whenever the bar is shown (MVP)
-- [ ] No nav item hidden by worker role or `lead_worker_id`
-- [ ] Cup-mode List lots highlights **Cups**, not **Lots**
-- [ ] `session.phase` WebSocket updates nav visibility without full page reload
-- [ ] `closed` session: no SessionNav — redirect **Home**
+- [ ] SessionNav hidden: **Home**, **New session**, **Part-out import** during `importing`, `closed`
+- [ ] **Lots** always visible when bar shown
+- [ ] **Cups** hidden only in `updating_inventory` (+ bar hidden in `importing` / `closed`)
+- [ ] **Reconcile** hidden only in `importing` / `closed`
+- [ ] No nav gating by role
+- [ ] Cup-mode List lots highlights **Cups**
+- [ ] **Compare with Part-Out List** on reconciliation view in `counting`
 
 ---
 
@@ -241,11 +152,4 @@ Use this when editing view specs or implementing `SessionNav.vue`:
 - [Process roles](./process-roles.md)
 - [View navigation diagram](./diagrams/view-navigation.mmd)
 - [Session phases state diagram](./diagrams/session-phases-state.mmd)
-
-## Open follow-ups
-
-| Topic | This doc’s MVP stance | Promote to view spec when locked |
-|-------|----------------------|----------------------------------|
-| **Lots** nav before `organizing` | Show nav; guarded empty state on destination | Update [list-lots.md](./view-specs/list-lots.md) open question |
-| **Cups** item: hide vs disable in `updating_inventory` | Hide (not rendered) | Align [list-cups.md](./view-specs/list-cups.md) if disable preferred |
-| Exact copy for out-of-phase **Lots** empty state | Placeholder guidance above | Product copy pass |
+- [Reconciliation workflow](./diagrams/reconciliation-workflow.mmd)

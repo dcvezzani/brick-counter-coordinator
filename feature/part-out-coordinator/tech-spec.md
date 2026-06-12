@@ -306,7 +306,19 @@ Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session i
 }
 ```
 
-**Duplicate merge (Unit 0 fixture):** Client may re-POST with `mergeDuplicate: true` to add entered qty to the existing lot. Live API contract for merge is TBD — confirm dialog may instead use idempotent upsert or a dedicated merge flag in Unit 2.
+**Duplicate merge (live):** After the worker confirms the duplicate dialog, re-POST the same body with **`confirmMerge: true`**. Server adds `qty` to the existing lot for `(partId, colorId, condition)` and returns the updated lot.
+
+```json
+{
+  "partId": "3001",
+  "colorId": "1",
+  "condition": "U",
+  "qty": 5,
+  "confirmMerge": true
+}
+```
+
+**Unit 0 fixture:** May use `mergeDuplicate: true` until the client aligns with `confirmMerge`.
 
 **Session condition:** `partOutOptions.condition` is `new` or `used` only. Lot form saves matching `N` or `U`; workers do not pick condition per lot. Partial-bag two-sweep uses two sessions.
 
@@ -343,7 +355,7 @@ Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session i
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/sessions/:id/pick-lists/split` | Even split among current workers |
+| `POST` | `/sessions/:id/pick-lists/split` | Even split among **current** joined workers — **once per session**; `409` or ignored if `pickListSplit` already true |
 | `PATCH` | `/sessions/:id/pick-lists/:itemId` | Update line status |
 | `POST` | `/sessions/:id/pick-lists/complete` | Mark worker list complete |
 
@@ -443,14 +455,24 @@ Local-network deployment assumed; document in README for production hardening la
 
 ### Unit 0 — Storyboard
 
+**New session (Unit 0):** **SetSearchCombobox** with fixture set catalog, client set-number pattern validation, condition New/Used (no Mixed), **Back to Home** — see [new-session.md](../../docs/view-specs/new-session.md). Legacy plain-text set field and pricing/existing-lots groups are removed when SetSearchCombobox ships.
+
+**Lot form (Unit 0):** qty minimum **1** — block save at 0 ([lot-form.md](../../docs/view-specs/lot-form.md)).
+
+**SessionNav:** [session-nav-by-view.md](../../docs/session-nav-by-view.md) — **Lots** always when bar shown; phase-gated **Cups** / **Reconcile** only.
+
+**Part-out reconciliation (Unit 0 fixture):** **Compare with Part-Out List** button for `counting` → `reconciling` (target; fixture may lag).
+
 **Deliver:** All routes + fixture-backed views; no `server/`.
 
 **Acceptance (Review):**
 
 - [ ] All seven views reachable per [storyboard.md](../../docs/support/storyboard.md)
 - [ ] Storyboard badge visible; no API calls
-- [ ] Lot form fits mobile viewport without scroll
-- [ ] List lots supports `mode` query switching (organizer / cup UI)
+- [ ] **New session:** SetSearchCombobox + fixture set catalog; condition New/Used only
+- [ ] Lot form fits mobile viewport without scroll; qty min 1
+- [ ] List lots supports `mode` query switching (organizer / cup UI); SessionNav **Lots** always when bar shown
+- [ ] Part-out reconciliation: **Compare with Part-Out List** in `counting` (fixture or stub)
 - [ ] Playwright smoke: Home → New session → List cups → Lot form
 
 **Tests:** Vitest for composables; Playwright happy-path walkthrough.
@@ -481,6 +503,8 @@ Local-network deployment assumed; document in README for production hardening la
 **Acceptance:**
 
 - [ ] Product criteria #1, #2, #5, #6, #7
+- [ ] Duplicate dialog → re-POST with **`confirmMerge: true`**
+- [ ] Lot save blocked when qty &lt; 1
 - [ ] Two browsers: parallel lot entry without overwrite
 - [ ] Save and Add Another pre-fills part id
 - [ ] List cups branching (one vs many lots)
@@ -496,6 +520,8 @@ Local-network deployment assumed; document in README for production hardening la
 **Acceptance:**
 
 - [ ] Product criteria #10–#12
+- [ ] **Split list** at most once per session (`pickListSplit` gate)
+- [ ] Organizer **Delete** returns **403** for lots not on current worker's pick list
 - [ ] Even split algorithm: round-robin by sorted part id; no worker gets 0 lines when N ≥ M
 - [ ] `window.print()` or print CSS for List lots
 - [ ] Status persists across refresh

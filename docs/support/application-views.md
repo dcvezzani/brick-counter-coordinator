@@ -1,6 +1,6 @@
 ## Application views
 
-**Canonical product reference:** [feature/part-out-coordinator/product-spec.md](../../feature/part-out-coordinator/product-spec.md#application-views). **Unit 0 (storyboard):** all routes + fixture UI. **Units 1–4:** live behavior on the same routes. Walkthrough: [storyboard.md](./storyboard.md).
+**Canonical product reference:** [feature/part-out-coordinator/product-spec.md](../../feature/part-out-coordinator/product-spec.md#application-views). **Per-view requirements:** [docs/view-specs/](../view-specs/). **Unit 0 (storyboard):** all routes + fixture UI — see [Fixture vs target](../view-specs/README.md#fixture-vs-target-unit-0). **Units 1–4:** live behavior on the same routes. Walkthrough: [storyboard.md](./storyboard.md).
 
 
 ### home page
@@ -11,13 +11,12 @@
 
 ### new session
 - create a new session (display name entered on Home first)
-  - specify set number and condition (New or Used)
+  - search/select set number (SetSearchCombobox) and condition (New or Used)
   - submit — server fetches official Bricklink part-out list (fixed pricing/merge defaults)
 
 ### part out import
 - shows all fetched part-out list entries (part, color, condition, qty, remarks)
-- session lead removes (excludes) specific entries not in scope for this counting sweep
-- excluded entries can be restored before confirming
+- any joined worker curates scope via checkboxes and footer **Exclude**; **Restore** from Excluded tab
 - confirm to begin counting
   - brand-new sealed set or loose bricks: usually confirm full list (single sweep)
   - partial-bag set (mixed opened/sealed bags): exclude out-of-scope lines; two sessions for used then new
@@ -28,8 +27,10 @@
   - enter or find part number
   - select color
   - session condition shown read-only (not selected on this form)
-  - enter count
+  - enter count (minimum 1 — cannot save qty 0)
+  - optional **New cup** when auto cup assignment is wrong
   - press button: "Save" or "Save and Add Another"
+  - duplicate lot: confirm dialog; merge adds qty to existing lot
 
 ### list cups
 - browse session cups (counting default landing is lot form, not list cups)
@@ -37,18 +38,20 @@
 - select a cup: zero lots → lot form with cup pinned; one lot → lot form edit; multiple lots → cup-filtered list lots
 
 ### list lots
-- lists a selection of lots assigned to a given worker; lists are evenly divided between workers, ordered by part id
+- **cup mode:** pick a lot from a multi-lot cup (see list cups)
+- **organizer mode:** pick list after **Split list** (once per session)
+- lists lots assigned to the current worker; ordered by part id
 - storage location (from part-out Remarks) shown per line in organizer mode
-- mark a lot as having been moved out of cup and into storage location
-- mark a lot as needing to be assigned a new storage location
-- open a lot for editing
-- open associated cup (filtered "list lots" in cup mode)
-- send list to printer
-- mark entire list as complete when all parts on the list have been moved to storage or marked as needing a new storage location assignment (disabled while any line is pending)
-- cup mode: pick a lot from a multi-lot cup (see list cups); new lots via SessionNav Lot or list cups — not on this view
+- mark a lot as moved to storage or needs new location
+- delete: own assigned lots only (organizer); any lot in cup (cup mode)
+- open lot for editing; open associated cup (organizer)
+- print pick list; mark entire list complete when all lines resolved
+- declare ready to import when all workers' lists complete
 
 ### part out reconciliation
-- session counts are compared with **included** part-out lines (after import curation)
-- discrepancy table shows open mismatches only; optional **View matched lines**
-- **Resolve** accept-as-is (acknowledge counted qty); any joined worker
-- **Reconciled — export XML** in `updating_inventory` — generates XML, opens Bricklink bulk update validation (phase unchanged); **Mark session complete** → `closed` after manual Bricklink handoff
+- session counts compared with **included** part-out lines (after import curation)
+- **Discrepancies** and **All lines** tabs; explicit **Resolve** on every row
+- in **counting**: preview diff; **Compare with Part-Out List** advances to reconciling
+- in **reconciling**: edit lots, resolve rows, **Declare ready to organize**
+- in **updating_inventory**: **Reconciled — export XML** (phase unchanged); **Mark session complete** → closed after manual Bricklink handoff
+- any joined worker may act; no role-based permissions

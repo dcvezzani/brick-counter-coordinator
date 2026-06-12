@@ -14,7 +14,7 @@
 | **Route params** | — |
 | **Query params** | — |
 | **Primary actor(s)** | Session lead (process role — any worker with a display name from Home can open this route; creator becomes session lead) |
-| **Delivery unit** | 0 (fixture) → 1 (live create + BrickLink fetch) |
+| **Delivery unit** | 0 (SetSearchCombobox + fixture create) → 1 (live create + BrickLink fetch) |
 | **Source file** | [`src/views/NewSessionView.vue`](../../src/views/NewSessionView.vue) |
 
 ## Related docs
@@ -90,7 +90,7 @@ Session lead specifies the LEGO **set number** and **condition** (New or Used), 
 | Display name missing (route guard) | Redirect to `/` before New session renders — user never sees the form without a name from Home |
 | Display name missing (on submit) | Destructive alert: Enter your display name first — use **Back to Home** (edge case: name cleared after arrival) |
 | Label | Set number |
-| Set search picker | [`SetSearchCombobox`](../../src/components/SetSearchCombobox.vue) *(planned)* — wraps [`FilterablePicker`](../../src/components/FilterablePicker.vue); searchable set catalog; placeholder e.g. `70404-1`; default selection `70404-1` (editable). Replaces plain text input from Unit 0. |
+| Set search picker | [`SetSearchCombobox`](../../src/components/SetSearchCombobox.vue) — wraps [`FilterablePicker`](../../src/components/FilterablePicker.vue); searchable **fixture set catalog** in Unit 0 (live catalog/API in Unit 1+); placeholder e.g. `70404-1`; default selection `70404-1` (editable). |
 | **Condition** (radio) | New · Used — **no default selected** |
 | Submit button | Create session & fetch part-out — disabled while request in flight or set number fails client pattern validation |
 
@@ -327,10 +327,15 @@ Server-side on create: normalize `setNumber`, derive `itemNo` (base before first
 
 ## Acceptance criteria
 
+### Unit 0 (storyboard)
+
+- [ ] Set number via **SetSearchCombobox** (FilterablePicker) with fixture set catalog (e.g. `70404` → stored `70404-1`; `70404-2` stored as-is)
+- [ ] Client pattern validation blocks invalid format before submit
+
 ### Unit 1+ (live)
 
 - [ ] **Back to Home** control navigates to `/`
-- [ ] Set number via **SetSearchCombobox** (FilterablePicker); searchable set list (e.g. `70404` → stored `70404-1`; `70404-2` stored as-is)
+- [ ] SetSearchCombobox backed by live set catalog/API (replaces fixture catalog)
 - [ ] Client pattern validation blocks invalid format before submit; inline alert shown
 - [ ] Invalid set (422): fixed client wrapper copy; optional server message as secondary detail
 - [ ] BrickLink `itemNo` is base before first `-` (e.g. `70404-2` → `70404`)
@@ -361,12 +366,12 @@ Server-side on create: normalize `setNumber`, derive `itemNo` (base before first
 - Phase set to `importing`; confirm on import advances to `counting`
 - Default set `70404-1` from config; helper text already matches target copy
 
-### Gaps (Units 1–4)
+### Gaps (Units 0–4)
 
 - Remove pricing basis, existing-lots, and Mixed condition from UI
 - No default condition; condition-required validation
 - Display-name route guard (redirect to Home) + defensive alert on submit
-- **SetSearchCombobox** (FilterablePicker-based set search); client pattern validation
+- **SetSearchCombobox** with fixture set catalog (Unit 0 target)
 - **Back to Home** control
 - Set-number normalization (append `-1` when no hyphen; `itemNo` = base before `-`)
 - Live `POST /api/v1/sessions` with server-side fetch retry
@@ -410,7 +415,7 @@ Reviewed 2026-06-12 against [session-phases-state.mmd](../diagrams/session-phase
 
 | # | Issue | Spec says | Diagram / doc gap | Resolution |
 |---|-------|-----------|-------------------|------------|
-| D1 | **Create submit outcomes** | Three paths: 201+ok → import; 201+error → import; 422 → stay | `workflow-storyboard.mmd` shows only happy path `NEW --> IMPORT` | **Diagram fix** — add 422 self-loop and error-status edge (see diagram PR) |
+| D1 | **Create submit outcomes** | Three paths: 201+ok → import; 201+error → import; 422 → stay | `workflow-storyboard.mmd` includes 422 self-loop and 201+error edge | **Resolved** |
 | D2 | **Fetch error still enters `importing`** | Network failure after retries creates session in `importing` with `part_out_fetch_status=error` | `session-phases-state.mmd` transition label does not distinguish inline fetch ok vs error | **Diagram note** added — both enter `importing`; refetch UX is on import view |
 | D3 | **Import arrival after create-time fetch failure** | Client navigates to import; **Loading then Error** on import mount ([part-out-import.md](./part-out-import.md#create-time-fetch-error-entry)) | `part-out-import-fetch-state.mmd` documents create-error entry at Loading | **Resolved** — Dave 2026-06-12 |
 | D4 | **Route path shorthand** | Full route `/session/:sessionId/import` | `view-navigation.mmd` uses `/import` (abbreviated nodes) | Intentional shorthand per post-review (#7–#9); full paths in `workflow-storyboard.mmd` and Tech Spec |
@@ -422,15 +427,17 @@ Reviewed 2026-06-12 against [session-phases-state.mmd](../diagrams/session-phase
 
 | # | Topic | Notes |
 |---|-------|-------|
-| A1 | Set catalog source for SetSearchCombobox | FilterablePicker needs set options — fixture catalog in Unit 0; live API/catalog TBD in Tech Spec. |
+| A1 | Set catalog source for SetSearchCombobox | **Unit 0:** fixture catalog in repo. **Unit 1+:** live API/catalog (Tech Spec). |
 | A2 | Normalize timing | Append `-1` on blur **or** submit — both valid; UX if user blurs `70404` then changes mind before submit is unspecified. |
 | A3 | Unit 0 storyboard | Fixture simulates successful create with lines; no 422 or network-error paths in storyboard — acceptable for Unit 0. |
 
 ## Open questions
 
-1. **SetSearchCombobox data source (live)** — Static/searchable fixture catalog for Unit 0; which API or catalog backs set search in Unit 1+?
+1. **SetSearchCombobox live data source (Unit 1+)** — Which API or catalog backs set search after Unit 0 fixture catalog?
 
 **Resolved (Dave 2026-06-12):**
+
+| SetSearchCombobox | **Unit 0** — fixture set catalog in storyboard; **Unit 1+** — live source TBD |
 
 | Topic | Decision |
 |-------|----------|
