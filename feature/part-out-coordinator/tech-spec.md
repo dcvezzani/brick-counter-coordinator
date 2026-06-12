@@ -134,9 +134,9 @@ brick-counter-coordinator/
 | `reconciling` | Lead, workers resolve | Part-out reconciliation — Edit, Resolve, Declare ready to organize; SessionNav **Reconcile** visible; List cups (browse) |
 | `organizing` | Organizers | List lots (organizer mode) — split, mark lines, Declare ready to import; SessionNav **Reconcile** hidden; List cups (browse) |
 | `updating_inventory` | Any joined worker | Part-out reconciliation — Reconciled export XML; Mark session complete; SessionNav **Reconcile** visible |
-| `closed` | — | Read-only or redirect Home |
+| `closed` | — | All session routes redirect Home |
 
-Lead advances phase via API (`POST /sessions/:id/phase`): `counting` → `reconciling` → `organizing` → `updating_inventory`. Export (`POST …/reconciliation/export-xml`) returns XML + validation URL only — **does not** change phase. **Mark session complete** (`POST …/sessions/:id/phase` → `closed`) requires at least one successful export this session. See [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md), [session-phases-state.mmd](../../docs/diagrams/session-phases-state.mmd), [home.md — Post-join routing](../../docs/view-specs/home.md#post-join-routing).
+Lead advances phase via API (`POST /sessions/:id/phase`): `counting` → `reconciling` → `organizing` → `updating_inventory`; `organizing` → `reconciling` when a count error is discovered (organizer pick-list progress **not** rolled back). Export (`POST …/reconciliation/export-xml`) returns XML + validation URL only — **does not** change phase. **Mark session complete** (`POST …/sessions/:id/phase` → `closed`) requires at least one successful export this session. **`closed`** sessions redirect all session-scoped routes to Home.
 
 ---
 
@@ -321,13 +321,15 @@ Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session i
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/sessions/:id/reconciliation` | Per-line expected, counted, delta, resolved |
-| `POST` | `/sessions/:id/reconciliation/resolve` | Body `{ lineId }` — accept-as-is; sets `resolved: true` |
+| `GET` | `/sessions/:id/reconciliation` | Per-line expected, counted, delta, resolved — **included** part-out lines plus **unexpected-count** rows (`qtyExpected = 0` for session lots not on included list) |
+| `POST` | `/sessions/:id/reconciliation/resolve` | Body `{ lineId }` — explicit sign-off; sets `resolved: true` |
 | `POST` | `/sessions/:id/reconciliation/export-xml` | Returns XML + validation URL only — **does not** change phase (only when current phase is `updating_inventory`) |
 
-**Resolve:** Accept-as-is acknowledgment — does not mutate lots. Open discrepancy = `delta !== 0 && !resolved`.
+**Resolve:** Explicit sign-off — does not mutate lots. Open row = `!resolved` (including `delta === 0` until worker resolves). **Declare ready to organize** requires every row `resolved === true`.
 
-**Phase advances (`POST /sessions/:id/phase`):** `counting` → `reconciling` (lead); `reconciling` → `organizing` when all discrepancies resolved (**Declare ready to organize**); `organizing` → `updating_inventory` when all organizer lists complete (**Declare ready to import** on List lots); `updating_inventory` → `closed` via **Mark session complete** (server requires prior `export-xml` success this session).
+**Phase advances (`POST /sessions/:id/phase`):** `counting` → `reconciling` (lead); `reconciling` → `organizing` when every row resolved (**Declare ready to organize**); `organizing` → `updating_inventory` when all organizer lists complete (**Declare ready to import** on List lots); `organizing` → `reconciling` when count error discovered (pick-list **Moved** / **New loc** state preserved); `updating_inventory` → `closed` via **Mark session complete** (server requires prior `export-xml` success this session).
+
+**Export warnings:** When `export-xml` returns `warnings`, client shows inline alert on Part-out reconciliation view.
 
 **Export XML:** Available only in `updating_inventory`. Port `buildBulkUpdateXml` from `bricklink-chrome-extension/scripts/bulk-repair/lib/build-bulk-update-xml.mjs` (`<LOTID>` from `bricklink_lot_id` + `<REMARKS>` per included row). **Not** upload XML from `inv-upload-xml.js`. Handoff: download/clipboard + `validationUrl` `https://www.bricklink.com/invXML.asp#update` — user pastes into `inv-update__textarea-xml` and verifies on BrickLink. Full contract: [docs/bricklink-mass-update-export.md](../../docs/bricklink-mass-update-export.md) and [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md).
 

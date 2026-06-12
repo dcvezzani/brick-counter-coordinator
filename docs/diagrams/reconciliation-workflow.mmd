@@ -7,19 +7,24 @@ flowchart TD
 
     enter --> tabs{"Active tab"}
 
-    tabs --> disc["Discrepancies tab<br>delta not 0 and not resolved"]
-    tabs --> all["All lines tab<br>full included-line comparison"]
+    tabs --> disc["Discrepancies tab<br>not resolved"]
+    tabs --> all["All lines tab<br>included lines + unexpected counts"]
 
     disc --> row{"Row action"}
     all --> row
 
     row -->|Edit| lot["Lot form<br>adjust session counts"]
-    row -->|Resolve| sign["POST .../reconciliation/resolve<br>sign-off (delta not 0, not resolved)"]
+    row -->|Resolve| sign["POST .../reconciliation/resolve<br>sign-off (not resolved)"]
 
     lot --> disc
     sign --> disc
 
-    disc --> check{"All discrepancies<br>cleared?"}
+    disc --> match{"All included lines<br>delta 0?"}
+    match -->|Yes, rows still open| celebrate["Celebratory alert<br>counts match part-out list"]
+    match -->|No| check
+    celebrate --> check{"Every row<br>resolved?"}
+    match -->|No| check
+
     check -->|No| disc
     check -->|Yes| ready["Declare ready to organize<br>POST .../sessions/{id}/phase"]
     ready --> phaseOrg["Session phase to organizing"]

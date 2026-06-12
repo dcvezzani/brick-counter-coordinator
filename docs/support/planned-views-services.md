@@ -201,7 +201,7 @@ Shared across modes: navigation to **Lot form**, **Open cup** (organizer → cup
 | Service | Endpoints / mechanism |
 |---------|----------------------|
 | Reconciliation | `GET /api/v1/sessions/:id/reconciliation`, `POST …/reconciliation/resolve`, `POST …/reconciliation/export-xml` |
-| Session | `POST /api/v1/sessions/:id/phase` (`counting` → `reconciling` → `organizing` → `updating_inventory` → `closed` via **Mark session complete** after export) |
+| Session | `POST /api/v1/sessions/:id/phase` (`counting` → `reconciling` → `organizing` → `updating_inventory`; `organizing` → `reconciling` without organizer rollback; → `closed` via **Mark session complete** after export) |
 | Part-out (read-only context) | Included lines only (`excluded = 0`) drive expected quantities |
 | WebSocket | `session.phase`, `lot.updated` refreshes open discrepancy counts |
 
@@ -209,17 +209,17 @@ Shared across modes: navigation to **Lot form**, **Open cup** (organizer → cup
 
 **Trigger:** Any joined worker opens **Part-out reconciliation** when session phase is `reconciling` or `updating_inventory`. SessionNav **Reconcile** hidden during `importing`, `counting`, and `organizing` (reconciliation must complete before organizing via **Declare ready to organize**).
 
-**Flow:** Client calls `GET /api/v1/sessions/:id/reconciliation` to load rows comparing summed session lot totals to **included** part-out lines (key: part + color + condition).
+**Flow:** Client calls `GET /api/v1/sessions/:id/reconciliation` to load rows comparing summed session lot totals to **included** part-out lines plus **unexpected-count** rows (`qtyExpected = 0` for lots not on included list). Open row = `!resolved`.
 
-**Resolve:** Any joined worker **Edit**s lots on **Lot form** and **Resolve**s (sign-off) open discrepancies via `POST …/reconciliation/resolve` with `{ lineId }`.
+**Resolve:** Any joined worker **Edit**s lots on **Lot form** and **Resolve**s every open row via `POST …/reconciliation/resolve` with `{ lineId }` — explicit sign-off required even when `delta === 0`. Celebratory alert when all included lines match.
 
-**Declare ready to organize:** When all discrepancies resolved in `reconciling`, `POST …/sessions/:id/phase` → `organizing`.
+**Declare ready to organize:** When every row `resolved === true` in `reconciling`, `POST …/sessions/:id/phase` → `organizing`.
 
-**Organize (Units 3–4):** Pick-list split and **List lots** progress in `organizing` ([list-lots.md](../view-specs/list-lots.md)). When all organizer lists complete, **Declare ready to import** → `updating_inventory`.
+**Organize (Units 3–4):** Pick-list split and **List lots** progress in `organizing` ([list-lots.md](../view-specs/list-lots.md)). **`organizing` → `reconciling`** if count error discovered — pick-list progress preserved. When all organizer lists complete, **Declare ready to import** → `updating_inventory`.
 
-**Export:** In `updating_inventory`, any joined worker runs **Reconciled — export XML** → `POST …/reconciliation/export-xml` — returns XML + `validationUrl`; **phase unchanged**.
+**Export:** In `updating_inventory`, any joined worker runs **Reconciled — export XML** → `POST …/reconciliation/export-xml` — returns XML + `validationUrl` + optional `warnings` (inline alert on view); **phase unchanged**.
 
-**Close session:** After manual Bricklink verify/submit outside the app, **Mark session complete** → `POST …/sessions/:id/phase` → `closed` (requires at least one successful export this session).
+**Close session:** After manual Bricklink verify/submit outside the app, **Mark session complete** → `POST …/sessions/:id/phase` → `closed` (requires at least one successful export this session). **`closed`** session routes redirect Home.
 
 **Export deliverables:** Bulk-update XML (`<LOTID>` from `bricklink_lot_id` + `<REMARKS>` per included row) and `validationUrl` (`https://www.bricklink.com/invXML.asp#update`). Client offers download and opens the validation page; upload happens outside the app.
 

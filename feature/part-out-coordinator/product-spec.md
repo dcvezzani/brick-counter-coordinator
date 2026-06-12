@@ -66,7 +66,7 @@ These tie directly to the **scorecard** in `/ship`. Each should be **testable** 
 | 6 | **Save and Add Another** — Form offers **Save** and **Save and Add Another**; the latter saves the current lot and opens a fresh form with the **same part id pre-filled** (one lot per form). | Submit via Save and Add Another; new form shows previous part id; color cleared; qty reset to 1; session condition unchanged. |
 | 7 | **List cups navigation** — **List cups** shows all cups in the session; tapping a cup opens **Lot form** (0 or 1 lot) or **List lots** filtered to that cup when it has **multiple lots**. | Cup with zero lots opens Lot form with cup pinned; one lot opens Lot form directly; multiple lots shows cup-filtered List lots then Lot form. |
 | 8 | **Reconciliation** — System compares session counts to the imported Bricklink part-out list; **Discrepancies** tab shows open mismatches; **All lines** tab shows full included-line comparison. | Known part-out + session data; open discrepancies classified correctly. |
-| 9 | **Discrepancy resolution** — Any joined worker can **Edit** lots on **Lot form** and **Resolve** (sign-off) until reconciled totals reflect agreed final quantities. | Resolve at least one mismatch; row leaves Discrepancies tab when agreed. |
+| 9 | **Discrepancy resolution** — Any joined worker can **Edit** lots on **Lot form** and **Resolve** (explicit sign-off on **every** line, including matching rows) until all rows are resolved. Unexpected session lots (not on included part-out list) appear with expected 0. Celebratory message when included lines all match. | Resolve rows including unexpected counts; **Declare ready to organize** only when every row resolved. |
 | 10 | **Pick-list split** — In `organizing` phase, any worker may run **Split list** (session lead typically); system generates **roughly even** organizer lists per worker; each line includes **storage location** from part-out Remarks. | Split among M workers; locations visible; no worker gets zero lines when N ≥ M. |
 | 11 | **Organizer progress** — On **List lots**, a worker can mark each lot as **moved to storage**, **needs new storage location**, or open it for editing; **mark entire list complete** when every line is in one of those states. Progress persists for their list during the session. | Mark lines with both outcomes; list-complete enabled only when all lines resolved; state survives refresh. |
 | 12 | **Pick-list delivery** — **List lots** is available on worker devices; worker can **send list to printer** when a printer is available. | View on device; print or print-ready output for one worker list. |
@@ -138,9 +138,9 @@ End-to-end phase order for a single part-out session:
 | 3 | `reconciling` | Part-out reconciliation — Edit lots, Resolve discrepancies (sign-off); **Declare ready to organize** when all cleared |
 | 4 | `organizing` | List lots — split pick list; organizers mark lines moved / needs location; mark lists complete; **Declare ready to import** when all lists complete |
 | 5 | `updating_inventory` | Part-out reconciliation — **Reconciled — export XML**; Bricklink bulk update validation (manual upload); **Mark session complete** when handoff done |
-| 6 | `closed` | Session done |
+| 6 | `closed` | Session done — session routes redirect Home |
 
-Lead advances `counting` → `reconciling` via API. **Declare ready to organize** advances `reconciling` → `organizing`. **Declare ready to import** advances `organizing` → `updating_inventory`. **Reconciled — export XML** does **not** change phase. **Mark session complete** advances `updating_inventory` → `closed`. Details: [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md), [session-phases-state.mmd](../../docs/diagrams/session-phases-state.mmd).
+Lead advances `counting` → `reconciling` via API. **Declare ready to organize** advances `reconciling` → `organizing` when every reconciliation row is resolved. **Declare ready to import** advances `organizing` → `updating_inventory`. **`organizing` → `reconciling`** when a count error is discovered — organizer pick-list progress is preserved (no rollback). **Reconciled — export XML** does **not** change phase. **Mark session complete** advances `updating_inventory` → `closed`. **`closed`** sessions redirect to Home.
 
 ## User experience & scenarios
 
@@ -164,11 +164,11 @@ Lead advances `counting` → `reconciling` via API. **Declare ready to organize*
    - **One lot** in the cup → opens **Lot form** for that lot.
    - **Multiple lots** in the cup → opens **List lots** filtered to that cup; worker picks a lot, then **Lot form**.
 
-7. **Reconcile (Part-out reconciliation)** — Lead advances to `reconciling`; any joined worker opens **Part-out reconciliation** (SessionNav **Reconcile** visible only in `reconciling` and `updating_inventory` — hidden during `counting` and `organizing`). **Included** part-out lines are compared to session counts. **Discrepancies** tab lists open mismatches; **All lines** tab shows the full comparison. Workers **Edit** lots on **Lot form** and **Resolve** (sign-off) until none remain.
+7. **Reconcile (Part-out reconciliation)** — Lead advances to `reconciling`; any joined worker opens **Part-out reconciliation**. **Included** part-out lines are compared to session counts; **unexpected counts** (lots not on included list) appear with expected 0. **Discrepancies** tab lists all `!resolved` rows; celebratory message when included lines all match. Workers **Edit** and **Resolve** every line explicitly before **Declare ready to organize**.
 
-8. **Declare ready to organize** — On **Part-out reconciliation** (`reconciling`), when all discrepancies are resolved, lead or worker presses **Declare ready to organize** → session advances to `organizing`.
+8. **Declare ready to organize** — When every row is resolved, lead or worker presses **Declare ready to organize** → `organizing`.
 
-9. **Split organizer lists (List lots)** — Any worker (lead typically) runs **Split list** on **List lots** (organizer mode). Lots divide evenly across joined workers, ordered by part id, with storage **Location** from Remarks.
+9. **Split organizer lists (List lots)** — Any worker runs **Split list** on **List lots** (organizer mode). Lots divide evenly across joined workers, ordered by part id, with storage **Location** from Remarks. If a count error is found during organizing, lead may return to `reconciling` without losing **Moved** / **New loc** progress on pick lists.
 
 10. **Organize (List lots)** — Each worker opens their **List lots** view. They mark lots **moved to storage** or **needs new storage location**, edit lots, jump to the associated cup, print the list, and **mark entire list complete** when every line is resolved. When all workers' lists are complete, any worker may **Declare ready to import** → `updating_inventory`.
 
@@ -259,7 +259,7 @@ Resolved in [qa-001.md](../../docs/support/qa-001.md):
 | 2026-06-12 | **Part-out import UX (Dave):** **Any joined worker** may curate/confirm; Confirm **disabled** at zero included (no toast); concurrent curation **last-write-wins**; keep curate helper during fetch error; thumbnails **100×100 px** 1:1 ([part-out-import.md](../../docs/view-specs/part-out-import.md)). |
 | 2026-06-12 | **List lots view spec:** Two modes on route (`cup`, `organizer`); reconciliation is Part-out reconciliation only. **Add lot** via SessionNav **Lot** / **List cups**, not on List lots. **Split list** any worker (lead typically). **Mark complete** gated until all lines resolved. **Location** column required in organizer mode. |
 | 2026-06-12 | **Session lifecycle (Model C):** `reconciling` → **Declare ready to organize** → `organizing` → **Declare ready to import** → `updating_inventory` → **Reconciled — export XML** (phase unchanged) → manual Bricklink handoff → **Mark session complete** → `closed`. See [home.md](../../docs/view-specs/home.md), [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md). |
-| 2026-06-12 | **Reconciliation UX (Dave):** SessionNav **Reconcile** visible only in `reconciling` and `updating_inventory` (hidden in `counting` and `organizing`); table rows match import (thumbnail + part id + description); any joined worker for Edit/Resolve/export/close. |
+| 2026-06-12 | **Reconciliation finalize (Dave):** Unexpected counts shown (`qtyExpected = 0`); explicit **Resolve** on every line; celebratory match message; export warnings inline alert; `closed` redirects Home; `organizing` → `reconciling` without organizer rollback. |
 
 ## Related documents
 

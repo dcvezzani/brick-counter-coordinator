@@ -76,7 +76,7 @@ After a successful join, navigate by the joined session’s `phase` (from join r
 | `reconciling` | `/session/:sessionId/reconciliation` |
 | `organizing` | `/session/:sessionId/lots?mode=organizer` |
 | `updating_inventory` | `/session/:sessionId/reconciliation` |
-| `closed` | Must not appear in open session list; if encountered, stay on Home with error |
+| `closed` | Must not appear in open session list; any session-scoped route redirects to Home |
 
 ## Layout & controls
 

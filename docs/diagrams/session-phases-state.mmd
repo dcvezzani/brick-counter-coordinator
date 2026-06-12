@@ -12,6 +12,7 @@ stateDiagram-v2
     counting --> reconciling: "POST .../sessions/{id}/phase (Lead advances phase)"
     reconciling --> organizing: "Declare ready to organize (POST .../sessions/{id}/phase)"
     organizing --> updating_inventory: "Declare ready to import (POST .../sessions/{id}/phase)"
+    organizing --> reconciling: "Return to reconciling (POST .../sessions/{id}/phase)<br>organizer progress preserved"
     updating_inventory --> closed: "Mark session complete (POST .../sessions/{id}/phase)"
     closed --> [*]
 
@@ -33,8 +34,8 @@ stateDiagram-v2
     note right of reconciling
         Initial count and sort activity done.
         Compare included part-out lines vs lot counts.
-        Edit lots and Resolve discrepancies.
-        Declare ready to organize when all cleared.
+        Edit lots and Resolve every line explicitly.
+        Declare ready to organize when all rows resolved.
         Post-join route /reconciliation
         List cups still browsable via SessionNav Cups.
     end note
@@ -48,6 +49,11 @@ stateDiagram-v2
         Post-join route /lots?mode=organizer
         List cups still browsable via SessionNav Cups.
         SessionNav Reconcile hidden.
+        Return to reconciling preserves pick-list Moved/New loc checks.
+    end note
+
+    note right of closed
+        Session routes redirect Home.
     end note
 
     note right of updating_inventory
