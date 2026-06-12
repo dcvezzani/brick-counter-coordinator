@@ -60,11 +60,11 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 ### Example usage
 
-**Trigger:** Session lead fills in set number (e.g. `70404-1`), Bricklink part-out options (pricing basis, new/used, overwrite vs consolidate), display name, and submits the form.
+**Trigger:** Session lead fills in set number (e.g. `70404-1` or `70404` — auto-appends `-1`) and condition (New or Used; no default). Display name comes from Home via `sessionStorage`. Submit is blocked without display name or condition.
 
-**Flow:** Client calls `POST /api/v1/sessions` with set number, options, and lead name. The coordinator creates the session (phase `importing`), fetches the official Bricklink part-out list, and persists `part_out_lines`.
+**Flow:** Client calls `POST /api/v1/sessions` with `setNumber`, `partOutOptions.condition` (`new` \| `used`), and `displayName`. Server normalizes set number, maps to Bricklink form (fixed pricing/merge constants + `itemNo` / `itemCondition`), retries fetch up to 3 times on network failure, creates session (phase `importing`), and persists `part_out_lines` on success.
 
-**Deliverables:** New `sessionId`, initial phase `importing`, and `part_out_fetch_status` (`ok` or `error`). On success the router navigates to **Part-out import** (`/session/:sessionId/import`). On fetch failure the session remains in `importing` with an error message and a path to refetch from the import view.
+**Deliverables:** New `sessionId`, initial phase `importing`, and `part_out_fetch_status` (`ok` or `error`). On fetch success → **Part-out import** (`/session/:sessionId/import`). Invalid set → HTTP 4xx, no session, stay on New session. Network failure after retries → session in `importing` with error; navigate to import for refetch ([new-session.md](../view-specs/new-session.md)).
 
 ---
 

@@ -14,7 +14,6 @@ describe('appConfig', () => {
   it('includes new session defaults', () => {
     expect(appConfig.newSession.defaultSetNumber).toBeTruthy()
     expect(appConfig.newSession.defaults.pricing).toBeTruthy()
-    expect(appConfig.newSession.defaults.condition).toBeTruthy()
     expect(appConfig.newSession.defaults.existingLots).toBeTruthy()
   })
 

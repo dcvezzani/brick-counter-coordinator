@@ -24,11 +24,12 @@
 - [Product Spec — Scenario 3: Curate import](../../feature/part-out-coordinator/product-spec.md#key-scenarios)
 - [Planned views & services — Part-out import](../support/planned-views-services.md#3-part-out-import)
 - [Storyboard walkthrough § 3. Part-out import](../support/storyboard.md#3-part-out-import)
+- [BrickLink set part-out fetch](../bricklink-set-part-out-fetch.md) — row parse targets including part image
 - [Shared chrome](./README.md#shared-chrome)
 
 ## Purpose
 
-Session lead reviews the server-fetched Bricklink part-out list and curates counting scope before workers begin. Most sessions confirm the full list unchanged; partial-bag sets may exclude out-of-scope lines per sweep.
+Session lead reviews the server-fetched Bricklink part-out list and curates counting scope before workers begin. Curation uses **row checkboxes** and a footer **Exclude** button — not per-row exclude actions. Most sessions confirm the full list unchanged; partial-bag sets may exclude out-of-scope lines per sweep.
 
 ## Entry & exit
 
@@ -54,6 +55,8 @@ Session lead reviews the server-fetched Bricklink part-out list and curates coun
 |---------|-----------------|
 | Page heading | {session.name} |
 | Helper text | Curate the fetched part-out list before counting begins. |
+| Footer actions | **Exclude** (secondary/outline) · **Confirm & begin counting** (primary) — siblings in one row |
+| **Exclude** button | Excludes all **checked** rows on the **Included** tab; disabled when no rows selected or when Excluded tab is active |
 | Primary button | Confirm & begin counting |
 
 ### Part-out import table
@@ -63,11 +66,35 @@ Session lead reviews the server-fetched Bricklink part-out list and curates coun
 | Section heading | Part-out import |
 | Tab | Included ({count}) |
 | Tab | Excluded ({count}) |
-| Bulk action | Exclude selected ({count}) — visible when rows checked |
-| **Included table columns** | (checkbox), Part, Color, Cond, Qty, Remarks, Exclude |
-| **Excluded table columns** | Part, Color, Qty, Remarks, Restore |
-| Row action (included) | Exclude |
+| **Included table columns** | (checkbox), Thumbnail, Part, Color, Cond, Qty, Remarks |
+| **Excluded table columns** | Thumbnail, Part, Color, Qty, Remarks, Restore |
+| Row action (included) | *(none — no per-row Exclude)* |
 | Row action (excluded) | Restore |
+
+#### Thumbnail
+
+| Aspect | Spec |
+|--------|------|
+| Content | Small LEGO part image for the row's part + color |
+| Placement | First data column after checkbox (Included) or leading column (Excluded) |
+| Alt text | Part id (e.g. `3001`) for accessibility |
+| Fallback | Placeholder or broken-image treatment when URL missing (storyboard may use static fixture URLs) |
+| Data source | Prefer image URL from BrickLink part-out HTML parse (`a[id^="imgLink"]` per [bricklink-set-part-out-fetch.md](../bricklink-set-part-out-fetch.md)); expose as `thumbnailUrl` on line payload or derive at render — implementation detail for `/build` |
+
+### Curation workflow
+
+```mermaid
+flowchart LR
+  check[Check rows on Included tab]
+  exclude[Press Exclude in footer]
+  moved[Lines move to Excluded tab]
+  confirm[Press Confirm and begin counting]
+  check --> exclude --> moved
+  moved --> confirm
+```
+
+- Default path: no checks → **Confirm** full list.
+- Partial-bag: check out-of-scope lines → **Exclude** → optionally **Restore** from Excluded tab → **Confirm**.
 
 ## Messages & feedback
 
@@ -83,10 +110,12 @@ No confirmation dialog before **Confirm & begin counting**.
 
 | Action | Preconditions | Outcome |
 |--------|---------------|---------|
-| Exclude line | Line in Included tab | Line moves to Excluded; excluded from reconciliation scope |
-| Restore line | Line in Excluded tab | Line returns to Included |
-| Select rows + Exclude selected | One or more checkboxes in Included tab | Bulk exclude selected lines |
+| Check / uncheck row | Included tab | Toggles row in selection set |
+| **Exclude** (footer) | Included tab; one or more rows checked | Checked lines move to Excluded; selection cleared |
+| Restore line | Excluded tab | Line returns to Included |
 | Confirm & begin counting | At least zero included lines (no minimum enforced today) | Session phase → `counting`; navigate to List cups |
+
+Footer **Exclude** maps to `POST …/part-out/lines/bulk-exclude` (or equivalent batch PATCH) in live mode.
 
 ### Curation scenarios (product)
 
@@ -94,7 +123,7 @@ No confirmation dialog before **Confirm & begin counting**.
 |----------|---------------|
 | Brand-new sealed set | Confirm full list — all lines included |
 | Loose brick purchase | Confirm full list — all lines included |
-| Partial-bag / two-sweep | Exclude lines out of scope for this sweep; second session excludes the opposite subset |
+| Partial-bag / two-sweep | Check and **Exclude** lines out of scope for this sweep; second session excludes the opposite subset |
 
 ## Data requirements
 
@@ -103,40 +132,44 @@ No confirmation dialog before **Confirm & begin counting**.
 | Field / entity | Source (live) | Notes |
 |----------------|---------------|-------|
 | Session | `GET /api/v1/sessions/:id` | Phase, fetch status |
-| Part-out lines | `GET /api/v1/sessions/:id/part-out/lines` | partId, colorId, condition, qtyExpected, remarks, excluded flag |
+| Part-out lines | `GET /api/v1/sessions/:id/part-out/lines` | partId, colorId, condition, qtyExpected, remarks, excluded flag, `thumbnailUrl` (optional) |
 
 ### Write
 
 | Operation | Endpoint (live) | Notes |
 |-----------|-----------------|-------|
-| Exclude line | `PATCH …/part-out/lines/:lineId` `{ excluded: true }` | |
-| Bulk exclude | `POST …/part-out/lines/bulk-exclude` | |
+| Bulk exclude (footer) | `POST …/part-out/lines/bulk-exclude` | Body: `{ lineIds: [] }` — checked Included rows |
+| Restore line | `PATCH …/part-out/lines/:lineId` `{ excluded: false }` | |
 | Confirm import | `POST …/part-out/confirm` | Phase → `counting`; WebSocket `session.phase` |
 | Refetch (planned) | `POST …/part-out/refetch` | On fetch failure |
 
 ## Acceptance criteria
 
-- [ ] All fetched part-out lines visible with part, color, condition, qty, and Remarks
-- [ ] Lead can exclude individual lines from the Included tab
+- [ ] All fetched part-out lines visible with thumbnail, part, color, condition, qty, and Remarks
+- [ ] Each included and excluded row shows a part **thumbnail**
+- [ ] Included rows have **no** per-row Exclude control
+- [ ] Footer **Exclude** sits beside **Confirm & begin counting**
+- [ ] Lead can check rows on Included tab and press **Exclude** to move them to Excluded
 - [ ] Lead can restore excluded lines from the Excluded tab
-- [ ] Lead can bulk-exclude multiple selected lines
 - [ ] Tab counts update when lines move between Included and Excluded
 - [ ] **Confirm & begin counting** advances session to counting phase and opens List cups
 - [ ] Excluded lines are omitted from reconciliation comparison (included lines only)
 - [ ] Single-sweep workflow: confirm without exclusions works for new/loose sessions
-- [ ] Two-sweep workflow: lead can exclude out-of-scope lines before confirm
+- [ ] Two-sweep workflow: lead can check and exclude out-of-scope lines before confirm
 
 ## Storyboard status
 
 ### Implemented (Unit 0)
 
 - Full included/excluded tabs with counts
-- Per-row exclude/restore and bulk exclude
+- Per-row exclude, table-header bulk exclude, and restore — **spec now targets checkbox + footer Exclude and thumbnails**; legacy controls remain in storyboard UI pending `/build`
 - Confirm advances phase and navigates to List cups
 - Fixture in-memory line mutations
 
 ### Gaps (Units 1–4)
 
+- Part thumbnails on import rows
+- Move **Exclude** to footer beside Confirm; remove per-row and table-header bulk exclude
 - No live part-out fetch or refetch-on-error
 - No fetch status indicator on mount
 - No guard preventing confirm with zero included lines (if product requires)
@@ -148,13 +181,18 @@ No confirmation dialog before **Confirm & begin counting**.
 |---------|---------|
 | `part-out-import-view` | Page container |
 | `confirm-import` | Confirm button |
+| `exclude-import` | Footer Exclude button |
 | `part-out-import-table` | Table component root |
-| `bulk-exclude` | Bulk exclude button |
+| `part-out-row-thumbnail` | Row thumbnail (or per-row suffix) |
 | `tab-included` | Included tab |
 | `tab-excluded` | Excluded tab |
+
+`bulk-exclude` (table header) is deprecated — spec targets `exclude-import` in the view footer.
 
 ## Open questions
 
 - Minimum included lines required before confirm?
 - Should excluded lines show condition column in Excluded tab (currently omitted)?
 - Refetch UX when Bricklink fetch fails on create?
+- Thumbnail size / aspect ratio on mobile?
+- Should footer **Exclude** show selected count in label (e.g. `Exclude (3)`)?

@@ -26,7 +26,7 @@ The official part-out list for a set lives in Bricklink (`invSetEdit.asp`). [ADR
 
 ## Decision
 
-1. On session create, the **coordinator server** fetches the Bricklink part-out for the set using `BRICKLINK_SESSION_COOKIE` and session `part_out_options` (pricing, N/U, overwrite vs consolidate). Port HTML parsing from extension `inv-set-edit-dom.js` / `code-scraper.js` — **AJAX/fetch only**, no iframes ([ADR-0002](./0002-bricklink-ajax-only-no-iframes.md)).
+1. On session create, the **coordinator server** fetches the Bricklink part-out for the set using `BRICKLINK_SESSION_COOKIE`, session condition (`part_out_options.condition`: `new` \| `used`), and **fixed server-side** pricing/merge form fields from the canonical sample ([request.md](../docs/support/set-part-out-list/request.md)). Port HTML parsing from extension `inv-set-edit-dom.js` / `code-scraper.js` — **AJAX/fetch only**, no iframes ([ADR-0002](./0002-bricklink-ajax-only-no-iframes.md)).
 2. Add application view **Part-out import**: shows **all** fetched lines; lead **excludes** lines not in scope for this sweep (remove action; excluded lines hidden or shown in a separate section with restore).
 3. **Counting and reconciliation** operate only on **included** (`excluded = 0`) part-out lines. The full fetched list remains stored for audit and for a second sweep in a new session.
 4. **JSON file upload is not MVP** — deferred as optional fallback only if server fetch fails and Dave approves a follow-up.

@@ -38,7 +38,7 @@ Check off during a review session; note feedback inline or in a new `qa-NNN.md`.
 
 ### 2. New session
 
-- [ ] Enter set number and options (pricing, new/used, overwrite vs consolidate)
+- [ ] Enter set number and condition (Unit 0 UI still shows legacy pricing/existing-lots/Mixed — target is set + New/Used only; see [new-session.md](../view-specs/new-session.md))
 - [ ] Submit → server fetch (fixture in storyboard) → Part-out import
 
 ### 3. Part-out import

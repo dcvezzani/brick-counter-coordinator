@@ -89,7 +89,7 @@ Canonical screen inventory from [application-views.md](../../docs/support/applic
 | View | Purpose | Primary actions |
 |------|---------|-----------------|
 | **Home** | Session entry | Worker enters **display name**; chooses **create a new session** or **enter an existing session**. |
-| **New session** | Session creation | Specify the **set** to part-out and Bricklink options; submit — server **fetches** the official part-out list. |
+| **New session** | Session creation | Specify **set number** and **condition** (New or Used); submit — server **fetches** the official part-out list using fixed Bricklink pricing/merge defaults. |
 | **Part-out import** | Curate counting scope | Shows **all** fetched part-out lines (part, color, condition, qty, Remarks). Lead **confirms** to start counting (typical: full list, no changes). For partial-bag sets, lead may **exclude** out-of-scope lines per sweep; excluded lines can be **restored** before confirm. |
 | **Lot form** | Counting entry | A **lot** = part id + color + condition. Enter or find part number, select color, enter count; session condition shown read-only; **Save** or **Save and Add Another**. Part and color required. |
 | **List cups** | Cup navigation | Select a cup. If the cup has **multiple lots**, open **List lots** filtered to that cup only; otherwise open **Lot form** for the single lot. |
@@ -134,7 +134,7 @@ Success criteria **#15** → Unit 0; **#1–#7, #14, #16** → Units 0–2 ( **#
 
 1. **Home → session** — On **Home**, worker enters display name and chooses **create a new session** or **enter an existing session**.
 
-2. **New session** — Session lead opens **New session**, specifies the set to part-out (Bricklink options: pricing basis, new/used, inventory overwrite vs consolidate), and submits. Server fetches the full official part-out list.
+2. **New session** — Session lead opens **New session** (after entering display name on Home), specifies set number and condition (New or Used), and submits. Server fetches the full official part-out list using fixed Bricklink wizard defaults for pricing and inventory merge ([new-session.md](../../docs/view-specs/new-session.md)).
 
 3. **Curate import (Part-out import)** — Lead reviews all fetched lines and confirms scope before counting. **Most sessions are a single sweep** — lead confirms the full list with no exclusions:
    - **Brand-new sealed set** — all parts are **new**; no used bricks expected; one session, confirm all lines.
@@ -235,6 +235,7 @@ Resolved in [qa-001.md](../../docs/support/qa-001.md):
 | 2026-06-10 | **Storyboard (Unit 0):** Interactive shadcn-vue prototype with fixture data — all views navigable for stakeholder walkthroughs before backend ([storyboard.md](../../docs/support/storyboard.md)). |
 | 2026-06-10 | **UI stack:** **shadcn-vue** + Tailwind v4 + Lucide + Vue Router on Vite; client **JavaScript** (`typescript: false`). Supersedes Font Awesome / generic ShadCN notes. |
 | 2026-06-10 | **Part-out import:** **Server-side fetch** on session create (not JSON upload). New **Part-out import** view shows full fetched list; lead confirms before counting (excludes lines only when needed). **Single sweep** for brand-new sealed sets (all new) or loose bricks (all used). **Two sweeps** only for partial-bag sets (mixed opened/sealed bags). Supersedes [ADR-0003](../../adr/0003-part-out-import-json-upload-mvp.md) → [ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md). |
+| 2026-06-11 | **New session scope:** Form exposes **set number + condition only**; Bricklink pricing and inventory-merge options are fixed server-side ([new-session.md](../../docs/view-specs/new-session.md)). Display name remains on Home. |
 
 ## Related documents
 

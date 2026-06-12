@@ -99,7 +99,7 @@ flowchart TB
 - **Thin client:** validation for UX only; authoritative rules on server.
 - **Real-time:** WebSocket broadcasts lot/session changes to joined clients (near-real-time totals, duplicate awareness).
 - **Bricklink:** Server holds **store session cookie** (env/config) for `list.ajax` and catalog color fetch; **no iframes** ([ADR-0002](../../adr/0002-bricklink-ajax-only-no-iframes.md)).
-- **Part-out official list (MVP):** Server **POST**s `invSetEdit.asp` on session create with `BRICKLINK_SESSION_COOKIE` and `part_out_options` form fields ([docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md)); lead curates via **Part-out import** view ([ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md)). Parser ports extension `inv-set-edit-dom.js` / `code-scraper.js` output shape.
+- **Part-out official list (MVP):** Server **POST**s `invSetEdit.asp` on session create with `BRICKLINK_SESSION_COOKIE`, session condition (`part_out_options.condition`), and **fixed** pricing/merge form fields from [request.md](../../docs/support/set-part-out-list/request.md) ([docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md)); lead curates via **Part-out import** view ([ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md)). Parser ports extension `inv-set-edit-dom.js` / `code-scraper.js` output shape.
 
 ### Repository layout (target)
 
@@ -153,7 +153,7 @@ SQLite schema (logical entities):
 | `phase` | TEXT | `importing` \| `counting` \| `reconciling` \| `organizing` \| `closed` |
 | `part_out_fetch_status` | TEXT | `pending` \| `ok` \| `error` |
 | `part_out_fetch_error` | TEXT | Nullable; last fetch failure message |
-| `part_out_options` | JSON | Pricing, N/U, overwrite vs consolidate |
+| `part_out_options` | JSON | Session condition only: `{ "condition": "new" \| "used" }` — pricing/merge are fixed server constants at fetch time |
 | `created_at` | TEXT | ISO8601 |
 
 ### `workers`
@@ -241,7 +241,7 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/sessions` | List open sessions for Home picker — all where `phase !== 'closed'` |
-| `POST` | `/sessions` | Create session (set number, options, lead name) |
+| `POST` | `/sessions` | Create session — body: `{ setNumber, displayName, partOutOptions: { condition } }` ([new-session.md](../../docs/view-specs/new-session.md#api-contract)) |
 | `GET` | `/sessions/:id` | Session detail + phase |
 | `POST` | `/sessions/:id/join` | Body: `{ displayName }` → worker + session phase; **409** if normalized name taken (see below) |
 | `POST` | `/sessions/:id/phase` | Lead: advance phase |
@@ -254,11 +254,19 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 - **409 Conflict** if normalized name already exists in the session — no auto-suffix; client shows fixed copy ([home.md](../../docs/view-specs/home.md)).
 - Response includes `worker` and session `phase` for client routing.
 
+**Create (`POST /sessions`):**
+
+- Body: `{ "setNumber": "70404-1", "displayName": "Alex", "partOutOptions": { "condition": "used" } }`.
+- Normalize `setNumber`: trim; auto-append `-1` if no variant suffix; persist canonical form on `set_number`.
+- Map to Bricklink `itemNo` by stripping variant suffix (e.g. `70404-1` → `70404`).
+- Invalid set (Bricklink reject / unparseable response): **409 or 422**, no session row — client stays on New session.
+- Transient network failure: retry Bricklink POST **up to 3 times** inline; if all fail, create session with `part_out_fetch_status=error`, return `sessionId`, client navigates to import for refetch.
+
 **Post-join routing (client):** After successful join, navigate by session phase — [home.md — Post-join routing](../../docs/view-specs/home.md#post-join-routing). Notably: `counting` → `/session/:sessionId/lot` (Lot form), not List cups.
 
 ### Part-out fetch & import (Unit 1)
 
-Triggered by `POST /sessions` (async or inline — inline OK for MVP). On failure, session stays in `importing` with `part_out_fetch_status=error`; lead can `POST …/part-out/refetch`.
+Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session is created. On **network failure after retries**, session stays in `importing` with `part_out_fetch_status=error`; lead can `POST …/part-out/refetch` from import view.
 
 **Upstream Bricklink call:** `POST https://www.bricklink.com/invSetEdit.asp` — session cookie, urlencoded form (`itemNo`, `itemCondition`, `invAdjust*`, etc.), HTML response parsed to `part_out_lines`. Full contract: [docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md). Fixture HTML: [support/set-part-out-list/response.html](../../docs/support/set-part-out-list/response.html).
 
@@ -629,7 +637,7 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 |------|--------|---------|
 | 2026-06-10 | `/design` | Initial Tech Spec: architecture, data model, APIs, Units 0–4, review passes |
 | 2026-06-10 | Dave | Locked part-out import: server fetch + Part-out import view (ADR-0004); seventh view; `importing` phase |
-| 2026-06-11 | Dave | Home spec: `GET /sessions` non-`closed` filter; join name normalization; phase-aware post-join routing |
+| 2026-06-11 | Dave | New session spec: set + condition only; fixed BL pricing/merge; set-number normalization; fetch retry/invalid-set policy; `part_out_options` condition-only |
 | 2026-06-10 | `/design` | Linked [planned-views-services.md](../../docs/support/planned-views-services.md); criteria traceability; join **409** policy; expanded review passes |
 
 ## Human approval

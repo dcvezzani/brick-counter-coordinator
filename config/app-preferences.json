@@ -2,13 +2,12 @@
   "version": 1,
   "storyboard": {
     "badgeSubtitle": "Storyboard — sample data",
-    "newSessionHelper": "Set number and Bricklink part-out options. Server fetch is simulated in storyboard."
+    "newSessionHelper": "Set number and condition (New or Used). Pricing and inventory merge use fixed BrickLink defaults. Server fetch is simulated in storyboard."
   },
   "newSession": {
     "defaultSetNumber": "70404-1",
     "defaults": {
       "pricing": "stock",
-      "condition": "mixed",
       "existingLots": "consolidate"
     }
   },

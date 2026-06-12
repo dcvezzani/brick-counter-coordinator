@@ -44,12 +44,12 @@ The cookie must be from an account that can part out the target set into **My St
 
 ### Form body (key fields)
 
-Values below match a real capture for set **21306**; the coordinator maps **New session** options into these fields via `part_out_options` on create.
+Values below match a real capture for set **21306**; the coordinator maps **New session** user inputs into `itemNo` (bare set id — strip `-1` suffix from stored `set_number`) and `itemCondition` from `part_out_options.condition`. Pricing and `invAdjust*` fields are **fixed server constants** from the canonical sample, not SPA inputs.
 
 | Field | Example | Meaning |
 |-------|---------|---------|
 | `itemType` | `S` | Item type: **S**et |
-| `itemNo` | `21306` | Set number (from session `set_number`) |
+| `itemNo` | `21306` | Bare set id — strip variant suffix from session `set_number` (e.g. `70404-1` → `70404`) |
 | `itemSeq` | `1` | Set sequence (usually `1`) |
 | `itemQty` | `1` | Number of sets to part out |
 | `breakType` | `M` | Break type (BrickLink wizard default in extension: `M`) |
@@ -73,7 +73,7 @@ Values below match a real capture for set **21306**; the coordinator maps **New 
 | `ItemInvSort` | `1` | Sort order for generated inventory rows |
 | `ItemInvAsc` | `A` | Sort direction |
 
-`invAdjust*` values encode **overwrite vs consolidate** (and related) choices from the BrickLink wizard; exact letter codes should stay aligned with whatever the **New session** form submits. Tier qty fields (`TQ1`…`TS3`) are empty in the sample.
+`invAdjust*` values encode **overwrite vs consolidate** (and related) choices from the BrickLink wizard. MVP uses **fixed constants** from the canonical sample in [request.md](support/set-part-out-list/request.md) — not user-configurable in the New session form. Tier qty fields (`TQ1`…`TS3`) are empty in the sample.
 
 ### Example `curl`
 
@@ -135,7 +135,7 @@ sequenceDiagram
   participant SPA
   participant Server
   participant BrickLink
-  Lead->>SPA: New session (set + options)
+  Lead->>SPA: New session (set + condition)
   SPA->>Server: POST /sessions
   Server->>BrickLink: POST invSetEdit.asp (cookie + form)
   BrickLink-->>Server: HTML part-out page

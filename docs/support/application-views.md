@@ -10,9 +10,9 @@
   - enter an existing session
 
 ### new session
-- create a new session
-  - specify the set that should be used to part-out
-  - submit (server fetches official Bricklink part-out list)
+- create a new session (display name entered on Home first)
+  - specify set number and condition (New or Used)
+  - submit — server fetches official Bricklink part-out list (fixed pricing/merge defaults)
 
 ### part out import
 - shows all fetched part-out list entries (part, color, condition, qty, remarks)
