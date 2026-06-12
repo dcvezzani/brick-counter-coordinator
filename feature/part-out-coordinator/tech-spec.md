@@ -148,10 +148,11 @@ SQLite schema (logical entities):
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | TEXT PK | UUID |
-| `set_number` | TEXT | e.g. `70404-1` |
-| `name` | TEXT | Display label |
+| `set_number` | TEXT | e.g. `70404-1` or `70404-2` |
+| `name` | TEXT | Display label — server-derived `{set_number} part-out` on create |
+| `lead_worker_id` | TEXT FK | Creator / session lead — set on `POST /sessions` |
 | `phase` | TEXT | `importing` \| `counting` \| `reconciling` \| `organizing` \| `closed` |
-| `part_out_fetch_status` | TEXT | `pending` \| `ok` \| `error` |
+| `part_out_fetch_status` | TEXT | `ok` \| `error` (inline fetch on create; no async `pending` in MVP) |
 | `part_out_fetch_error` | TEXT | Nullable; last fetch failure message |
 | `part_out_options` | JSON | Session condition only: `{ "condition": "new" \| "used" }` — pricing/merge are fixed server constants at fetch time |
 | `created_at` | TEXT | ISO8601 |
@@ -257,10 +258,11 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 **Create (`POST /sessions`):**
 
 - Body: `{ "setNumber": "70404-1", "displayName": "Alex", "partOutOptions": { "condition": "used" } }`.
-- Normalize `setNumber`: trim; auto-append `-1` if no variant suffix; persist canonical form on `set_number`.
-- Map to Bricklink `itemNo` by stripping variant suffix (e.g. `70404-1` → `70404`).
-- Invalid set (Bricklink reject / unparseable response): **409 or 422**, no session row — client stays on New session.
-- Transient network failure: retry Bricklink POST **up to 3 times** inline; if all fail, create session with `part_out_fetch_status=error`, return `sessionId`, client navigates to import for refetch.
+- Normalize `setNumber`: trim; auto-append `-1` if input contains no `-`; preserve user suffix (e.g. `70404-2`); persist on `set_number`.
+- Map to Bricklink `itemNo`: substring before first `-` in stored `set_number` (e.g. `70404-1` → `70404`, `70404-2` → `70404`).
+- Set `lead_worker_id` to the creating worker; derive `name` as `{set_number} part-out`.
+- Invalid set (Bricklink reject / unparseable response): **422 Unprocessable Entity**, `{ "error": { "code": "INVALID_SET_NUMBER", "message": "…" } }`, no session row — client stays on New session ([new-session.md](../../docs/view-specs/new-session.md#api-contract)).
+- Transient network failure: retry Bricklink POST **up to 3 times** inline; if all fail, create session with `part_out_fetch_status=error`, return **201** with `sessionId` and `worker`, client navigates to import for refetch.
 
 **Post-join routing (client):** After successful join, navigate by session phase — [home.md — Post-join routing](../../docs/view-specs/home.md#post-join-routing). Notably: `counting` → `/session/:sessionId/lot` (Lot form), not List cups.
 
@@ -638,6 +640,7 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 | 2026-06-10 | `/design` | Initial Tech Spec: architecture, data model, APIs, Units 0–4, review passes |
 | 2026-06-10 | Dave | Locked part-out import: server fetch + Part-out import view (ADR-0004); seventh view; `importing` phase |
 | 2026-06-11 | Dave | New session spec: set + condition only; fixed BL pricing/merge; set-number normalization; fetch retry/invalid-set policy; `part_out_options` condition-only |
+| 2026-06-11 | `/design` | New session consistency review: `lead_worker_id`; `itemNo` = base before first `-`; invalid set **422** + `INVALID_SET_NUMBER`; drop `pending` from MVP fetch status; import refetch UX cross-linked |
 | 2026-06-10 | `/design` | Linked [planned-views-services.md](../../docs/support/planned-views-services.md); criteria traceability; join **409** policy; expanded review passes |
 
 ## Human approval

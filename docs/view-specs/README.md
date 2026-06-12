@@ -54,7 +54,7 @@ All session views (everything except **Home** and **New session**) render inside
 
 ### SessionNav (bottom bar)
 
-Visible when the route includes `sessionId`.
+Visible when the route includes `sessionId`, **except** during **Part-out import** while `phase === 'importing'` — bottom nav is **hidden** until the worker confirms import and the session advances to `counting`. See [part-out-import.md](./part-out-import.md#entry--exit).
 
 | Label | Route | `data-testid` |
 |-------|-------|---------------|

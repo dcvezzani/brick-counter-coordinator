@@ -64,7 +64,7 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 **Flow:** Client calls `POST /api/v1/sessions` with `setNumber`, `partOutOptions.condition` (`new` \| `used`), and `displayName`. Server normalizes set number, maps to Bricklink form (fixed pricing/merge constants + `itemNo` / `itemCondition`), retries fetch up to 3 times on network failure, creates session (phase `importing`), and persists `part_out_lines` on success.
 
-**Deliverables:** New `sessionId`, initial phase `importing`, and `part_out_fetch_status` (`ok` or `error`). On fetch success → **Part-out import** (`/session/:sessionId/import`). Invalid set → HTTP 4xx, no session, stay on New session. Network failure after retries → session in `importing` with error; navigate to import for refetch ([new-session.md](../view-specs/new-session.md)).
+**Deliverables:** New `sessionId`, initial phase `importing`, and `part_out_fetch_status` (`ok` or `error`). On **HTTP 201** (fetch ok or error after retries) → **Part-out import** (`/session/:sessionId/import`). Invalid set → **HTTP 422**, no session, stay on New session. Network failure after retries → session in `importing` with error; import view shows refetch ([new-session.md](../view-specs/new-session.md), [part-out-import.md](../view-specs/part-out-import.md#fetch-error-on-mount)).
 
 ---
 

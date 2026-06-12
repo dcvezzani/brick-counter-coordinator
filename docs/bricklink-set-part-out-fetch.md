@@ -44,12 +44,12 @@ The cookie must be from an account that can part out the target set into **My St
 
 ### Form body (key fields)
 
-Values below match a real capture for set **21306**; the coordinator maps **New session** user inputs into `itemNo` (bare set id — strip `-1` suffix from stored `set_number`) and `itemCondition` from `part_out_options.condition`. Pricing and `invAdjust*` fields are **fixed server constants** from the canonical sample, not SPA inputs.
+Values below match a real capture for set **21306**; the coordinator maps **New session** user inputs into `itemNo` (bare set id — substring before first `-` in stored `set_number`; auto-append `-1` to stored form when user omits a hyphen) and `itemCondition` from `part_out_options.condition`. Pricing and `invAdjust*` fields are **fixed server constants** from the canonical sample, not SPA inputs.
 
 | Field | Example | Meaning |
 |-------|---------|---------|
 | `itemType` | `S` | Item type: **S**et |
-| `itemNo` | `21306` | Bare set id — strip variant suffix from session `set_number` (e.g. `70404-1` → `70404`) |
+| `itemNo` | `21306` | Bare set id — substring before first `-` in session `set_number` (e.g. `70404-1` or `70404-2` → `70404`) |
 | `itemSeq` | `1` | Set sequence (usually `1`) |
 | `itemQty` | `1` | Number of sets to part out |
 | `breakType` | `M` | Break type (BrickLink wizard default in extension: `M`) |

@@ -1,7 +1,7 @@
 # New session
 
 **Status:** Draft — for Dave review  
-**Last updated:** 2026-06-11
+**Last updated:** 2026-06-11 (consistency review)
 
 ---
 
@@ -13,8 +13,8 @@
 | **Route** | `/session/new` |
 | **Route params** | — |
 | **Query params** | — |
-| **Primary actor(s)** | Session lead |
-| **Delivery unit** | 0 (fixture) → 1 (live create + Bricklink fetch) |
+| **Primary actor(s)** | Session lead (process role — any worker with a display name from Home can open this route; creator becomes session lead) |
+| **Delivery unit** | 0 (fixture) → 1 (live create + BrickLink fetch) |
 | **Source file** | [`src/views/NewSessionView.vue`](../../src/views/NewSessionView.vue) |
 
 ## Related docs
@@ -33,6 +33,8 @@
 
 Session lead specifies the LEGO **set number** and **condition** (New or Used), then submits so the coordinator fetches the official part-out list and creates a session in the **importing** phase. Pricing and inventory-merge behavior use **fixed BrickLink wizard defaults** from the sample request — they are not exposed in this form.
 
+**Session naming:** MVP derives `{normalizedSetNumber} part-out` on create only. Custom names (e.g. storyboard fixture `Castle 70404 — June part-out`) are **illustrative** — not the create formula.
+
 ## Locked decisions
 
 | Topic | Decision |
@@ -40,13 +42,15 @@ Session lead specifies the LEGO **set number** and **condition** (New or Used), 
 | Form scope | **Set number + condition only** in the SPA; pricing and inventory merge are server-side constants from [request.md](../support/set-part-out-list/request.md). |
 | Condition | **New** or **Used** only — no Mixed. Partial-bag two-sweep uses **two separate sessions** ([lot-form.md](./lot-form.md)). |
 | Default condition | **None** — lead must explicitly select New or Used before submit. |
-| Set number storage | Trim whitespace; **auto-append `-1`** when the user omits a variant suffix (e.g. `70404` → `70404-1`). Persist canonical `{base}-{variant}` on the session record. |
-| Set number → BrickLink `itemNo` | Strip the variant suffix for the upstream POST (e.g. `70404-1` → `70404`), matching the canonical sample (`itemNo=21306` in [request.md](../support/set-part-out-list/request.md)). |
-| Session name | Derived: `{normalizedSetNumber} part-out` (uses stored form with `-1` suffix). |
+| Set number storage | Trim whitespace. If input has **no `-`**, auto-append `-1` (e.g. `70404` → `70404-1`). If user enters a suffix (e.g. `70404-2`), **persist as-is**. Stored form is always `{base}-{variant}`. |
+| Set number → BrickLink `itemNo` | **`itemNo` = substring before the first `-`** in stored `setNumber` (e.g. `70404-1` → `70404`, `70404-2` → `70404`). Matches canonical sample (`itemNo=21306` in [request.md](../support/set-part-out-list/request.md)). |
+| Session name | Server-derived: `{storedSetNumber} part-out`. No editable name field on this view. |
 | `partOutOptions` (persisted) | **Condition only** (`new` \| `used`). Pricing and overwrite are not stored — fixed at fetch time. |
-| Display name | Set on **Home** only. If `workerDisplayName` is missing from `sessionStorage`, **block submit** with the same destructive alert copy as Home (“Enter your display name first”) and a path back to `/`. No editable name field on this view; no silent `"Session Lead"` fallback. |
-| Fetch failure — invalid set | BrickLink rejects or returns an unparseable part-out for the set → **no session created**; destructive alert on this view; user stays on New session to correct input. |
-| Fetch failure — network | Server **retries the BrickLink POST up to 3 times** during `POST /api/v1/sessions`. If all retries fail, session **is created** in `importing` with `part_out_fetch_status=error`; client navigates to Part-out import for refetch ([part-out-import.md](./part-out-import.md)). |
+| Session lead | Creating worker is persisted as `lead_worker_id` on the session; first worker record is the implicit lead for phase transitions. |
+| Display name | Set on **Home** only. Apply [Home display name rules](./home.md#display-name-rules) (trim + case-fold) before `POST`. No editable name field here; no silent `"Session Lead"` fallback. |
+| Display name feedback | **Toast** on mount when `workerDisplayName` is missing ([Home — toast notifications](./home.md#toast-notifications)). **Destructive alert** on submit attempt with same copy as Home (“Enter your display name first”) plus instruction to return to `/`. |
+| Fetch failure — invalid set | BrickLink rejects or returns an unparseable part-out → **HTTP 422**, **no session created**; destructive alert with server message; stay on New session. |
+| Fetch failure — network | Server **retries the BrickLink POST up to 3 times** during `POST /api/v1/sessions`. If all retries fail, session **is created** in `importing` with `part_out_fetch_status=error`; client navigates to Part-out import for refetch ([part-out-import.md — Fetch error on mount](./part-out-import.md#fetch-error-on-mount)). |
 | Shell chrome | Renders inside [`AppShell`](../../src/components/AppShell.vue) (header + storyboard badge in fixture mode). **SessionNav is hidden** — no `sessionId` in route until after create. |
 
 ## Entry & exit
@@ -56,15 +60,14 @@ Session lead specifies the LEGO **set number** and **condition** (New or Used), 
 | From | Path / action |
 |------|---------------|
 | Home → **Create new session** | `/session/new` (requires normalized `workerDisplayName` in `sessionStorage`) |
-| Direct navigation / bookmark | `/session/new` — submit blocked until lead returns to Home and enters a display name |
+| Direct navigation / bookmark | `/session/new` — toast on mount if display name missing; submit blocked until lead returns to Home |
 
 ### Where actions navigate
 
 | Action | Destination |
 |--------|-------------|
-| **Create session & fetch part-out** (success) | `/session/:sessionId/import` |
+| **Create session & fetch part-out** (`POST` succeeds — fetch ok or error) | `/session/:sessionId/import` |
 | Invalid set number on create (live) | Stay on `/session/new` — no session created |
-| Network fetch exhausted after retries (live) | `/session/:sessionId/import` — session exists with fetch error; refetch on import view |
 
 ## Layout & controls
 
@@ -74,7 +77,8 @@ Session lead specifies the LEGO **set number** and **condition** (New or Used), 
 |---------|-----------------|
 | Page heading | New session |
 | Helper text (live) | Set number and condition (New or Used). Pricing and inventory merge use fixed BrickLink defaults. |
-| Display name hint (when missing) | Destructive alert: Enter your display name first — link or instruction to return to Home |
+| Display name missing (on mount) | Toast: Enter your display name first — return to Home to enter your name |
+| Display name missing (on submit) | Destructive alert: Enter your display name first — link or instruction to return to `/` |
 | Label | Set number |
 | Input placeholder | 70404-1 |
 | Prefill set number | `70404-1` (editable) |
@@ -83,17 +87,18 @@ Session lead specifies the LEGO **set number** and **condition** (New or Used), 
 
 ### Storyboard (Unit 0 today)
 
-Legacy UI in [`NewSessionView.vue`](../../src/views/NewSessionView.vue) still shows pricing basis, condition mix (including **Mixed**), and existing-lots option groups. Helper text: “Set number and Bricklink part-out options. Server fetch is simulated in storyboard.” Defaults from [`app-preferences.json`](../../config/app-preferences.json) pre-select condition `mixed` — **not** target behavior.
+Legacy UI in [`NewSessionView.vue`](../../src/views/NewSessionView.vue) still shows pricing basis, condition mix (including **Mixed**), and existing-lots option groups — **not** target behavior.
 
 | Element | Copy / behavior (Unit 0 only) |
 |---------|-------------------------------|
+| Helper text | From [`app-preferences.json`](../../config/app-preferences.json) `storyboard.newSessionHelper` — already uses **target** copy (“Set number and condition… fixed BrickLink defaults”) |
 | Label | Pricing basis |
 | Radio | Stock guide · Last 6 months sales |
 | Label | Condition mix |
 | Radio | New · Used · **Mixed** |
 | Label | Existing lots |
 | Radio | Consolidate with existing · Overwrite existing |
-| Helper text | Server fetch is simulated in storyboard. |
+| Condition default | Component reads `appConfig.newSession.defaults.condition` — **undefined in config today**; storyboard may show no selection or fall through to empty; legacy intent was `mixed` |
 
 ### BrickLink part-out request mapping
 
@@ -103,11 +108,11 @@ The server POSTs to `invSetEdit.asp` on create. Only **set number** and **condit
 
 | UI field | Stored value | BrickLink field |
 |----------|--------------|-----------------|
-| Set number | `setNumber` (canonical `{base}-{variant}`, e.g. `70404-1`) | `itemNo` (bare set id, e.g. `70404` — strip `-1` suffix) |
+| Set number | `setNumber` (`{base}-{variant}`, e.g. `70404-1` or `70404-2`) | `itemNo` (base before first `-`, e.g. `70404`) |
 | Condition: New | `new` | `itemCondition=N` |
 | Condition: Used | `used` | `itemCondition=U` |
 
-Session-wide lot condition drives the read-only label on Lot form.
+Session-wide lot condition drives the read-only label on Lot form. Fetched part-out rows may show per-line condition in the import table; session condition is the sweep scope for counting.
 
 #### Fixed BrickLink parameters (not user-configurable)
 
@@ -167,23 +172,42 @@ flowchart LR
 
 ## Validation & normalization
 
+Single reference for field rules (also reflected in Locked decisions):
+
 | Field | Rule |
 |-------|------|
-| Set number | Trim; block empty submit; auto-append `-1` on blur or submit when no `-` suffix present |
-| Condition | Required before submit; inline destructive alert if neither New nor Used selected |
-| Display name | Read `workerDisplayName` from `sessionStorage` (set on Home); block submit with Home copy if missing |
+| Set number | Trim; block empty submit. If no `-` in input, append `-1` on blur or submit. Preserve user-provided suffix (e.g. `70404-2`). Malformed input is passed to BrickLink; rejections surface as invalid set (422). |
+| Set number → `itemNo` | Substring before first `-` in stored `setNumber`. |
+| Condition | Required before submit; destructive alert if neither New nor Used selected. |
+| Display name | Read `workerDisplayName` from `sessionStorage`. Apply trim + case-fold per [home.md](./home.md#display-name-rules) before API body; write normalized value back on create success. Toast on mount if missing; destructive alert on submit block. |
+
+## Submit outcomes (Unit 1+)
+
+| Outcome | HTTP | Session created? | `partOutFetchStatus` | Navigation | User feedback |
+|---------|------|------------------|----------------------|------------|---------------|
+| Valid set, fetch OK | 201 | Yes | `ok` | `/session/:sessionId/import` | — |
+| Invalid set | 422 | No | — | Stay on `/session/new` | Destructive alert (`{server message}`) |
+| Network exhausted (3 retries) | 201 | Yes | `error` | `/session/:sessionId/import` | [Import fetch-error banner](./part-out-import.md#fetch-error-on-mount) + refetch |
+
+Server performs network retries (up to 3) — not the browser client.
 
 ## Submit & loading (Unit 1+)
 
 | State | Behavior |
 |-------|----------|
 | Idle | Submit enabled when display name present, set number non-empty, condition selected |
-| In flight | Submit disabled; optional inline “Fetching part-out…” helper |
+| In flight | Submit disabled; inline “Fetching part-out…” helper (MVP — no progress bar) |
 | Invalid set | Stay on view; show server error message; **no** navigation |
 | Network exhausted | Navigate to import view; session persisted with `part_out_fetch_status=error` |
-| Success | Store client session keys (see [Client state](#client-state)); navigate to import |
+| Create success (fetch ok or error) | Store client session keys (see [Client state](#client-state)); connect WebSocket; navigate to import |
 
-Server performs network retries (up to 3) — not the browser client.
+## Feedback patterns
+
+| Pattern | Use on this view |
+|---------|------------------|
+| **Toast** (top-right, auto-dismiss) | Missing display name on **page mount** — see [home.md — toast notifications](./home.md#toast-notifications) |
+| **Destructive alert** (inline, blocking) | Missing display name on **submit**; missing condition on submit; invalid set after 422 |
+| **Helper text** | Always-visible form guidance; “Fetching part-out…” while in flight |
 
 ## Messages & feedback
 
@@ -191,19 +215,20 @@ Server performs network retries (up to 3) — not the browser client.
 
 | Message | Type | Trigger |
 |---------|------|---------|
-| Set number and Bricklink part-out options. Server fetch is simulated in storyboard. | Helper text | Always |
-| *(none)* | — | No condition-required or display-name validation in storyboard today |
+| Set number and condition (New or Used). Pricing and inventory merge use fixed BrickLink defaults. Server fetch is simulated in storyboard. | Helper text | Always (from config) |
+| *(none)* | — | No condition-required, display-name, or toast validation in storyboard today |
 
 ### Unit 1+ (live)
 
 | Message | Type | Trigger |
 |---------|------|---------|
 | Set number and condition (New or Used). Pricing and inventory merge use fixed BrickLink defaults. | Helper text | Always |
+| Enter your display name first | Toast | Mount when `workerDisplayName` missing |
 | Enter your display name first | Destructive alert | Submit with missing `workerDisplayName` |
 | Select New or Used condition | Destructive alert / inline | Submit with no condition selected |
 | Fetching part-out… | Helper text / disabled submit | Create request in flight |
-| {server message} | Destructive alert | Invalid set — fetch rejected; stay on view |
-| *(import view)* | Alert + refetch | Network failure after retries — see [part-out-import.md](./part-out-import.md) |
+| {server message} | Destructive alert | Invalid set — HTTP 422; stay on view |
+| *(import view)* | Alert + refetch | Network failure after retries — see [part-out-import.md — Fetch error on mount](./part-out-import.md#fetch-error-on-mount) |
 
 ## User actions
 
@@ -211,16 +236,16 @@ Server performs network retries (up to 3) — not the browser client.
 |--------|---------------|---------|
 | Configure set number | — | Updates form state; normalizes on blur/submit |
 | Select condition (New or Used) | — | Stored in `partOutOptions.condition` on create |
-| Create session & fetch part-out | Non-empty `workerDisplayName` in `sessionStorage`; non-empty set number; condition selected | Creates session (phase `importing`), sets current worker as lead, persists client keys, navigates to Part-out import on success |
+| Create session & fetch part-out | Normalized `workerDisplayName` in `sessionStorage`; non-empty set number; condition selected | `POST /api/v1/sessions` creates session (phase `importing`), sets `lead_worker_id` to creator, persists client keys, connects WebSocket, navigates to Part-out import when HTTP 201 (including fetch error status) |
 
 ## Client state
 
 | When | `sessionStorage` keys | In-memory (`useSession`) |
 |------|----------------------|--------------------------|
 | Arrive from Home | `workerDisplayName` (normalized) | — |
-| Create success (Unit 1+) | `workerDisplayName`, `currentSessionId`, `currentWorkerId` | `setCurrentWorker(worker)` |
+| Create success (Unit 1+) | `workerDisplayName`, `currentSessionId`, `currentWorkerId` (normalized name) | `setCurrentWorker(worker)` |
 
-Unit 1+: connect `useWebSocket` after successful create (before navigation to import). Display name is not persisted server-side until `POST /api/v1/sessions`.
+Unit 1+: connect `useWebSocket` after every successful `POST /api/v1/sessions` (HTTP 201, including `partOutFetchStatus=error`) before navigation to import. Display name is not persisted server-side until create.
 
 ## Data requirements
 
@@ -248,7 +273,7 @@ Unit 1+: connect `useWebSocket` after successful create (before navigation to im
 }
 ```
 
-**Response (success or partial success):**
+**Response — fetch OK (HTTP 201):**
 
 ```json
 {
@@ -259,26 +284,58 @@ Unit 1+: connect `useWebSocket` after successful create (before navigation to im
 }
 ```
 
-**Response when invalid set (HTTP 4xx):** `{ "error": { "code": "…", "message": "…" } }` — no session created.
+**Response — network failure after retries (HTTP 201):**
 
-Server-side on create: normalize `setNumber`, map to BrickLink form (`itemNo` without suffix, `itemCondition`, fixed fields), retry BrickLink POST up to 3 times on transient failure, parse HTML → `part_out_lines`.
+```json
+{
+  "sessionId": "…",
+  "partOutFetchStatus": "error",
+  "partOutFetchError": "BrickLink request failed after 3 attempts",
+  "worker": { "id": "…", "displayName": "Alex" }
+}
+```
+
+Client navigates to import in both 201 cases; refetch UX is on the import view.
+
+**Response — invalid set (HTTP 422):**
+
+```json
+{
+  "error": {
+    "code": "INVALID_SET_NUMBER",
+    "message": "Set not found or part-out list could not be parsed"
+  }
+}
+```
+
+No session row created.
+
+Server-side on create: normalize `setNumber`, derive `itemNo` (base before first `-`), map to BrickLink form (`itemCondition`, fixed fields), retry BrickLink POST up to 3 times on transient failure, parse HTML → `part_out_lines` on success.
 
 `partOutOptions` on the persisted session record carries **condition only** (`new` \| `used`).
 
 ## Acceptance criteria
 
-- [ ] Lead can enter a Bricklink set number (e.g. `70404` or `70404-1`; stored as `70404-1`)
+### Unit 1+ (live)
+
+- [ ] Lead can enter a set number (e.g. `70404` → stored `70404-1`; `70404-2` stored as-is)
+- [ ] BrickLink `itemNo` is base before first `-` (e.g. `70404-2` → `70404`)
 - [ ] Lead must explicitly choose **condition** (`New` or `Used`) — no pre-selected default
-- [ ] Submit blocked without display name from Home (no silent fallback name)
-- [ ] Form does **not** expose pricing or existing-lot options (Unit 1+)
+- [ ] Toast on mount when display name missing; destructive alert on submit block (no silent fallback name)
+- [ ] Form does **not** expose pricing or existing-lot options
 - [ ] Server fetch uses fixed pricing/consolidation values from [request.md](../support/set-part-out-list/request.md)
-- [ ] BrickLink `itemNo` uses bare set id (variant suffix stripped)
-- [ ] Submit creates a session and navigates to Part-out import on fetch success
-- [ ] Fetched part-out lines are available on the import view (fixture or live)
-- [ ] Condition (`new` or `used`) is persisted on the session and drives read-only lot form label
-- [ ] Invalid set: error on New session; no session record created
-- [ ] Network failure after 3 retries: session created with error status; import view shows refetch
-- [ ] SessionNav is **not** shown (no `sessionId` until after create)
+- [ ] Submit creates session and navigates to Part-out import when `POST /sessions` returns **201** (fetch ok **or** fetch error after retries)
+- [ ] Fetched part-out lines available on import when `partOutFetchStatus=ok`; refetch offered when `error`
+- [ ] Condition (`new` or `used`) persisted on session; drives read-only lot form label
+- [ ] Invalid set: HTTP 422, error on New session, no session record
+- [ ] Network failure after 3 retries: session created with error status; import view shows refetch ([part-out-import.md](./part-out-import.md))
+- [ ] SessionNav **not** shown (no `sessionId` until after create)
+- [ ] Creator worker stored as `lead_worker_id` on session
+
+### Unit 0 (storyboard)
+
+- [ ] Legacy form demonstrates set + condition + pricing + Mixed + existing-lots (target UI not required in Unit 0)
+- [ ] Simulated create navigates to import with fixture lines
 
 ## Storyboard status
 
@@ -287,17 +344,17 @@ Server-side on create: normalize `setNumber`, map to BrickLink form (`itemNo` wi
 - Form with set number, condition, pricing, existing-lots, and legacy Mixed radio (see [Storyboard layout](#storyboard-unit-0-today))
 - Simulated create → fixture demo part-out lines cloned into new session
 - Phase set to `importing`; confirm on import advances to `counting`
-- Default set `70404-1`; default condition `mixed` in config (legacy)
+- Default set `70404-1` from config; helper text already matches target copy
 
 ### Gaps (Units 1–4)
 
 - Remove pricing basis, existing-lots, and Mixed condition from UI
 - No default condition; condition-required validation
-- Display-name required validation (match Home)
-- Set-number normalization (auto-append `-1`; strip for BrickLink)
+- Display-name toast on mount + alert on submit (match Home)
+- Set-number normalization (append `-1` when no hyphen; `itemNo` = base before `-`)
 - Live `POST /api/v1/sessions` with server-side fetch retry
-- Invalid-set vs network failure UX
-- Replace storyboard helper text in live mode
+- Invalid-set (422) vs network failure UX
+- Remove `"Session Lead"` silent fallback in [`NewSessionView.vue`](../../src/views/NewSessionView.vue)
 
 ### `data-testid` inventory
 
@@ -313,4 +370,6 @@ Server-side on create: normalize `setNumber`, map to BrickLink form (`itemNo` wi
 
 ## Open questions
 
-- Show fetch progress / line count after create (beyond disabled submit + helper text)?
+- Show fetch progress / line count after create (beyond disabled submit + “Fetching part-out…” helper)? **Deferred** — MVP uses disabled submit + helper text only; see [tech-spec — DevOps](../../feature/part-out-coordinator/tech-spec.md) for timeout notes if needed.
+- Explicit **Back to Home** control vs browser back / AppShell header only?
+- Fixed client copy for invalid set vs server message only?

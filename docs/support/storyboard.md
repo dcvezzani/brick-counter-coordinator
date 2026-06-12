@@ -17,7 +17,7 @@ Use one demo session so all views have context:
 
 | Field | Example value |
 |-------|----------------|
-| Session name | `Castle 70404 — June part-out` |
+| Session name | `70404-1 part-out` (auto-derived on create — see [new-session.md](../view-specs/new-session.md)) |
 | Set | `70404-1` |
 | Workers | `Alex`, `Jordan`, `Sam` (current user: pick at Home) |
 | Cups | 3–5 cups with mix of single- and multi-lot |
