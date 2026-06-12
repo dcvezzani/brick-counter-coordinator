@@ -30,6 +30,8 @@ Workers often do not know when someone else is already counting the same part (s
 - **Session lead** — person who starts a part-out session for a specific set, monitors progress, runs reconciliation, and finalizes the list.
 - **Organizers** — workers who later put reconciled parts into labeled drawers, bins, or containers using assigned pick lists.
 
+**Process roles are documentation-only.** Names like counter, session lead, and organizer describe typical workflow on the floor — not permissions in the app. No code may require role-based authentication; whoever uses a screen unofficially takes on that role for the action. See [docs/process-roles.md](../../docs/process-roles.md).
+
 ### Current experience (baseline)
 
 1. One or two people sort parts into cups (sometimes duplicating lots already being worked elsewhere).
@@ -140,7 +142,7 @@ End-to-end phase order for a single part-out session:
 | 5 | `updating_inventory` | Part-out reconciliation — **Reconciled — export XML**; Bricklink bulk update validation (manual upload); **Mark session complete** when handoff done |
 | 6 | `closed` | Session done — session routes redirect Home |
 
-Lead advances `counting` → `reconciling` via API. **Declare ready to organize** advances `reconciling` → `organizing` when every reconciliation row is resolved. **Declare ready to import** advances `organizing` → `updating_inventory`. **`organizing` → `reconciling`** when a count error is discovered — organizer pick-list progress is preserved (no rollback). **Reconciled — export XML** does **not** change phase. **Mark session complete** advances `updating_inventory` → `closed`. **`closed`** sessions redirect to Home.
+Any joined worker may advance phase via API when the UI offers the control and preconditions are met (see [process-roles.md](../../docs/process-roles.md)). **Declare ready to organize** advances `reconciling` → `organizing` when every reconciliation row is resolved. **Declare ready to import** advances `organizing` → `updating_inventory`. **`organizing` → `reconciling`** when a count error is discovered — organizer pick-list progress is preserved (no rollback). **Reconciled — export XML** does **not** change phase. **Mark session complete** advances `updating_inventory` → `closed`. **`closed`** sessions redirect to Home.
 
 ## User experience & scenarios
 
@@ -260,12 +262,14 @@ Resolved in [qa-001.md](../../docs/support/qa-001.md):
 | 2026-06-12 | **List lots view spec:** Two modes on route (`cup`, `organizer`); reconciliation is Part-out reconciliation only. **Add lot** via SessionNav **Lot** / **List cups**, not on List lots. **Split list** any worker (lead typically). **Mark complete** gated until all lines resolved. **Location** column required in organizer mode. |
 | 2026-06-12 | **Session lifecycle (Model C):** `reconciling` → **Declare ready to organize** → `organizing` → **Declare ready to import** → `updating_inventory` → **Reconciled — export XML** (phase unchanged) → manual Bricklink handoff → **Mark session complete** → `closed`. See [home.md](../../docs/view-specs/home.md), [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md). |
 | 2026-06-12 | **Reconciliation MVP scope (Dave):** Promote Unit 4 gaps to requirements — tabs, Edit, live API, Mark complete, phase toasts, Reconcile nav from counting onward, no Cond column, refactor legacy List lots mode. |
+| 2026-06-12 | **Process roles (Dave):** Counter, session lead, and organizer are **documentation-only** — no role-based auth in code; whoever uses a tool unofficially takes that role. `lead_worker_id` is audit metadata. See [process-roles.md](../../docs/process-roles.md). |
 
 ## Related documents
 
 - Storyboard walkthrough: [storyboard.md](../../docs/support/storyboard.md)
 - Tech stack: [docs/tech-stack.md](../../docs/tech-stack.md)
 - Application views (canonical): [application-views.md](../../docs/support/application-views.md)
+- Process roles policy: [process-roles.md](../../docs/process-roles.md)
 - Q&A: [qa-001.md](../../docs/support/qa-001.md)
 - Design reference map: [PROJECT.md — bricklink-chrome-extension](../../PROJECT.md#design-reference--bricklink-chrome-extension)
 - Seed proposal: [OVERVIEW_AND_PROPOSAL.md](../../OVERVIEW_AND_PROPOSAL.md)

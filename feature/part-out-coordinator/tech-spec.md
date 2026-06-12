@@ -125,18 +125,22 @@ brick-counter-coordinator/
 
 **Dev:** `npm run dev` proxies `/api` and `/ws` to the coordinator (Vite `server.proxy`).
 
+### Process roles (documentation only)
+
+Floor roles (counter, session lead, organizer) in specs and diagrams are **informational** — not RBAC. Any joined worker may use any control the UI exposes for the current phase. `lead_worker_id` is **audit metadata** (session creator), not authorization for `POST …/phase` or other APIs. See [docs/process-roles.md](../../docs/process-roles.md).
+
 ### Session lifecycle (server state machine)
 
-| Phase | Who acts | UI views |
-|-------|----------|----------|
+| Phase | Typical actors (docs only) | UI views |
+|-------|----------------------------|----------|
 | `importing` | Any joined worker | Part-out import (curate fetched list; last-write-wins) |
-| `counting` | Counters, lead | Lot form, List cups (Home is global entry, not phase-scoped) |
-| `reconciling` | Lead, workers resolve | Part-out reconciliation — Edit, Resolve, Declare ready to organize; SessionNav **Reconcile** visible; List cups (browse) |
-| `organizing` | Organizers | List lots (organizer mode); SessionNav **Reconcile** visible (return path); **Return to reconciling** without organizer rollback |
+| `counting` | Counters | Lot form, List cups (Home is global entry, not phase-scoped) |
+| `reconciling` | Any joined worker | Part-out reconciliation — Edit, Resolve, Declare ready to organize; SessionNav **Reconcile** visible; List cups (browse) |
+| `organizing` | Any joined worker | List lots (organizer mode); SessionNav **Reconcile** visible (return path); **Return to reconciling** without organizer rollback |
 | `updating_inventory` | Any joined worker | Part-out reconciliation — export XML; Mark session complete; SessionNav **Reconcile** visible |
 | `closed` | — | All session routes redirect Home |
 
-Lead advances phase via API (`POST /sessions/:id/phase`): `counting` → `reconciling` → `organizing` → `updating_inventory`; `organizing` → `reconciling` when a count error is discovered (organizer pick-list progress **not** rolled back). Export (`POST …/reconciliation/export-xml`) returns XML + validation URL only — **does not** change phase. **Mark session complete** (`POST …/sessions/:id/phase` → `closed`) requires at least one successful export this session. **`closed`** sessions redirect all session-scoped routes to Home.
+Phase advances via `POST /sessions/:id/phase` when **preconditions** are met (not role checks): `counting` → `reconciling` → `organizing` → `updating_inventory`; `organizing` → `reconciling` when a count error is discovered (organizer pick-list progress **not** rolled back). Export (`POST …/reconciliation/export-xml`) returns XML + validation URL only — **does not** change phase. **Mark session complete** (`POST …/sessions/:id/phase` → `closed`) requires at least one successful export this session. **`closed`** sessions redirect all session-scoped routes to Home.
 
 ---
 
@@ -151,7 +155,7 @@ SQLite schema (logical entities):
 | `id` | TEXT PK | UUID |
 | `set_number` | TEXT | e.g. `70404-1` or `70404-2` |
 | `name` | TEXT | Display label — server-derived `{set_number} part-out` on create |
-| `lead_worker_id` | TEXT FK | Creator / session lead — set on `POST /sessions` |
+| `lead_worker_id` | TEXT FK | Creator worker id (audit only) — set on `POST /sessions`; not used for authorization |
 | `phase` | TEXT | `importing` \| `counting` \| `reconciling` \| `organizing` \| `updating_inventory` \| `closed` |
 | `part_out_fetch_status` | TEXT | `ok` \| `error` (inline fetch on create; no async `pending` in MVP) |
 | `part_out_fetch_error` | TEXT | Nullable; last fetch failure message |
@@ -246,7 +250,7 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 | `POST` | `/sessions` | Create session — body: `{ setNumber, displayName, partOutOptions: { condition } }` ([new-session.md](../../docs/view-specs/new-session.md#api-contract)) |
 | `GET` | `/sessions/:id` | Session detail + phase |
 | `POST` | `/sessions/:id/join` | Body: `{ displayName }` → worker + session phase; **409** if normalized name taken (see below) |
-| `POST` | `/sessions/:id/phase` | Lead: advance phase |
+| `POST` | `/sessions/:id/phase` | Advance phase when preconditions met — any joined worker; no role check ([process-roles.md](../../docs/process-roles.md)) |
 
 **Open session list (`GET /sessions`):** Returns summaries for the Home open-sessions dialog. Include sessions in `importing`, `counting`, `reconciling`, `organizing`, and `updating_inventory`; exclude `closed`. Minimum fields per row: `id`, `setNumber`, `name`, `phase`, `workerCount`.
 
@@ -329,7 +333,7 @@ Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session i
 
 **Phase toasts:** `session.phase` WebSocket event → AppShell toast on every session view for all joined workers.
 
-**Phase advances (`POST /sessions/:id/phase`):** `counting` → `reconciling` (lead); `reconciling` → `organizing` when every row resolved; `organizing` → `updating_inventory` when organizer lists complete; `organizing` → `reconciling` (pick-list state preserved); `updating_inventory` → `closed` via **Mark session complete** (requires prior export).
+**Phase advances (`POST /sessions/:id/phase`):** Any joined worker when UI + preconditions allow — `counting` → `reconciling`; `reconciling` → `organizing` when every row resolved; `organizing` → `updating_inventory` when organizer lists complete; `organizing` → `reconciling` (pick-list state preserved); `updating_inventory` → `closed` via **Mark session complete** (requires prior export). No role-based authorization ([process-roles.md](../../docs/process-roles.md)).
 
 **Export XML:** Available only in `updating_inventory`. Port `buildBulkUpdateXml` from `bricklink-chrome-extension/scripts/bulk-repair/lib/build-bulk-update-xml.mjs` (`<LOTID>` from `bricklink_lot_id` + `<REMARKS>` per included row). **Not** upload XML from `inv-upload-xml.js`. Handoff: download/clipboard + `validationUrl` `https://www.bricklink.com/invXML.asp#update` — user pastes into `inv-update__textarea-xml` and verifies on BrickLink. **`warnings`** → inline alert on reconciliation view. Full contract: [docs/bricklink-mass-update-export.md](../../docs/bricklink-mass-update-export.md) and [part-out-reconciliation.md](../../docs/view-specs/part-out-reconciliation.md).
 

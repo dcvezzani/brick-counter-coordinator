@@ -52,7 +52,7 @@ Session lead specifies the LEGO **set number** and **condition** (New or Used), 
 | Set number → BrickLink `itemNo` | **`itemNo` = substring before the first `-`** in stored `setNumber` (e.g. `70404-1` → `70404`, `70404-2` → `70404`). Matches canonical sample (`itemNo=21306` in [request.md](../support/set-part-out-list/request.md)). |
 | Session name | Server-derived: `{storedSetNumber} part-out`. No editable name field on this view. |
 | `partOutOptions` (persisted) | **Condition only** (`new` \| `used`). Pricing and overwrite are not stored — fixed at fetch time. |
-| Session lead | Creating worker is persisted as `lead_worker_id` on the session; first worker record is the implicit lead for phase transitions. |
+| Session lead | Creating worker is persisted as `lead_worker_id` on the session (**audit metadata only** — not authorization for phase transitions; see [process-roles.md](../process-roles.md)). |
 | Display name | Set on **Home** only. Apply [Home display name rules](./home.md#display-name-rules) (trim + case-fold) before `POST`. No editable name field here; no silent `"Session Lead"` fallback. |
 | Direct entry without display name | **Redirect immediately to Home** (`/`) — route guard before New session renders; no toast on this view. |
 | Display name feedback | **Route guard** handles missing name on entry (redirect). **Destructive alert** on submit only if name was cleared after arrival (defense in depth) — “Enter your display name first”; use **Back to Home**. |

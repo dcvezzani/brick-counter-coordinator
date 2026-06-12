@@ -13,7 +13,7 @@
 | **Route** | `/session/:sessionId/reconciliation` |
 | **Route params** | `sessionId` |
 | **Query params** | — |
-| **Primary actor(s)** | Session lead (orchestrates); any joined worker (Resolve, Edit, Reconciled) |
+| **Primary actor(s)** | Any joined worker (session lead typically orchestrates on the floor — [process-roles.md](../process-roles.md)) |
 | **Delivery unit** | 0 (fixture) → 4 (reconciliation + XML export) |
 | **Source file** | [`src/views/ReconciliationView.vue`](../../src/views/ReconciliationView.vue) |
 | **Table component** | [`LotListTable.vue`](../../src/components/LotListTable.vue) (`mode=reconciliation`) |
@@ -54,7 +54,7 @@ Compare session counted totals against **included** part-out lines (post-import 
 | **Mark session complete** | Visible in `updating_inventory` after at least one successful export this session; `POST …/sessions/:id/phase` → `closed` — separate from export so workers finish manual Bricklink steps first |
 | **Resolve** | **Sign-off** — worker explicitly acknowledges the row (counts match or accept difference and move on). Required on **every** line before **Declare ready to organize**; does **not** silently overwrite session lot quantities |
 | **Unexpected counts** | Session lots for part/color **not** on the included part-out list appear as reconciliation rows with `qtyExpected = 0`; worker must **Resolve** each (same as any open row) |
-| **Return to reconciling from organizing** | If a count error surfaces during organizing, lead may advance phase **`organizing` → `reconciling`** via `POST …/sessions/:id/phase` — **no rollback** of organizer pick-list progress; **Moved** / **New loc** checks remain when session returns to `organizing` |
+| **Return to reconciling from organizing** | If a count error surfaces during organizing, any joined worker may advance phase **`organizing` → `reconciling`** via `POST …/sessions/:id/phase` (session lead typically) — **no rollback** of organizer pick-list progress; **Moved** / **New loc** checks remain when session returns to `organizing` |
 | **Lot fixes** | Workers correct counts via **Edit** → **Lot form** separately from Resolve |
 | **Table scope** | **Tabs:** **Discrepancies** (rows with `!resolved`, default) and **All lines** (full comparison: included part-out lines **plus** unexpected-count rows). When every row is resolved, Discrepancies tab shows success/empty state; **All lines** tab always available |
 | **Table row UX** | Match [part-out-import.md](./part-out-import.md): **Thumbnail**, **Part** (id + description), Color, Expected, Counted, **Delta**, Actions — thumbnails **100×100 px**, 1:1, `object-fit: contain`. **No Cond column** — session is New **or** Used (condition is session-scoped, not per row) |
@@ -63,7 +63,7 @@ Compare session counted totals against **included** part-out lines (post-import 
 | **Resolve after lot edit** | If `lot.updated` changes `qtyCounted`/`delta` on a row that was `resolved === true`, server clears `resolved` (row reopens) |
 | **SessionNav Reconcile** | Visible from `counting` through `updating_inventory` — hidden only in `importing` and `closed` (see [Shared chrome](./README.md#sessionnav-bottom-bar)) |
 | **Phase change toasts** | `session.phase` WebSocket event shows a toast on **every session view** (AppShell-level host); see [README — Toast notifications](./README.md#toast-notifications) |
-| **Who can act** | **Any joined worker** may **Edit**, **Resolve**, **Reconciled — export XML**, and **Mark session complete** (session lead typically orchestrates) |
+| **Who can act** | **Any joined worker** may **Edit**, **Resolve**, **Reconciled — export XML**, and **Mark session complete** — no role check ([process-roles.md](../process-roles.md)) |
 | **Dedicated route** | Reconciliation is **not** a `mode` on [List lots](./list-lots.md). Unit 4 `/build`: remove legacy `mode=reconciliation` from List lots and refactor `LotListTable` so reconciliation runs only on this route |
 | **Validation URL** | MVP fixed: `https://www.bricklink.com/invXML.asp#update` |
 | **Page heading** | **Part-out reconciliation** only — no duplicate inner table `<h2>` (tab label carries context) |
@@ -85,8 +85,8 @@ Compare session counted totals against **included** part-out lines (post-import 
 
 | Transition | Trigger |
 |------------|---------|
-| `counting` → `reconciling` | Lead `POST /api/v1/sessions/:id/phase` when counting is done |
-| `organizing` → `reconciling` | Count error discovered during organizing — `POST …/sessions/:id/phase`; organizer pick-list progress **preserved** (see [list-lots.md](./list-lots.md)) |
+| `counting` → `reconciling` | Any joined worker `POST /api/v1/sessions/:id/phase` when counting is done (session lead typically; no role check — [process-roles.md](../process-roles.md)) |
+| `organizing` → `reconciling` | Count error discovered during organizing — any joined worker `POST …/sessions/:id/phase`; organizer pick-list progress **preserved** (see [list-lots.md](./list-lots.md)) |
 | `reconciling` → `organizing` | **Declare ready to organize** when every row `resolved === true` |
 | `organizing` → `updating_inventory` | **Declare ready to import** on [List lots](./list-lots.md) when all organizer lists complete |
 | `updating_inventory` → `closed` | **Mark session complete** (`POST …/sessions/:id/phase`) — only after worker has exported XML and finished manual Bricklink verify/submit outside the app |

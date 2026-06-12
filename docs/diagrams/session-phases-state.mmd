@@ -9,7 +9,7 @@ stateDiagram-v2
 
     [*] --> importing: "POST /sessions (New session submit - 201 only)"
     importing --> counting: "POST .../part-out/confirm (Confirm and begin counting)"
-    counting --> reconciling: "POST .../sessions/{id}/phase (Lead advances phase)"
+    counting --> reconciling: "POST .../sessions/{id}/phase (any joined worker; lead typically)"
     reconciling --> organizing: "Declare ready to organize (POST .../sessions/{id}/phase)"
     organizing --> updating_inventory: "Declare ready to import (POST .../sessions/{id}/phase)"
     organizing --> reconciling: "Return to reconciling (POST .../sessions/{id}/phase)<br>organizer progress preserved"

@@ -8,7 +8,7 @@
 
 A **part-out counting coordinator** for a LEGO resale/sorting business. When breaking down sets into individual parts for Bricklink, multiple workers sort LEGO into physical cups while recording counts on mobile devices. A central session consolidates counts in near real time, surfaces duplicate lots, reconciles against the **Bricklink part-out** list, splits organizer pick lists (with **Remarks** / storage locations), and exports **XML** for **Bricklink bulk update**.
 
-**Primary users:** counters/sorters (pick name at join), session lead, organizers.
+**Primary users:** counters/sorters (pick name at join), session lead, organizers — **process roles only**; no role-based auth in code ([docs/process-roles.md](docs/process-roles.md)).
 
 **Seed documents:** [OVERVIEW_AND_PROPOSAL.md](OVERVIEW_AND_PROPOSAL.md) · [docs/support/qa-001.md](docs/support/qa-001.md) · [docs/support/application-views.md](docs/support/application-views.md) · extension reference below
 

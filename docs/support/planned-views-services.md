@@ -4,6 +4,8 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 **Delivery context:** Unit 0 (storyboard) uses fixture composables only; Units 1–4 wire the same routes to live REST and WebSocket services under `/api/v1`.
 
+**Process roles:** Counter, session lead, and organizer names in this doc are **floor workflow only** — not RBAC. See [process-roles.md](../process-roles.md).
+
 **Client service layers (planned):**
 
 | Layer | Location | Role |

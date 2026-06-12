@@ -66,7 +66,7 @@ flowchart TB
     LOTS_CUP -->|"Edit lot"| LOT
     LOTS_CUP -->|"Back or SessionNav Cups"| CUPS
 
-    LOT -->|"Lead advances phase<br>counting to reconciling"| RECON
+    LOT -->|"Advance phase counting to reconciling<br>any joined worker"| RECON
     RECON -->|"Edit row"| LOT
     RECON -->|"Resolve discrepancies<br>sign-off"| RECON
     RECON -->|"Declare ready to organize"| LOTS_ORG

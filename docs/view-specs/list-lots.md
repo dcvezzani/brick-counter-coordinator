@@ -52,7 +52,7 @@ Discrepancy reconciliation lives on [**Part-out reconciliation**](./part-out-rec
 | **Add another lot** | **Not on this view** — use SessionNav **Lot** or **List cups** |
 | **Open associated cup** | **Required** row action in organizer mode (Unit 3) |
 | **Split list** | Any worker in organizer mode may run it after phase is `organizing` and every reconciliation row is resolved; session lead will typically click it |
-| **Return to reconciling** | If a count error surfaces during organizing, lead may advance phase **`organizing` → `reconciling`** — pick-list **Moved** / **New loc** checks and split assignments **preserved** (no rollback) |
+| **Return to reconciling** | If a count error surfaces during organizing, any joined worker may advance phase **`organizing` → `reconciling`** (session lead typically; [process-roles.md](../process-roles.md)) — pick-list **Moved** / **New loc** checks and split assignments **preserved** (no rollback) |
 | **Mark entire list complete** | **Disabled** until every assigned line is **Moved to storage** or **Needs new location** (no `pending` lines) |
 | **Declare ready to import** | Visible in `organizing`; **disabled** until every joined worker has marked their list complete; advances session to `updating_inventory` via `POST …/sessions/:id/phase` |
 | Storage location column | **Required** in organizer mode — show part-out **Remarks** / storage location per line (Product Spec scenario 10; Unit 3) |

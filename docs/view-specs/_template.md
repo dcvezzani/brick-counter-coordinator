@@ -13,7 +13,7 @@
 | **Route** | `[path]` |
 | **Route params** | [e.g. `sessionId`] |
 | **Query params** | [if any] |
-| **Primary actor(s)** | [Worker / Session lead / Organizer] |
+| **Primary actor(s)** | [Typical floor role — informational only; see [process roles](../process-roles.md)] |
 | **Delivery unit** | [0 → N per planned-views-services.md] |
 | **Source file** | [`src/views/...`](../../src/views/) |
 
@@ -24,6 +24,7 @@
 - [Planned views & services](../support/planned-views-services.md)
 - [Storyboard walkthrough](../support/storyboard.md)
 - [Shared chrome](./README.md#shared-chrome)
+- [Process roles (documentation only)](../process-roles.md)
 
 ## Purpose
 

@@ -16,6 +16,16 @@ Per-view requirements for the seven canonical application screens. Use these to 
 
 Each view spec is **requirements-first** (what the view must do), with a **Storyboard status** section noting what the current fixture UI implements vs. what ships in Units 1–4.
 
+## Process roles (documentation only)
+
+Roles in view specs (**counter**, **session lead**, **organizer**, **Primary actor(s)**, etc.) describe **typical floor workflow**, not software permissions.
+
+- **No role-based auth** — client or server code must not require a user to be authenticated as one role vs. another.
+- **Whoever uses a tool** unofficially takes on that process role for the moment.
+- Controls are gated by **session phase** and business preconditions (e.g. every row resolved), not by role.
+
+Full policy: [process-roles.md](../process-roles.md).
+
 ## Index
 
 Walk views in storyboard order during review:
