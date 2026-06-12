@@ -80,16 +80,16 @@ Inventory of all currently planned application views for the Part-Out Counting C
 | Service | Endpoints / mechanism |
 |---------|----------------------|
 | Session | `GET /api/v1/sessions/:id` (phase, fetch status) |
-| Part-out | `GET /api/v1/sessions/:id/part-out/lines`, `PATCH …/lines/:lineId`, `POST …/lines/bulk-exclude`, `POST …/part-out/confirm`, `POST …/part-out/refetch` |
-| WebSocket | `session.phase` event when lead confirms |
+| Part-out | `GET /api/v1/sessions/:id/part-out/lines`, `PATCH …/lines/:lineId`, `POST …/lines/bulk-exclude`, `POST …/lines/bulk-restore`, `POST …/part-out/confirm`, `POST …/part-out/refetch` |
+| WebSocket | `session.phase` event when import is confirmed (any joined worker) |
 
 ### Example usage
 
-**Trigger:** View mounts after session create (or lead returns to curate before counting).
+**Trigger:** View mounts after session create or when any joined worker joins during `importing` ([home.md — Post-join routing](../view-specs/home.md#post-join-routing)).
 
-**Flow:** Client calls `GET /api/v1/sessions/:id/part-out/lines` (default: all lines, included and excluded). Lead excludes out-of-scope lines for a partial-bag sweep via `PATCH …/lines/:lineId` with `{ excluded: true }`.
+**Flow:** Client calls `GET /api/v1/sessions/:id/part-out/lines`. Workers exclude out-of-scope lines via footer **Exclude** → `POST …/lines/bulk-exclude` with `{ lineIds: [] }`. Concurrent edits: **last-write-wins** (no real-time line sync for MVP).
 
-**Deliverables:** Full part-out row set (part id, color, condition, expected qty, Remarks, excluded flag). After lead taps **Confirm**, `POST …/part-out/confirm` advances phase to `counting` and the app routes to **Lot form** (`/session/:id/lot`).
+**Deliverables:** Full part-out row set (part id, color, condition, expected qty, Remarks, excluded flag, optional thumbnail). After any joined worker taps **Confirm**, `POST …/part-out/confirm` advances phase to `counting` and the app routes to **Lot form** (`/session/:id/lot`).
 
 ---
 
