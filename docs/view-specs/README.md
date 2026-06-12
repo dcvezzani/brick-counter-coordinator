@@ -12,6 +12,7 @@ Per-view requirements for the seven canonical application screens. Use these to 
 | [application-views.md](../support/application-views.md) | Short inventory of all views |
 | [planned-views-services.md](../support/planned-views-services.md) | Routes, APIs, delivery units |
 | [storyboard.md](../support/storyboard.md) | Walkthrough script for Unit 0 |
+| [session-nav-by-view.md](../session-nav-by-view.md) | SessionNav (footer) visibility per view and phase |
 | **This folder** | Detailed, reviewable spec per view |
 
 Each view spec is **requirements-first** (what the view must do), with a **Storyboard status** section noting what the current fixture UI implements vs. what ships in Units 1–4.
@@ -65,6 +66,8 @@ All session views (everything except **Home** and **New session**) render inside
 ### SessionNav (bottom bar)
 
 Visible when the route includes `sessionId`, **except** during **Part-out import** while `phase === 'importing'` — bottom nav is **hidden** until the worker confirms import and the session advances to `counting`. See [part-out-import.md](./part-out-import.md#entry--exit).
+
+**Per-view matrix (authoritative for MVP):** [session-nav-by-view.md](../session-nav-by-view.md) — which items appear on each screen and by session phase.
 
 | Label | Route | `data-testid` | Phase visibility |
 |-------|-------|---------------|------------------|

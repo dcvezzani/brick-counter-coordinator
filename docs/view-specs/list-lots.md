@@ -289,5 +289,5 @@ WebSocket: `pick_list.updated` refreshes organizer rows ([tech spec](../../featu
 
 - Can workers re-run **Split list** after workers have started (or after partial progress)?
 - May an organizer **Delete** lots that are on another worker's pick list, or only their own assigned lines?
-- **Dave (blocking):** Should SessionNav **Lots** be hidden or disabled outside `organizing` (and optionally `updating_inventory`), or may workers open organizer mode early with an empty/guarded state?
+- **SessionNav Lots before `organizing`:** MVP stance in [session-nav-by-view.md](../session-nav-by-view.md) — nav item **visible**; destination shows guarded empty state until `organizing`. Promote to locked decision here when Dave confirms.
 - **Dave:** When `mode=cup` is missing `cupId`, prefer hard redirect to List cups vs inline empty state with guidance?
