@@ -36,7 +36,7 @@ Workers browse physical cups in the session and open the correct lot entry flow.
 | From | Path / action |
 |------|---------------|
 | Part-out import → Confirm | `/session/:sessionId/cups` |
-| Home → join session | `/session/:sessionId/cups` |
+| Home → join session (`counting` phase) | SessionNav **Cups**, or Lot form first — join lands on `/session/:sessionId/lot` per [home.md](./home.md#post-join-routing) |
 | SessionNav **Cups** | `/session/:sessionId/cups` |
 
 ### Where actions navigate

@@ -15,7 +15,7 @@
 | **Status** | In review — awaiting human approval before `/build` |
 | **Author** | AIDLC `/design` (David Vezzani, product owner) |
 | **Created** | 2026-06-10 |
-| **Last updated** | 2026-06-10 (view/service inventory; review passes; join-name policy) |
+| **Last updated** | 2026-06-11 (Home spec: join routing, session list filter, name normalization) |
 
 ### Summary
 
@@ -162,10 +162,10 @@ SQLite schema (logical entities):
 |--------|------|-------|
 | `id` | TEXT PK | UUID |
 | `session_id` | TEXT FK | |
-| `display_name` | TEXT | From Home join |
+| `display_name` | TEXT | Normalized (trim + case-fold) from Home join/create |
 | `joined_at` | TEXT | |
 
-Unique: `(session_id, display_name)`.
+Unique: `(session_id, display_name)` on **normalized** display name (server applies trim + case-fold before insert and uniqueness check).
 
 ### `part_out_lines` (fetched official list)
 
@@ -240,11 +240,21 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/sessions` | List open sessions (enter existing) |
+| `GET` | `/sessions` | List open sessions for Home picker — all where `phase !== 'closed'` |
 | `POST` | `/sessions` | Create session (set number, options, lead name) |
 | `GET` | `/sessions/:id` | Session detail + phase |
-| `POST` | `/sessions/:id/join` | Body: `{ displayName }` → worker; **409** if name taken in session (see below) |
+| `POST` | `/sessions/:id/join` | Body: `{ displayName }` → worker + session phase; **409** if normalized name taken (see below) |
 | `POST` | `/sessions/:id/phase` | Lead: advance phase |
+
+**Open session list (`GET /sessions`):** Returns summaries for the Home open-sessions dialog. Include sessions in `importing`, `counting`, `reconciling`, and `organizing`; exclude `closed`. Minimum fields per row: `id`, `setNumber`, `name`, `phase`, `workerCount`.
+
+**Join (`POST /sessions/:id/join`):**
+
+- Normalize `displayName`: trim whitespace, case-fold to canonical form (lowercase) before uniqueness check and persist.
+- **409 Conflict** if normalized name already exists in the session — no auto-suffix; client shows fixed copy ([home.md](../../docs/view-specs/home.md)).
+- Response includes `worker` and session `phase` for client routing.
+
+**Post-join routing (client):** After successful join, navigate by session phase — [home.md — Post-join routing](../../docs/view-specs/home.md#post-join-routing). Notably: `counting` → `/session/:sessionId/lot` (Lot form), not List cups.
 
 ### Part-out fetch & import (Unit 1)
 
@@ -430,8 +440,8 @@ Local-network deployment assumed; document in README for production hardening la
 **Acceptance:**
 
 - [ ] `POST /sessions` creates session, fetches part-out, stores `part_out_lines`; phase starts `importing`
-- [ ] `GET /sessions` lists open sessions
-- [ ] Join with display name; duplicate name returns **409** with clear message (no auto-suffix)
+- [ ] `GET /sessions` lists open sessions (`phase !== 'closed'`)
+- [ ] Join with normalized display name; duplicate name returns **409** with clear message (no auto-suffix)
 - [ ] Part-out import: list all lines, exclude/restore, confirm → `counting`
 - [ ] Fetch failure surfaces error with refetch action (fixture fallback in dev documented)
 - [ ] WebSocket connects on enter session
@@ -570,7 +580,7 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 |-------|--------|-------|
 | REST `/api/v1` + error envelope | **Pass** | Consistent JSON errors |
 | Session authority | **Pass** | Phase transitions server-side only |
-| Join duplicate names | **Resolved** | **409 Conflict** — user picks another name (no auto-suffix) |
+| Join duplicate names | **Resolved** | **409 Conflict** — normalized name (trim + case-fold); user picks another name (no auto-suffix) |
 | Bricklink cookie | **Pass** | Env only; never exposed to browser |
 | Idempotent lot upsert | **Pass** | Unique key on `(session_id, part_id, color_id, condition)` |
 
@@ -619,6 +629,7 @@ CI (add in Unit 1): `npm run test:unit`, `npm run build`, optional `test:e2e` on
 |------|--------|---------|
 | 2026-06-10 | `/design` | Initial Tech Spec: architecture, data model, APIs, Units 0–4, review passes |
 | 2026-06-10 | Dave | Locked part-out import: server fetch + Part-out import view (ADR-0004); seventh view; `importing` phase |
+| 2026-06-11 | Dave | Home spec: `GET /sessions` non-`closed` filter; join name normalization; phase-aware post-join routing |
 | 2026-06-10 | `/design` | Linked [planned-views-services.md](../../docs/support/planned-views-services.md); criteria traceability; join **409** policy; expanded review passes |
 
 ## Human approval

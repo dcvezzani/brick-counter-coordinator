@@ -35,11 +35,11 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 ### Example usage
 
-**Trigger:** Worker enters a display name and taps **Enter an existing session**.
+**Trigger:** Worker enters a display name and taps **Enter existing session**.
 
-**Flow:** Client calls `GET /api/v1/sessions` to load open sessions (set number, name, phase, worker count).
+**Flow:** Client calls `GET /api/v1/sessions` to load open sessions (all phases except `closed`; set number, name, phase, worker count).
 
-**Deliverables:** Array of session summaries for the picker; after the worker selects a session, `POST /api/v1/sessions/:id/join` with `{ displayName }` returns a worker record. The client stores `sessionId`, `workerId`, and display name in session state and navigates to the session hub (typically **List cups**).
+**Deliverables:** Array of session summaries for the picker; after the worker selects a session, `POST /api/v1/sessions/:id/join` with normalized `{ displayName }` returns a worker record. The client stores `workerDisplayName`, `currentSessionId`, and `currentWorkerId` in `sessionStorage`, connects WebSocket (Unit 1+), and navigates by session phase — see [home.md — Post-join routing](../view-specs/home.md#post-join-routing) (`counting` → **Lot form**, not List cups).
 
 ---
 
@@ -235,7 +235,7 @@ Uses the same **Session** service as **Home** (`GET /api/v1/sessions`, then join
 | Event | Payload | Views that consume |
 |-------|---------|-------------------|
 | `lot.updated` | `{ lot }` | Lot form, List cups, List lots, reconciliation |
-| `worker.joined` | `{ worker }` | Home (session hub), pick-list split input |
+| `worker.joined` | `{ worker }` | Session-scoped views after join (Lot form, List cups, etc.); pick-list split input |
 | `session.phase` | `{ phase }` | All session-scoped views (nav gating, badges) |
 | `pick_list.updated` | `{ item }` | List lots (organizer mode) |
 
