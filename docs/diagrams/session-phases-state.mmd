@@ -12,7 +12,7 @@ stateDiagram-v2
     counting --> reconciling: "POST .../sessions/{id}/phase (Lead advances phase)"
     reconciling --> organizing: "Declare ready to organize (POST .../sessions/{id}/phase)"
     organizing --> updating_inventory: "Declare ready to import (POST .../sessions/{id}/phase)"
-    updating_inventory --> closed: "POST .../reconciliation/export-xml and Bricklink mass update success"
+    updating_inventory --> closed: "Reconciled — export XML (POST .../reconciliation/export-xml)"
     closed --> [*]
 
     note right of importing
@@ -49,8 +49,8 @@ stateDiagram-v2
 
     note right of updating_inventory
         Generate and export XML.
-        Bricklink mass update call.
-        Confirm store inventory updated.
+        Phase → closed on export API success.
+        Worker verifies and submits on Bricklink manually.
         Post-join route /reconciliation
         SessionNav Cups hidden.
     end note

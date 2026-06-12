@@ -31,6 +31,16 @@
 - [bricklink-mass-update-export.md](../bricklink-mass-update-export.md)
 - [Shared chrome](./README.md#shared-chrome)
 
+## Diagrams
+
+| Diagram | Role |
+|---------|------|
+| [reconciliation-workflow.mmd](../diagrams/reconciliation-workflow.mmd) | Reconciling phase: tabs, Edit, Resolve, Declare ready to organize |
+| [store-inventory-update.mmd](../diagrams/store-inventory-update.mmd) | Updating_inventory phase: export XML, dialog, manual Bricklink handoff |
+| [session-phases-state.mmd](../diagrams/session-phases-state.mmd) | Full session lifecycle and post-join routes |
+| [view-navigation.mmd](../diagrams/view-navigation.mmd) | SessionNav **Reconcile**, Edit → Lot form |
+| [workflow-storyboard.mmd](../diagrams/workflow-storyboard.mmd) | End-to-end storyboard including export after organizer complete |
+
 ## Purpose
 
 Compare session counted totals against **included** part-out lines (post-import curation). Workers fix counts via **Lot form** and **Resolve** rows when agreed. After organizer lists complete, workers export Bricklink bulk-update XML in the **`updating_inventory`** phase. Live upload to Bricklink is out of scope — export + manual paste/upload.
@@ -55,7 +65,7 @@ Compare session counted totals against **included** part-out lines (post-import 
 |-------|---------------------------|
 | `counting` | SessionNav **Reconcile** visible — preview/diff optional Unit 4+; primary reconcile work not expected until `reconciling` |
 | `reconciling` | Resolve discrepancies (Edit + Resolve); **Declare ready to organize** when all cleared |
-| `organizing` | View reachable via nav; primary work on [List lots](./list-lots.md) organizer mode |
+| `organizing` | View reachable via SessionNav **Reconcile** (read-only comparison — no phase-advance buttons); primary work on [List lots](./list-lots.md) organizer mode |
 | `updating_inventory` | **Reconciled — export XML** — download + Bricklink validation handoff |
 | `closed` | Read-only or redirect Home (Unit 4+) |
 
@@ -66,7 +76,7 @@ Compare session counted totals against **included** part-out lines (post-import 
 | `counting` → `reconciling` | Lead `POST /api/v1/sessions/:id/phase` when counting is done |
 | `reconciling` → `organizing` | **Declare ready to organize** (`POST /api/v1/sessions/:id/phase`) when all discrepancies resolved |
 | `organizing` → `updating_inventory` | **Declare ready to import** on [List lots](./list-lots.md) when all organizer lists complete |
-| `updating_inventory` → `closed` | Successful **Reconciled — export XML** (`POST …/reconciliation/export-xml`) after Bricklink mass update |
+| `updating_inventory` → `closed` | **Reconciled — export XML** (`POST …/reconciliation/export-xml`) — phase advances on successful export; Bricklink verify/submit is manual outside the app ([product spec scenario 11](../../feature/part-out-coordinator/product-spec.md#key-scenarios)) |
 
 Post-join routing: [home.md](./home.md#post-join-routing) (`reconciling` and `updating_inventory` → this view).
 
@@ -104,6 +114,8 @@ SessionNav **Reconcile** is visible whenever the route includes `sessionId` (see
 | Row actions | **Edit**, **Resolve** (when `delta !== 0 && !resolved`) |
 | Primary button (`reconciling`) | **Declare ready to organize** — disabled while any open discrepancy remains |
 | Primary button (`updating_inventory`) | **Reconciled — export XML** |
+| Primary button (`organizing`, `counting`, `closed`) | **None** — no **Declare ready to organize** or **Reconciled — export XML** outside their phases |
+| SessionNav **Cups** | Hidden in `updating_inventory` and `closed` (see [list-cups.md](./list-cups.md#overview)); visible in `counting`, `reconciling`, `organizing` |
 
 No separate table `<h2>` — tab labels and page heading provide context.
 
@@ -237,7 +249,30 @@ WebSocket: `lot.updated` refreshes `qtyCounted` on open rows; `session.phase` up
 | `export-validation-link` | Open Bricklink validation page (planned) |
 | `lot-list-table` | Table root |
 
+## Spec–diagram review (2026-06-12)
+
+| Spec section | Diagram | Finding | Severity |
+|--------------|---------|---------|----------|
+| [Phase transitions](#session-phase--navigation) `updating_inventory` → `closed` | `session-phases-state.mmd`, `store-inventory-update.mmd` | Diagrams gate `closed` on **Bricklink mass update success** (retry loop). Spec, [product spec scenario 11](../../feature/part-out-coordinator/product-spec.md#key-scenarios), and [tech spec export](../../feature/part-out-coordinator/tech-spec.md#reconciliation-unit-4) advance phase on **export-xml** only; verify/submit is manual outside the app. **Diagrams updated** to match. | **Blocking** (resolved in diagrams — confirm with Dave) |
+| [Locked decisions](#locked-decisions) Resolve = sign-off | `reconciliation-workflow.mmd` | Diagram label "sign-off when aligned or resolved" is ambiguous vs spec precondition `delta !== 0 && !resolved`. Resolve is not available when counts already match. | Advisory |
+| [Layout](#layout--controls) Discrepancies / All lines tabs | `reconciliation-workflow.mmd` | Tabs, Edit → Lot form, Resolve → POST resolve, **Declare ready to organize** when cleared — align. | Pass |
+| [Entry & exit](#entry--exit) Edit row | `view-navigation.mmd`, `workflow-storyboard.mmd` | `RECON → LOT_EDIT` and storyboard `RECON → Edit row → LOT` match. | Pass |
+| Post-join routing | `view-navigation.mmd`, `session-phases-state.mmd` | Home join `reconciling` / `updating_inventory` → `/reconciliation` matches [home.md](./home.md#post-join-routing). | Pass |
+| [Session phase table](#session-phase--navigation) `organizing` | `workflow-storyboard.mmd` | Storyboard subgraph places reconciliation only under `reconciling` and `updating_inventory`; spec allows SessionNav **Reconcile** during `organizing` (read-only). Nav diagram does not phase-gate **Reconcile**. | Advisory |
+| [Session phase table](#session-phase--navigation) `counting` preview | `reconciliation-workflow.mmd` | Workflow diagram entry is `phase reconciling` only; spec and storyboard allow optional preview via SessionNav during `counting`. Open question below. | **Blocking** (product decision) |
+| End-to-end flow | `workflow-storyboard.mmd` | `RECON → Declare ready to organize → LOTS_ORG` and `LOTS_ORG → Declare ready to import → STORE_UPDATE` match Model C lifecycle. | Pass |
+| SessionNav **Cups** in `updating_inventory` | `session-phases-state.mmd` | Note "SessionNav Cups hidden" aligns with [list-cups.md](./list-cups.md); reconciliation spec now cross-links. | Pass |
+| Export dialog handoff | `store-inventory-update.mmd` | Was modeled as in-app mass-update confirmation; spec is download + open validation URL, then manual Bricklink steps. **Diagram updated.** | **Blocking** (resolved in diagram) |
+| Tech spec `qtyAgreed` field | — | [Tech spec](../../feature/part-out-coordinator/tech-spec.md#reconciliation-unit-4) exposes `qtyAgreed` on GET reconciliation; this view spec omits it. Resolve sets agreed qty from counted (server-side); UI may not surface separately for MVP. | Advisory |
+| Table columns Part / Thumbnail | `part-out-import.md` | Import table shows thumbnail + part id + description; reconciliation columns list **Part** only — parity TBD. | Advisory |
+
 ## Open questions
 
+- **Dave (blocking — confirm diagram fix):** Session → `closed` on **Reconciled — export XML** (export API success), with Bricklink verify/submit fully manual outside the app — not gated on mass-update success in the coordinator?
 - **Unexpected counts:** Session lots for part/color **not** on the included part-out list — show as discrepancy rows (expected 0) or omit for MVP?
-- **SessionNav Reconcile during `counting`:** Allow navigate for preview, or hide/disable until lead advances to `reconciling`?
+- **SessionNav Reconcile during `counting`:** Allow navigate for preview (read-only or live diff), or hide/disable until lead advances to `reconciling`?
+- **Dave:** During `organizing`, should reconciliation be **read-only** (tabs + comparison, no Edit/Resolve), or still allow Edit/Resolve if someone finds a late discrepancy?
+- **Dave:** Rows with `delta === 0` but `resolved === false` — auto-clear from Discrepancies tab, or require explicit **Resolve**?
+- **Dave:** Match import table UX (thumbnail, part id + description) on reconciliation rows, or keep minimal Part/Color/Cond columns for MVP?
+- **Dave:** Export `warnings` (e.g. skipped rows without `bricklink_lot_id`) — inline alert on reconciliation view, dialog only, or toast?
+- **Dave:** `closed` phase — keep `/reconciliation` read-only for audit, or redirect all session routes to Home?

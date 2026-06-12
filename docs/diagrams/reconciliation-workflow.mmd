@@ -14,7 +14,7 @@ flowchart TD
     all --> row
 
     row -->|Edit| lot["Lot form<br>adjust session counts"]
-    row -->|Resolve| sign["POST .../reconciliation/resolve<br>sign-off when aligned or resolved"]
+    row -->|Resolve| sign["POST .../reconciliation/resolve<br>sign-off (delta not 0, not resolved)"]
 
     lot --> disc
     sign --> disc
