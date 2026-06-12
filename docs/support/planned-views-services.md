@@ -60,11 +60,11 @@ Inventory of all currently planned application views for the Part-Out Counting C
 
 ### Example usage
 
-**Trigger:** Session lead fills in set number (e.g. `70404-1` or `70404` — auto-appends `-1`) and condition (New or Used; no default). Display name comes from Home via `sessionStorage`. Submit is blocked without display name or condition.
+**Trigger:** Session lead searches/selects set via **SetSearchCombobox** (FilterablePicker; client pattern validation), chooses condition (New or Used; no default), and may use **Back to Home** to return to `/`. Display name comes from Home via `sessionStorage`; direct `/session/new` without a name redirects to Home.
 
 **Flow:** Client calls `POST /api/v1/sessions` with `setNumber`, `partOutOptions.condition` (`new` \| `used`), and `displayName`. Server normalizes set number, maps to Bricklink form (fixed pricing/merge constants + `itemNo` / `itemCondition`), retries fetch up to 3 times on network failure, creates session (phase `importing`), and persists `part_out_lines` on success.
 
-**Deliverables:** New `sessionId`, initial phase `importing`, and `part_out_fetch_status` (`ok` or `error`). On **HTTP 201** (fetch ok or error after retries) → **Part-out import** (`/session/:sessionId/import`). Invalid set → **HTTP 422**, no session, stay on New session. Network failure after retries → session in `importing` with error; import view handles refetch ([new-session.md](../view-specs/new-session.md), [part-out-import.md — Loading & fetch states](../view-specs/part-out-import.md#loading--fetch-states)).
+**Deliverables:** New `sessionId`, initial phase `importing`, and `part_out_fetch_status` (`ok` or `error`). On **HTTP 201** (fetch ok or error after retries) → **Part-out import** (`/session/:sessionId/import`). Invalid set → **HTTP 422**, fixed client wrapper on New session, no session row. Network failure after retries → session in `importing` with error; import view **Loading then Error** ([new-session.md](../view-specs/new-session.md), [part-out-import.md — Create-time fetch error entry](../view-specs/part-out-import.md#create-time-fetch-error-entry)).
 
 ---
 
@@ -80,16 +80,16 @@ Inventory of all currently planned application views for the Part-Out Counting C
 | Service | Endpoints / mechanism |
 |---------|----------------------|
 | Session | `GET /api/v1/sessions/:id` (phase, fetch status) |
-| Part-out | `GET /api/v1/sessions/:id/part-out/lines`, `PATCH …/lines/:lineId`, `POST …/lines/bulk-exclude`, `POST …/part-out/confirm`, `POST …/part-out/refetch` |
-| WebSocket | `session.phase` event when lead confirms |
+| Part-out | `GET /api/v1/sessions/:id/part-out/lines`, `PATCH …/lines/:lineId`, `POST …/lines/bulk-exclude`, `POST …/lines/bulk-restore`, `POST …/part-out/confirm`, `POST …/part-out/refetch` |
+| WebSocket | `session.phase` event when import is confirmed (any joined worker) |
 
 ### Example usage
 
-**Trigger:** View mounts after session create (or lead returns to curate before counting).
+**Trigger:** View mounts after session create or when any joined worker joins during `importing` ([home.md — Post-join routing](../view-specs/home.md#post-join-routing)).
 
-**Flow:** Client calls `GET /api/v1/sessions/:id/part-out/lines` (default: all lines, included and excluded). Lead excludes out-of-scope lines for a partial-bag sweep via `PATCH …/lines/:lineId` with `{ excluded: true }`.
+**Flow:** Client calls `GET /api/v1/sessions/:id/part-out/lines`. Workers exclude out-of-scope lines via footer **Exclude** → `POST …/lines/bulk-exclude` with `{ lineIds: [] }`. Concurrent edits: **last-write-wins** (no real-time line sync for MVP).
 
-**Deliverables:** Full part-out row set (part id, color, condition, expected qty, Remarks, excluded flag). After lead taps **Confirm**, `POST …/part-out/confirm` advances phase to `counting` and the app routes to **Lot form** (`/session/:id/lot`).
+**Deliverables:** Full part-out row set (part id, color, condition, expected qty, Remarks, excluded flag, optional thumbnail). After any joined worker taps **Confirm**, `POST …/part-out/confirm` advances phase to `counting` and the app routes to **Lot form** (`/session/:id/lot`).
 
 ---
 

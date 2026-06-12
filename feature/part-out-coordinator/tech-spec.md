@@ -99,7 +99,7 @@ flowchart TB
 - **Thin client:** validation for UX only; authoritative rules on server.
 - **Real-time:** WebSocket broadcasts lot/session changes to joined clients (near-real-time totals, duplicate awareness).
 - **Bricklink:** Server holds **store session cookie** (env/config) for `list.ajax` and catalog color fetch; **no iframes** ([ADR-0002](../../adr/0002-bricklink-ajax-only-no-iframes.md)).
-- **Part-out official list (MVP):** Server **POST**s `invSetEdit.asp` on session create with `BRICKLINK_SESSION_COOKIE`, session condition (`part_out_options.condition`), and **fixed** pricing/merge form fields from [request.md](../../docs/support/set-part-out-list/request.md) ([docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md)); lead curates via **Part-out import** view ([ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md)). Parser ports extension `inv-set-edit-dom.js` / `code-scraper.js` output shape.
+- **Part-out official list (MVP):** Server **POST**s `invSetEdit.asp` on session create with `BRICKLINK_SESSION_COOKIE`, session condition (`part_out_options.condition`), and **fixed** pricing/merge form fields from [request.md](../../docs/support/set-part-out-list/request.md) ([docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md)); **any joined worker** curates via **Part-out import** view ([ADR-0004](../../adr/0004-part-out-server-fetch-curated-import.md)). Parser ports extension `inv-set-edit-dom.js` / `code-scraper.js` output shape.
 
 ### Repository layout (target)
 
@@ -129,7 +129,7 @@ brick-counter-coordinator/
 
 | Phase | Who acts | UI views |
 |-------|----------|----------|
-| `importing` | Lead | Part-out import (curate fetched list) |
+| `importing` | Any joined worker | Part-out import (curate fetched list; last-write-wins) |
 | `counting` | Counters, lead | Lot form, List cups (Home is global entry, not phase-scoped) |
 | `reconciling` | Lead, workers resolve | Part-out reconciliation — Edit, Resolve, Declare ready to organize; List cups (browse) |
 | `organizing` | Organizers | List lots (organizer mode) — split, mark lines, Declare ready to import; List cups (browse) |
@@ -269,7 +269,7 @@ Base path: `/api/v1`. JSON bodies. Errors: `{ "error": { "code": "...", "message
 
 ### Part-out fetch & import (Unit 1)
 
-Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session is created. On **network failure after retries**, session stays in `importing` with `part_out_fetch_status=error`; lead can `POST …/part-out/refetch` from import view.
+Triggered by `POST /sessions` (inline for MVP). On **invalid set**, no session is created. On **network failure after retries**, session stays in `importing` with `part_out_fetch_status=error`; any joined worker can `POST …/part-out/refetch` from import view.
 
 **Upstream Bricklink call:** `POST https://www.bricklink.com/invSetEdit.asp` — session cookie, urlencoded form (`itemNo`, `itemCondition`, `invAdjust*`, etc.), HTML response parsed to `part_out_lines`. Full contract: [docs/bricklink-set-part-out-fetch.md](../../docs/bricklink-set-part-out-fetch.md). Fixture HTML: [support/set-part-out-list/response.html](../../docs/support/set-part-out-list/response.html).
 
